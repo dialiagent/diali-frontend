@@ -1199,6 +1199,27 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
     {id:"LoQnubeEKhw9RDkfeS80",name:"Larry",desc:"Authoritative, steady",tag:""},
     {id:"hGQkZQUA5RiOXIw7P9iO",name:"Kiora",desc:"Friendly, energetic",tag:""}
   ];
+  const[playingVoice,setPlayingVoice]=useState(null);
+  const[loadingVoice,setLoadingVoice]=useState(null);
+  const audioRef=React.useRef(null);
+  const previewVoice=(vId,e)=>{
+    e.stopPropagation();
+    /* Stop current playback */
+    if(audioRef.current){audioRef.current.pause();audioRef.current=null;}
+    if(playingVoice===vId){setPlayingVoice(null);return;}
+    setLoadingVoice(vId);setPlayingVoice(null);
+    const text="Hi, thanks for calling! I can help you schedule a service appointment or answer any questions you might have. What's going on today?";
+    fetch("https://api.elevenlabs.io/v1/text-to-speech/"+vId+"/stream?output_format=mp3_44100_64",{
+      method:"POST",headers:{"Content-Type":"application/json","xi-api-key":"sk_2035a5f2d5adc7f64fb91dfe6f9e88266bbd69a8f3fbb2cd"},
+      body:JSON.stringify({text,model_id:"eleven_turbo_v2_5",voice_settings:{stability:0.5,similarity_boost:0.75}})
+    }).then(r=>{if(!r.ok)throw new Error("ElevenLabs error "+r.status);return r.blob();}).then(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=new Audio(url);
+      a.onended=()=>{setPlayingVoice(null);audioRef.current=null;URL.revokeObjectURL(url);};
+      a.onerror=()=>{setPlayingVoice(null);setLoadingVoice(null);audioRef.current=null;};
+      audioRef.current=a;setPlayingVoice(vId);setLoadingVoice(null);a.play();
+    }).catch(err=>{console.error("Voice preview error:",err);setLoadingVoice(null);setPlayingVoice(null);});
+  };
 
   /* Listen for SDK load */
   React.useEffect(()=>{
@@ -1468,7 +1489,9 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-neutral-300 font-mono">{v.id.slice(0,12)}...</span>
-                <button onClick={e=>{e.stopPropagation();setTestPanel(true);}} className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors flex items-center gap-1.5"><span className="w-3.5 h-3.5">{I.play}</span>Test voice</button>
+                <button onClick={e=>previewVoice(v.id,e)} className={"text-xs transition-colors flex items-center gap-1.5 "+(playingVoice===v.id?"text-neutral-900":"text-neutral-400 hover:text-neutral-900")}>
+                  {loadingVoice===v.id?<><div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>Loading...</>:playingVoice===v.id?<><span className="w-3.5 h-3.5">{I.x}</span>Stop</>:<><span className="w-3.5 h-3.5">{I.play}</span>Preview voice</>}
+                </button>
               </div>
             </div>))}
           </div>
@@ -2423,6 +2446,28 @@ const Onboarding=({onDone})=>{
     "Other":["Service Call","Repair","Installation","Inspection","Maintenance Plans","Emergency Service","Consultation","Estimate"]
   };
   const allServices=tradeServices[trade]||tradeServices["General"];
+  const obVoiceIdMap2={"Kim":"O7LV5fxosQChiBE7l6Wz","Asher":"tMvyQtpCVQ0DkixuYm6J","Brady":"Sr9Xhw1be5kyNtGEOV0y","Evan":"TWutjvRaJqAX89preB4e","Larry":"LoQnubeEKhw9RDkfeS80","Kiora":"hGQkZQUA5RiOXIw7P9iO"};
+  const[obPlaying,setObPlaying]=useState(null);
+  const[obLoading,setObLoading]=useState(null);
+  const obAudioRef=React.useRef(null);
+  const obPreview=(name,e)=>{
+    e.stopPropagation();
+    if(obAudioRef.current){obAudioRef.current.pause();obAudioRef.current=null;}
+    if(obPlaying===name){setObPlaying(null);return;}
+    const vid=obVoiceIdMap2[name];if(!vid)return;
+    setObLoading(name);setObPlaying(null);
+    const text="Hi, thanks for calling! I can help you schedule a service appointment or answer any questions. What's going on today?";
+    fetch("https://api.elevenlabs.io/v1/text-to-speech/"+vid+"/stream?output_format=mp3_44100_64",{
+      method:"POST",headers:{"Content-Type":"application/json","xi-api-key":"sk_2035a5f2d5adc7f64fb91dfe6f9e88266bbd69a8f3fbb2cd"},
+      body:JSON.stringify({text,model_id:"eleven_turbo_v2_5",voice_settings:{stability:0.5,similarity_boost:0.75}})
+    }).then(r=>{if(!r.ok)throw new Error("err");return r.blob();}).then(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=new Audio(url);
+      a.onended=()=>{setObPlaying(null);obAudioRef.current=null;URL.revokeObjectURL(url);};
+      a.onerror=()=>{setObPlaying(null);setObLoading(null);obAudioRef.current=null;};
+      obAudioRef.current=a;setObPlaying(name);setObLoading(null);a.play();
+    }).catch(()=>{setObLoading(null);setObPlaying(null);});
+  };
 
   return(
     <div className="min-h-screen bg-white flex flex-col">
@@ -2507,7 +2552,9 @@ const Onboarding=({onDone})=>{
                   <div className={"w-10 h-10 flex items-center justify-center shrink-0 "+(voicePick===n?"bg-neutral-900":"bg-neutral-100")}><span className={"w-4 h-4 "+(voicePick===n?"text-white":"text-neutral-400")}>{I.mic}</span></div>
                   <div className="flex-1"><p className="text-sm text-neutral-900">{n}</p><p className="text-xs text-neutral-400 mt-0.5">{d}</p></div>
                   {tag&&<span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5">{tag}</span>}
-                  <button className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors flex items-center gap-1 shrink-0"><span className="w-3.5 h-3.5">{I.play}</span>Play</button>
+                  <button onClick={e=>obPreview(n,e)} className={"text-xs transition-colors flex items-center gap-1 shrink-0 "+(obPlaying===n?"text-neutral-900":"text-neutral-400 hover:text-neutral-900")}>
+                    {obLoading===n?<><div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>...</>:obPlaying===n?<><span className="w-3.5 h-3.5">{I.x}</span>Stop</>:<><span className="w-3.5 h-3.5">{I.play}</span>Play</>}
+                  </button>
                 </div>
               ))}
             </div>
