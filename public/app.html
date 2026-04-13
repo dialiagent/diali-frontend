@@ -497,7 +497,7 @@ const Calls=()=>{
 
       {/* Left list */}
       <div className={"w-full md:w-[380px] shrink-0 flex flex-col "+(sel?"hidden md:flex":"flex")}>
-        <div className="flex bg-neutral-200 p-1 mb-5 overflow-x-auto">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} onClick={()=>setFilter(k)} className={"px-5 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(filter===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div>
+        <div className="flex items-center justify-between mb-4"><div className="flex bg-neutral-200 p-1 overflow-x-auto">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} onClick={()=>setFilter(k)} className={"px-5 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(filter===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div><button onClick={()=>setPanel("newcall")} className="bg-neutral-900 text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black transition-colors shrink-0 ml-3"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">Log call</span></button></div>
         <div className="flex-1 overflow-y-auto space-y-2 md:pr-1">
           {filtered.map(c=>(
             <div key={c.id} onClick={()=>pick(c)} className={"p-4 cursor-pointer transition-all duration-200 "+(sel?.id===c.id?"bg-neutral-900":"bg-white hover:bg-neutral-50")}>
@@ -1834,12 +1834,30 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
 };
 
 /* ══════════════════ CALENDAR ══════════════════ */
-const CalendarEmpty=()=>(
+const CalendarEmpty=()=>{
+  const[addPanel,setAddPanel]=useState(false);
+  const[newAppt,setNewAppt]=useState({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});
+  return(
   <div className="fu">
-    <div className="flex items-end justify-between mb-6 md:mb-10"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Calendar</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">Your scheduling hub — AI-booked appointments show up here.</p></div></div>
-    <Empty icon={I.cal} title="No appointments yet" sub="When your AI agent books an appointment on a call, it will appear here for you to confirm. You can also manually add appointments." action="Add appointment"/>
-  </div>
-);
+    <Panel open={addPanel} onClose={()=>setAddPanel(false)}>
+      <PanelHeader onClose={()=>setAddPanel(false)} title="New appointment" sub="Add a manual booking"/>
+      <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newAppt.name} onChange={e=>setNewAppt({...newAppt,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
+        <div className="grid grid-cols-3 gap-3">
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Start</label><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">End</label><input type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+        </div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue / description</label><textarea rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+      </div>
+      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>{setAddPanel(false);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add appointment</button></div>
+    </Panel>
+    <div className="flex items-end justify-between mb-6 md:mb-10"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Calendar</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">Your scheduling hub — AI-booked appointments show up here.</p></div><button onClick={()=>setAddPanel(true)} className="bg-neutral-900 text-white px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">New appointment</span><span className="md:hidden">New</span></button></div>
+    <Empty icon={I.cal} title="No appointments yet" sub="When your AI agent books an appointment on a call, it will appear here for you to confirm. You can also manually add appointments." action="Add appointment" onAction={()=>setAddPanel(true)}/>
+  </div>);
+};
 
 const Calendar=()=>{
   const[view,setView]=useState("week");
@@ -1864,6 +1882,8 @@ const Calendar=()=>{
     {id:6,name:"Lisa Martinez",phone:"(555) 678-9012",address:"905 Cedar St, Arvada CO",issue:"AC maintenance plan — annual tune-up, last service 14 months ago",time:"3:00 PM",timeEnd:"4:00 PM",date:day(3),status:"confirmed",urgency:"standard",source:"Phone"},
   ]);
 
+  const[addPanel,setAddPanel]=useState(false);
+  const[newAppt,setNewAppt]=useState({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});
   const[bookTech,setBookTech]=useState("Unassigned");
   const[bookNotes,setBookNotes]=useState("");
 
@@ -1915,6 +1935,26 @@ const Calendar=()=>{
         </>}
       </Panel>
 
+      {/* New appointment panel */}
+      <Panel open={addPanel} onClose={()=>setAddPanel(false)}>
+        <PanelHeader onClose={()=>setAddPanel(false)} title="New appointment" sub="Add a manual booking"/>
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newAppt.name} onChange={e=>setNewAppt({...newAppt,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
+          <div className="grid grid-cols-3 gap-3">
+            <div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+            <div><label className="text-xs text-neutral-400 mb-1.5 block">Start</label><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+            <div><label className="text-xs text-neutral-400 mb-1.5 block">End</label><input type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+          </div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue / description</label><textarea rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><div className="grid grid-cols-3 gap-2">{[["standard","Standard"],["urgent","Urgent"],["emergency","Emergency"]].map(([k,l])=><button key={k} onClick={()=>setNewAppt({...newAppt,urgency:k})} className={"text-sm py-2.5 border transition-colors "+(newAppt.urgency===k?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{l}</button>)}</div></div>
+        </div>
+        <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
+          <button onClick={()=>{if(!newAppt.name||!newAppt.date)return;const fmtT=t=>{if(!t)return"TBD";const[h,m]=t.split(":");const hr=parseInt(h);return(hr>12?hr-12:hr===0?12:hr)+":"+m+" "+(hr>=12?"PM":"AM");};const d=new Date(newAppt.date+"T12:00:00");const nb={id:Date.now(),name:newAppt.name,phone:newAppt.phone,address:newAppt.address,issue:newAppt.issue,time:fmtT(newAppt.time),timeEnd:fmtT(newAppt.timeEnd),date:d,status:"pending",urgency:newAppt.urgency,source:"Manual"};setBookings(p=>[...p,nb]);setNewAppt({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});setAddPanel(false);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add appointment</button>
+        </div>
+      </Panel>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3">
         <div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Calendar</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{view==="week"?fmt(weekDays[0])+" — "+fmt(weekDays[6])+", "+weekDays[0].getFullYear():fmtMonth(monthDate)}</p></div>
@@ -1925,6 +1965,7 @@ const Calendar=()=>{
             <button onClick={()=>{view==="week"?setWeekOff(w=>w+1):setMonthOff(m=>m+1);}} className="w-8 h-8 flex items-center justify-center hover:bg-neutral-300 transition-colors"><span className="w-4 h-4 text-neutral-500 rotate-180">{I.arrowL}</span></button>
           </div>
           <div className="flex bg-neutral-200 p-1">{[["week","Week"],["month","Month"]].map(([k,l])=><button key={k} onClick={()=>setView(k)} className={"px-4 md:px-5 py-2 text-sm transition-all duration-200 "+(view===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div>
+          <button onClick={()=>setAddPanel(true)} className="bg-neutral-900 text-white px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">New appointment</span><span className="md:hidden">New</span></button>
         </div>
       </div>
 
@@ -2635,17 +2676,33 @@ const HomeEmpty=()=>{
   );
 };
 
-const CallsEmpty=()=>(
+const CallsEmpty=()=>{
+  const[panel,setPanel]=useState(null);
+  const[newCall,setNewCall]=useState({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});
+  return(
   <div className="flex flex-col md:flex-row gap-0 md:gap-6 h-full fu">
+    <Panel open={panel==="newcall"} onClose={()=>setPanel(null)}>
+      <PanelHeader onClose={()=>setPanel(null)} title="Log a new call"/>
+      <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue</label><textarea rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><select value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Normal</option><option>Urgent</option><option>Emergency</option></select></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Source</label><select value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></select></div>
+        </div>
+      </div>
+      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>{setPanel(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save call</button></div>
+    </Panel>
     <div className="hidden md:flex w-[380px] shrink-0 flex-col">
-      <div className="flex bg-neutral-200 p-1 mb-5">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} className={"px-5 py-2 text-sm transition-all duration-200 "+(k==="all"?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div>
+      <div className="flex items-center justify-between mb-4"><div className="flex bg-neutral-200 p-1">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} className={"px-5 py-2 text-sm transition-all duration-200 "+(k==="all"?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div><button onClick={()=>setPanel("newcall")} className="bg-neutral-900 text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black transition-colors shrink-0 ml-3"><span className="w-4 h-4">{I.plus}</span></button></div>
       <div className="flex-1 flex items-center justify-center"><p className="text-xs text-neutral-300">No calls to show</p></div>
     </div>
     <div className="flex-1 bg-white border border-neutral-100 flex items-center justify-center py-16 md:py-0">
-      <Empty icon={I.phone} title="No calls yet" sub="When your AI answers its first call, it'll show up here with a full transcript, recording, and action items." action="Log a call"/>
+      <Empty icon={I.phone} title="No calls yet" sub="When your AI answers its first call, it'll show up here with a full transcript, recording, and action items." action="Log a call" onAction={()=>setPanel("newcall")}/>
     </div>
-  </div>
-);
+  </div>);
+};
 
 const JobsEmpty=()=>{
   const[view,setView]=useState("board");
@@ -2704,14 +2761,27 @@ const LeadsEmpty=()=>{
   );
 };
 
-const QuotesEmpty=()=>(
+const QuotesEmpty=()=>{
+  const[adding,setAdding]=useState(false);
+  const[draft,setDraft]=useState({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});
+  return(
   <div className="fu">
+    <Panel open={adding} onClose={()=>setAdding(false)}>
+      <PanelHeader onClose={()=>setAdding(false)} title="Add pricebook item" sub="Add a new service, part, or labor rate"/>
+      <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Name</label><input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Standard diagnostic" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Description</label><textarea value={draft.desc} onChange={e=>setDraft({...draft,desc:e.target.value})} rows={2} placeholder="Short description" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+        <div><label className="text-xs text-neutral-400 mb-1.5 block">Category</label><div className="grid grid-cols-5 gap-2">{["Service","Labor","Parts","Maintenance","Install"].map(c=><button key={c} onClick={()=>setDraft({...draft,cat:c})} className={"text-xs py-2.5 border transition-colors "+(draft.cat===c?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{c}</button>)}</div></div>
+        <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Rate</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span><input value={draft.rate} onChange={e=>setDraft({...draft,rate:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums"/></div></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Unit</label><select value={draft.unit} onChange={e=>setDraft({...draft,unit:e.target.value})} className="w-full border border-neutral-200 px-3 py-3 text-sm bg-white"><option value="each">each</option><option value="hour">hour</option><option value="lb">lb</option><option value="ft">linear ft</option></select></div></div>
+      </div>
+      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>setAdding(false)} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add item</button></div>
+    </Panel>
     <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3">
       <div>
         <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Quotes</p>
         <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">Your pricebook — the source of truth Diali uses to build instant quotes</p>
       </div>
-      <button className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span>Add item</span></button>
+      <button onClick={()=>setAdding(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span>Add item</span></button>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
       {[["Total items","0"],["Categories","0"],["Avg. rate","$0"],["Top seller","—"]].map(([l,v])=>(
@@ -2729,8 +2799,8 @@ const QuotesEmpty=()=>(
         <p className="text-xs text-neutral-400 text-center max-w-sm">Add your services, labor rates, parts, and fees. Diali will use these to build instant quotes for every qualified lead.</p>
       </div>
     </div>
-  </div>
-);
+  </div>);
+};
 
 const DEMO_EMAIL="demo@diali.com";
 const App=()=>{
