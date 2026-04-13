@@ -1859,6 +1859,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
 /* ══════════════════ CALENDAR ══════════════════ */
 const CalendarEmpty=()=>{
   const[addPanel,setAddPanel]=useState(false);
+  const[appts,setAppts]=useState([]);
   const[newAppt,setNewAppt]=useState({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});
   return(
   <div className="fu">
@@ -1875,10 +1876,11 @@ const CalendarEmpty=()=>{
         </div>
         <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue / description</label><textarea rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
       </div>
-      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>{setAddPanel(false);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add appointment</button></div>
+      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>{if(!newAppt.name)return;const fmtT=t=>{if(!t)return"TBD";const[h,m]=t.split(":");const hr=parseInt(h);return(hr>12?hr-12:hr===0?12:hr)+":"+m+" "+(hr>=12?"PM":"AM");};const nb={id:Date.now(),name:newAppt.name,phone:newAppt.phone,address:newAppt.address,issue:newAppt.issue,time:fmtT(newAppt.time),timeEnd:fmtT(newAppt.timeEnd),date:newAppt.date||"TBD",status:"pending",urgency:newAppt.urgency||"standard",source:"Manual"};setAppts(p=>[nb,...p]);setNewAppt({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});setAddPanel(false);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add appointment</button></div>
     </Panel>
     <div className="flex items-end justify-between mb-6 md:mb-10"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Calendar</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">Your scheduling hub — AI-booked appointments show up here.</p></div><button onClick={()=>setAddPanel(true)} className="bg-neutral-900 text-white px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">New appointment</span><span className="md:hidden">New</span></button></div>
-    <Empty icon={I.cal} title="No appointments yet" sub="When your AI agent books an appointment on a call, it will appear here for you to confirm. You can also manually add appointments." action="Add appointment" onAction={()=>setAddPanel(true)}/>
+    {appts.length?<div className="space-y-3">{appts.map(a=><div key={a.id} className="bg-white border border-neutral-100 p-5 flex items-center justify-between"><div className="flex items-center gap-4"><Av n={a.name} s={40}/><div><p className="text-sm text-neutral-900">{a.name}</p><p className="text-xs text-neutral-400">{a.issue}</p></div></div><div className="text-right"><p className="text-sm text-neutral-900">{a.time}</p><p className="text-xs text-neutral-400">{a.date}</p></div></div>)}</div>
+    :<Empty icon={I.cal} title="No appointments yet" sub="When your AI agent books an appointment on a call, it will appear here for you to confirm. You can also manually add appointments." action="Add appointment" onAction={()=>setAddPanel(true)}/>}
   </div>);
 };
 
@@ -2722,7 +2724,10 @@ const HomeEmpty=()=>{
 
 const CallsEmpty=()=>{
   const[panel,setPanel]=useState(null);
+  const[calls,setCalls]=useState([]);
+  const[sel,setSel]=useState(null);
   const[newCall,setNewCall]=useState({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});
+  const saveCall=()=>{if(!newCall.name)return;const nc={id:Date.now(),name:newCall.name,ph:newCall.phone,addr:"",time:"Just now",dur:"0:00",issue:newCall.issue,urg:newCall.urg.toLowerCase(),status:"follow-up",booked:null,src:newCall.src,rev:0,conf:0,score:"warm",tr:[],notes:"",sms:[]};setCalls(p=>[nc,...p]);C.push(nc);setNewCall({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});setPanel(null);};
   return(
   <div className="flex flex-col md:flex-row gap-0 md:gap-6 h-full fu">
     <Panel open={panel==="newcall"} onClose={()=>setPanel(null)}>
@@ -2736,14 +2741,15 @@ const CallsEmpty=()=>{
           <div><label className="text-xs text-neutral-400 mb-1.5 block">Source</label><select value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></select></div>
         </div>
       </div>
-      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>{setPanel(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save call</button></div>
+      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveCall} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save call</button></div>
     </Panel>
     <div className="hidden md:flex w-[380px] shrink-0 flex-col">
       <div className="flex items-center justify-between mb-4"><div className="flex bg-neutral-200 p-1">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} className={"px-5 py-2 text-sm transition-all duration-200 "+(k==="all"?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div><button onClick={()=>setPanel("newcall")} className="bg-neutral-900 text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black transition-colors shrink-0 ml-3"><span className="w-4 h-4">{I.plus}</span></button></div>
-      <div className="flex-1 flex items-center justify-center"><p className="text-xs text-neutral-300">No calls to show</p></div>
+      {calls.length?<div className="flex-1 overflow-y-auto space-y-2">{calls.map(c=><div key={c.id} onClick={()=>setSel(c)} className={"p-4 cursor-pointer transition-all duration-200 "+(sel?.id===c.id?"bg-neutral-900":"bg-white hover:bg-neutral-50")}><div className="flex items-start gap-3.5"><Av n={c.name} s={40}/><div className="flex-1 min-w-0"><div className="flex items-center justify-between mb-1"><span className={"text-sm "+(sel?.id===c.id?"text-white":"text-neutral-900")}>{c.name}</span><span className={"text-xs "+(sel?.id===c.id?"text-neutral-400":"text-neutral-300")}>{c.time}</span></div><p className={"text-xs truncate mb-2.5 "+(sel?.id===c.id?"text-neutral-400":"text-neutral-400")}>{c.issue}</p><div className="flex items-center gap-2.5"><Bg s={c.status}/></div></div></div></div>)}</div>:<div className="flex-1 flex items-center justify-center"><p className="text-xs text-neutral-300">No calls to show</p></div>}
     </div>
     <div className="flex-1 bg-white border border-neutral-100 flex items-center justify-center py-16 md:py-0">
-      <Empty icon={I.phone} title="No calls yet" sub="When your AI answers its first call, it'll show up here with a full transcript, recording, and action items." action="Log a call" onAction={()=>setPanel("newcall")}/>
+      {sel?<div className="w-full h-full p-7"><div className="flex items-center gap-4 mb-6"><Av n={sel.name} s={48}/><div><p className="text-lg text-neutral-900">{sel.name}</p><p className="text-sm text-neutral-400">{sel.ph}</p></div></div><div className="space-y-4"><div><p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Issue</p><p className="text-sm text-neutral-700">{sel.issue}</p></div><div className="grid grid-cols-3 gap-4"><div><p className="text-xs text-neutral-400 mb-1">Urgency</p><p className="text-sm text-neutral-700 capitalize">{sel.urg}</p></div><div><p className="text-xs text-neutral-400 mb-1">Source</p><p className="text-sm text-neutral-700">{sel.src}</p></div><div><p className="text-xs text-neutral-400 mb-1">Status</p><Bg s={sel.status}/></div></div></div></div>
+      :<Empty icon={I.phone} title="No calls yet" sub="When your AI answers its first call, it'll show up here with a full transcript, recording, and action items." action="Log a call" onAction={()=>setPanel("newcall")}/>}
     </div>
   </div>);
 };
@@ -2751,20 +2757,25 @@ const CallsEmpty=()=>{
 const JobsEmpty=()=>{
   const[view,setView]=useState("board");
   const[panel,setPanel]=useState(null);
+  const[jobs,setJobs]=useState([]);
+  const[newJob,setNewJob]=useState({cust:"",date:"",time:"",addr:"",issue:"",tech:"Unassigned",rev:""});
+  const totalRev=jobs.reduce((a,j)=>a+j.rev,0);
+  const saveJob=()=>{if(!newJob.cust)return;const nj={id:Date.now(),day:newJob.date||"TBD",time:newJob.time||"TBD",cust:newJob.cust,ph:"",addr:newJob.addr,issue:newJob.issue,tech:newJob.tech,rev:parseInt(newJob.rev)||0,st:"Confirmed",pct:0,checklist:[],parts:[],notes:""};setJobs(p=>[nj,...p]);setNewJob({cust:"",date:"",time:"",addr:"",issue:"",tech:"Unassigned",rev:""});setPanel(null);};
+  const cols={Confirmed:jobs.filter(j=>j.st==="Confirmed"),Quote:jobs.filter(j=>j.st==="Quote"),Completed:jobs.filter(j=>j.st==="Completed")};
   return(
     <div className="fu">
       <Panel open={panel==="newjob"} onClose={()=>setPanel(null)}>
         <PanelHeader onClose={()=>setPanel(null)} title="Create new job"/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer</label><input type="text" className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Customer name"/></div>
-          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Time</label><input type="time" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Description</label><textarea rows={3} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Job details..."/></div>
-          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Assign to</label><select className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Unassigned</option></select></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Revenue estimate</label><input type="text" className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="$0"/></div></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer</label><input type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Customer name"/></div>
+          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Time</label><input type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Description</label><textarea rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Job details..."/></div>
+          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Assign to</label><select value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Unassigned</option><option>Tech 1</option><option>Tech 2</option></select></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Revenue estimate</label><input type="text" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="$0"/></div></div>
         </div>
-        <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>setPanel(null)} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Create job</button></div>
+        <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveJob} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Create job</button></div>
       </Panel>
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Jobs</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">$0 total scheduled revenue</p></div>
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Jobs</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{"$"+totalRev.toLocaleString()+" total scheduled revenue"}</p></div>
         <div className="flex items-center gap-3 md:gap-4">
           <div className="flex bg-neutral-200 p-1">{[["board","Board"],["list","List"]].map(([k,l])=><button key={k} onClick={()=>setView(k)} className={"px-4 md:px-5 py-2 text-sm transition-all duration-200 "+(view===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div>
           <button onClick={()=>setPanel("newjob")} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">New job</span><span className="md:hidden">New</span></button>
@@ -2772,13 +2783,15 @@ const JobsEmpty=()=>{
       </div>
       {view==="board"&&<div className="grid grid-cols-1 md:grid-cols-3 gap-5">{["Confirmed","Quote","Completed"].map(name=>(
         <div key={name}>
-          <div className="flex items-center justify-between mb-4"><div className="flex items-center gap-2.5"><span className="text-sm text-neutral-900">{name}</span><span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center">0</span></div></div>
-          <div className="border border-dashed border-neutral-200 py-12 flex flex-col items-center"><span className="w-5 h-5 text-neutral-200 mb-2">{I.wrench}</span><p className="text-xs text-neutral-300">No jobs</p></div>
+          <div className="flex items-center justify-between mb-4"><div className="flex items-center gap-2.5"><span className="text-sm text-neutral-900">{name}</span><span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center">{cols[name]?.length||0}</span></div></div>
+          {cols[name]?.length?<div className="space-y-3">{cols[name].map(j=><div key={j.id} className="bg-white border border-neutral-100 p-4"><p className="text-sm text-neutral-900 mb-1">{j.cust}</p><p className="text-xs text-neutral-400 mb-2">{j.issue}</p><div className="flex items-center justify-between"><span className="text-xs text-neutral-400">{j.day} {j.time}</span><span className="text-xs text-neutral-900">${j.rev.toLocaleString()}</span></div></div>)}</div>
+          :<div className="border border-dashed border-neutral-200 py-12 flex flex-col items-center"><span className="w-5 h-5 text-neutral-200 mb-2">{I.wrench}</span><p className="text-xs text-neutral-300">No jobs</p></div>}
         </div>
       ))}</div>}
       {view==="list"&&<div className="bg-white border border-neutral-100">
-        <div className="px-7 py-3.5 border-b border-neutral-100 grid grid-cols-7 gap-4">{["Customer","Issue","Schedule","Tech","Revenue","Progress","Status"].map(h=><span key={h} className="text-xs text-neutral-400 uppercase tracking-widest">{h}</span>)}</div>
-        <div className="flex flex-col items-center py-16"><div className="w-12 h-12 bg-neutral-50 flex items-center justify-center mb-3"><span className="w-5 h-5 text-neutral-200">{I.wrench}</span></div><p className="text-sm text-neutral-900 mb-1">No jobs scheduled</p><p className="text-xs text-neutral-400">Create your first job to get started.</p></div>
+        <div className="hidden md:grid px-7 py-3.5 border-b border-neutral-100 grid-cols-7 gap-4">{["Customer","Issue","Schedule","Tech","Revenue","Progress","Status"].map(h=><span key={h} className="text-xs text-neutral-400 uppercase tracking-widest">{h}</span>)}</div>
+        {jobs.length?<div>{jobs.map(j=><div key={j.id} className="px-7 py-4 border-b border-neutral-100 grid grid-cols-7 gap-4 items-center"><span className="text-sm text-neutral-900">{j.cust}</span><span className="text-xs text-neutral-400">{j.issue}</span><span className="text-xs text-neutral-400">{j.day}</span><span className="text-xs text-neutral-400">{j.tech}</span><span className="text-sm text-neutral-900">${j.rev.toLocaleString()}</span><span className="text-xs text-neutral-400">{j.pct}%</span><span className="text-xs bg-neutral-100 px-2 py-1 inline-block w-fit">{j.st}</span></div>)}</div>
+        :<div className="flex flex-col items-center py-16"><div className="w-12 h-12 bg-neutral-50 flex items-center justify-center mb-3"><span className="w-5 h-5 text-neutral-200">{I.wrench}</span></div><p className="text-sm text-neutral-900 mb-1">No jobs scheduled</p><p className="text-xs text-neutral-400">Create your first job to get started.</p></div>}
       </div>}
     </div>
   );
@@ -2807,7 +2820,11 @@ const LeadsEmpty=()=>{
 
 const QuotesEmpty=()=>{
   const[adding,setAdding]=useState(false);
+  const[items,setItems]=useState([]);
   const[draft,setDraft]=useState({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});
+  const saveItem=()=>{if(!draft.name)return;setItems(p=>[...p,{id:Date.now(),...draft}]);setDraft({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});setAdding(false);};
+  const cats=[...new Set(items.map(i=>i.cat))];
+  const avgRate=items.length?Math.round(items.reduce((a,i)=>a+i.rate,0)/items.length):0;
   return(
   <div className="fu">
     <Panel open={adding} onClose={()=>setAdding(false)}>
@@ -2818,7 +2835,7 @@ const QuotesEmpty=()=>{
         <div><label className="text-xs text-neutral-400 mb-1.5 block">Category</label><div className="grid grid-cols-5 gap-2">{["Service","Labor","Parts","Maintenance","Install"].map(c=><button key={c} onClick={()=>setDraft({...draft,cat:c})} className={"text-xs py-2.5 border transition-colors "+(draft.cat===c?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{c}</button>)}</div></div>
         <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Rate</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span><input value={draft.rate} onChange={e=>setDraft({...draft,rate:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums"/></div></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Unit</label><select value={draft.unit} onChange={e=>setDraft({...draft,unit:e.target.value})} className="w-full border border-neutral-200 px-3 py-3 text-sm bg-white"><option value="each">each</option><option value="hour">hour</option><option value="lb">lb</option><option value="ft">linear ft</option></select></div></div>
       </div>
-      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>setAdding(false)} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add item</button></div>
+      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveItem} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add item</button></div>
     </Panel>
     <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3">
       <div>
@@ -2828,7 +2845,7 @@ const QuotesEmpty=()=>{
       <button onClick={()=>setAdding(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span>Add item</span></button>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-      {[["Total items","0"],["Categories","0"],["Avg. rate","$0"],["Top seller","—"]].map(([l,v])=>(
+      {[["Total items",items.length],["Categories",cats.length],["Avg. rate","$"+avgRate],["Top seller",items.length?items[0].name:"—"]].map(([l,v])=>(
         <div key={l} className="bg-white border border-neutral-100 p-5">
           <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">{l}</p>
           <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{v}</p>
@@ -2837,21 +2854,26 @@ const QuotesEmpty=()=>{
     </div>
     <div className="bg-white border border-neutral-100">
       <div className="hidden md:grid px-7 py-3.5 border-b border-neutral-100 grid-cols-6 gap-4">{["Name","Category","Unit","Rate","Uses","Updated"].map(h=><span key={h} className="text-xs text-neutral-400 uppercase tracking-widest">{h}</span>)}</div>
-      <div className="flex flex-col items-center py-12 md:py-16 px-4">
+      {items.length?<div>{items.map(it=><div key={it.id} className="px-7 py-4 border-b border-neutral-100 last:border-0 grid grid-cols-6 gap-4 items-center"><span className="text-sm text-neutral-900">{it.name}</span><span className="text-xs bg-neutral-100 text-neutral-600 px-2.5 py-1 w-fit">{it.cat}</span><span className="text-xs text-neutral-400">/{it.unit}</span><span className="text-sm text-neutral-900 tabular-nums">${it.rate}</span><span className="text-xs text-neutral-400">0</span><span className="text-xs text-neutral-400">Just now</span></div>)}</div>
+      :<div className="flex flex-col items-center py-12 md:py-16 px-4">
         <div className="w-12 h-12 bg-neutral-50 flex items-center justify-center mb-3"><span className="w-5 h-5 text-neutral-200">{I.dollar}</span></div>
         <p className="text-sm text-neutral-900 mb-1">Your pricebook is empty</p>
         <p className="text-xs text-neutral-400 text-center max-w-sm">Add your services, labor rates, parts, and fees. Diali will use these to build instant quotes for every qualified lead.</p>
-      </div>
+      </div>}
     </div>
   </div>);
 };
 
 const DEMO_EMAIL="demo@diali.com";
+const VALID_PAGES=new Set(["home","calls","calendar","jobs","quotes","leads","agent","settings"]);
+const hashPage=()=>{const h=window.location.hash.replace("#","");return VALID_PAGES.has(h)?h:"home";};
 const App=()=>{
   const[auth,setAuth]=useState("loading");
   const[isNew,setIsNew]=useState(false);
   const[isDemo,setIsDemo]=useState(false);
-  const[pg,go]=useState("home");
+  const[pg,setPg]=useState(hashPage);
+  const go=p=>{setPg(p);window.location.hash=p==="home"?"":p;};
+  React.useEffect(()=>{const h=()=>setPg(hashPage());window.addEventListener("hashchange",h);return()=>window.removeEventListener("hashchange",h);},[]);
   const[vapiKeys,setVapiKeys]=useState({publicKey:"",privateKey:""});
   const[userId,setUserId]=useState(null);
   const[agentCfg,setAgentCfg]=useState(null);
