@@ -50,6 +50,7 @@ window.dispatchEvent(new Event('supabase-ready'));
 <script type="text/babel">
 const{useState}=React;
 const portal=ch=>ReactDOM.createPortal(ch,document.body);
+const BACKEND_URL='https://dialiai-production.up.railway.app';
 
 /* Diali logo — diamond variant */
 const Logo=({s=20,light})=>{
@@ -1168,7 +1169,7 @@ const Quotes=()=>{
 /* ══════════════════ AGENT ══════════════════ */
 const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   const defaultPrompt="You are the AI receptionist for a home services company. You sound natural, warm, and confident — like someone who has worked the front desk for years. Short sentences. No jargon unless the caller uses it first.\n\n## YOUR JOB ON EVERY CALL\n\n### 1. Greet and identify\n- Answer warmly. Once you have their name, use it naturally.\n- Ask if they are an existing customer.\n\n### 2. Diagnose the issue — go deep\nYour goal is to gather enough detail so the technician shows up prepared with the right parts and tools. Do NOT settle for vague answers. Ask follow-ups:\n- What specific equipment is affected? (AC unit, furnace, water heater, thermostat, ductwork, etc.)\n- What exactly is happening? (Not cooling, making noise, leaking, won't turn on, blowing warm air, short cycling, etc.)\n- When did it start? Is it constant or intermittent?\n- Any unusual sounds, smells, or error codes on the unit?\n- How old is the equipment if they know?\n- Have they tried anything already? (Reset breaker, changed filter, adjusted thermostat)\n- Is this affecting the whole house or just certain rooms?\nIf they say \"I don't know\" to something, that's fine — move on. But always try. A tech who shows up informed saves everyone time.\n\n### 3. Assess urgency\n- Ask: \"Is this something that needs attention today, or could we look at it in the next day or two?\"\n- EMERGENCY triggers (prioritize same-day): no heat in winter, no AC in extreme heat, gas smell, carbon monoxide alarm, water actively flooding, sparking or burning smell.\n- For emergencies say: \"That sounds urgent — let me get someone out to you as soon as possible today.\"\n\n### 4. Collect their information\n- Full name\n- Phone number (confirm by repeating it back)\n- Service address\n- If existing customer, ask if their address is still the same on file\n\n### 5. SCHEDULE THE APPOINTMENT — this is critical\nDo NOT say \"someone will call you back\" or \"we'll reach out to schedule.\" YOU book it on this call. That's the whole point.\n- Offer 2-3 specific time windows: \"I have availability tomorrow morning between 8 and 10, or tomorrow afternoon between 1 and 3. What works better for you?\"\n- If they need same-day, say: \"Let me get you on the schedule for today. Our next available window is [time]. Does that work?\"\n- If they ask about a specific day, accommodate: \"We can do Thursday. Would morning or afternoon work better?\"\n- Always confirm the exact date and time window they chose.\n- Let them know a tech will be assigned and they'll get a confirmation.\n\n### 6. Confirm and close\nBefore ending, repeat back ALL details:\n- Their name\n- The issue (brief summary)\n- Appointment date and time window\n- Service address\n- Say: \"You're all set. If anything changes before then, just give us a call back. Have a great day!\"\n\n## PRICING — this is critical\nYou do NOT give firm quotes on the phone. Ever. Firm quotes only happen after our tech sees the equipment on-site.\n\nWhen a caller asks about price:\n1. Start with empathy and honesty: \"Great question — I want to give you a real answer.\"\n2. Make it clear you can't quote firm: \"Our tech needs to come take a look to give you an exact number, because every job is a little different.\"\n3. Give a BALLPARK RANGE based on what they've described, pulled from the pricebook's range fields. For example:\n   - \"For something like what you're describing, most jobs fall in the $X to $Y range.\"\n   - \"A diagnostic visit starts at $95, and from there we'll give you a firm quote before doing any work.\"\n4. ALWAYS anchor back to the diagnostic visit: \"The good news is the diagnostic is a flat $95 — after that our tech will give you an exact price in writing before doing any work, and you decide from there.\"\n5. Never commit the business to a firm number. If pushed, say: \"I really can't give you a firm price without the tech seeing it — I'd be guessing and I don't want to set the wrong expectation. But I can get someone out to you [time], and you'll have a real quote in hand after that.\"\n\nYou do NOT need to itemize a quote on the call. The business gets a draft quote automatically after the call ends, and they'll send it to the customer themselves once they've reviewed it.\n\n## RULES\n- Never give firm pricing or commit to a final number — only ballpark ranges.\n- Never reveal you are AI unless directly asked — then be honest.\n- If the caller is frustrated, acknowledge it: \"I hear you, that sounds really frustrating. Let's get this taken care of.\"\n- If you cannot help or the caller asks for a manager, say: \"Let me connect you with our team\" and flag for escalation.\n- Stay concise. Don't over-explain. Let them talk.";
-  const[sec,setSec]=useState(vapiKeys.publicKey?"voice":"setup");
+  const[sec,setSec]=useState("voice");
   const[voiceId,setVoiceId]=useState(agentCfg?.voice_id||"O7LV5fxosQChiBE7l6Wz");
   const[voiceName,setVoiceName]=useState(agentCfg?.voice_name||"Kim");
   const[greeting,setGreeting]=useState(agentCfg?.greeting||"Hi, thanks for calling! How can we help you today?");
@@ -1297,38 +1298,31 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   const endCall=()=>{try{vapiRef.current?.stop();}catch(e){}setCallState('ended');};
   const toggleMute=()=>{try{vapiRef.current?.setMuted(!muted);}catch(e){}setMuted(!muted);};
 
-  /* Save assistant to Vapi API */
+  /* Save assistant via backend (platform Vapi key — clients never touch it) */
   const saveAssistant=async()=>{
-    if(!vapiKeys.privateKey)return;
     setSaving(true);
     try{
-      const url=assistantId?'https://api.vapi.ai/assistant/'+assistantId:'https://api.vapi.ai/assistant';
-      const res=await fetch(url,{method:assistantId?'PATCH':'POST',headers:{'Authorization':'Bearer '+vapiKeys.privateKey,'Content-Type':'application/json'},body:JSON.stringify(buildAssistantConfig())});
+      const sb=window.supabase;if(!sb)return;
+      const{data:{session}}=await sb.auth.getSession();
+      if(!session)return;
+      const res=await fetch(BACKEND_URL+'/api/assistants/deploy',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({assistantConfig:buildAssistantConfig()})});
       const data=await res.json();
-      if(data.id){setAssistantId(data.id);setSaved(true);setTimeout(()=>setSaved(false),3000);}
+      if(data.assistantId){setAssistantId(data.assistantId);setSaved(true);setTimeout(()=>setSaved(false),3000);
+        /* Also persist agent settings to Supabase for local state */
+        saveSetting({voice_id:voiceId,voice_name:voiceName,greeting,system_prompt:sysPrompt,questions:qs,vapi_assistant_id:data.assistantId});
+      }else{console.error('Deploy failed:',data);}
     }catch(e){console.error(e);}
     setSaving(false);
   };
 
-  /* Fetch existing assistant */
-  const fetchAssistant=async()=>{
-    if(!vapiKeys.privateKey)return;
-    try{
-      const res=await fetch('https://api.vapi.ai/assistant',{headers:{'Authorization':'Bearer '+vapiKeys.privateKey}});
-      const list=await res.json();
-      if(Array.isArray(list)&&list.length>0){
-        const a=list.find(x=>x.name==='Diali Receptionist')||list[0];
-        setAssistantId(a.id);
-        if(a.firstMessage)setGreeting(a.firstMessage);
-        if(a.voice?.voiceId)setVoiceId(a.voice.voiceId);
-        if(a.model?.messages?.[0]?.content)setSysPrompt(a.model.messages[0].content);
-      }
-    }catch(e){console.error(e);}
+  /* Load existing assistant ID from Supabase settings (already loaded via agentCfg) */
+  const fetchAssistant=()=>{
+    if(agentCfg?.vapi_assistant_id)setAssistantId(agentCfg.vapi_assistant_id);
   };
 
   const addQ=()=>{if(newQ.trim()){setQs(p=>[...p,newQ.trim()]);setNewQ("");}};
   const rmQ=i=>setQs(p=>p.filter((_,idx)=>idx!==i));
-  const hasKeys=vapiKeys.publicKey&&vapiKeys.privateKey;
+  const hasKeys=true; /* Deploy always available via backend; public key only needed for test calls */
 
   return(
     <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full fu">
@@ -1432,19 +1426,14 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
             </div>
 
             <div>
-              <label className="text-xs text-neutral-400 mb-1.5 block">Public key</label>
+              <label className="text-xs text-neutral-400 mb-1.5 block">Vapi public key <span className="text-neutral-300">(optional — for browser test calls)</span></label>
               <input value={vapiKeys.publicKey} onChange={e=>setVapiKeys(p=>({...p,publicKey:e.target.value}))} type="text" placeholder="pk_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" className="w-full border border-neutral-200 px-4 py-3 text-sm font-mono"/>
-              <p className="text-xs text-neutral-300 mt-1.5">Used for browser-based test calls</p>
-            </div>
-            <div>
-              <label className="text-xs text-neutral-400 mb-1.5 block">Private key</label>
-              <input value={vapiKeys.privateKey} onChange={e=>setVapiKeys(p=>({...p,privateKey:e.target.value}))} type="password" placeholder="sk_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" className="w-full border border-neutral-200 px-4 py-3 text-sm font-mono"/>
-              <p className="text-xs text-neutral-300 mt-1.5">Used to create and manage your assistant via API</p>
+              <p className="text-xs text-neutral-300 mt-1.5">Only needed if you want to test calls in the browser. Your AI agent deploys without it.</p>
             </div>
 
-            {hasKeys&&<div className="flex gap-3">
-              <button onClick={()=>{fetchAssistant();setSec("voice");}} className="bg-neutral-900 text-white px-6 py-3 text-sm hover:bg-black transition-colors flex items-center gap-2"><span className="w-4 h-4">{I.check}</span>Connected — continue setup</button>
-            </div>}
+            <div className="flex gap-3">
+              <button onClick={()=>{fetchAssistant();setSec("voice");}} className="bg-neutral-900 text-white px-6 py-3 text-sm hover:bg-black transition-colors flex items-center gap-2"><span className="w-4 h-4">{I.check}</span>Continue setup</button>
+            </div>
             {!hasKeys&&<div className="bg-neutral-900 p-6">
               <p className="text-sm text-white mb-2">Don't have a Vapi account?</p>
               <p className="text-xs text-neutral-400 leading-relaxed mb-4">Sign up free at vapi.ai — you get $10 in credits to test. No credit card required.</p>
@@ -1632,12 +1621,12 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
           {/* Vapi — primary */}
           <div className="border-2 border-neutral-900 p-6 mb-6">
             <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-4"><div className="w-12 h-12 bg-neutral-900 flex items-center justify-center"><img src="data:image/png;base64,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" width="32" height="32" style={{objectFit:"contain"}}/></div><div><p className="text-sm text-neutral-900">Vapi — Voice AI</p><div className="flex items-center gap-1.5 mt-1"><div className={"w-1.5 h-1.5 "+(vapiKeys.publicKey&&vapiKeys.privateKey?"bg-neutral-900":"bg-neutral-300")}/><p className="text-xs text-neutral-400">{vapiKeys.publicKey&&vapiKeys.privateKey?"Connected":"Not connected"}</p></div></div></div>
-              <span className={"text-xs px-3 py-1 "+(vapiKeys.publicKey&&vapiKeys.privateKey?"bg-neutral-900 text-white":"bg-neutral-200 text-neutral-500")}>Required</span>
+              <div className="flex items-center gap-4"><div className="w-12 h-12 bg-neutral-900 flex items-center justify-center"><img src="data:image/png;base64,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" width="32" height="32" style={{objectFit:"contain"}}/></div><div><p className="text-sm text-neutral-900">Vapi — Voice AI</p><div className="flex items-center gap-1.5 mt-1"><div className={"w-1.5 h-1.5 "+("bg-neutral-900")}/><p className="text-xs text-neutral-400">Platform managed</p></div></div></div>
+              <span className="text-xs px-3 py-1 bg-neutral-900 text-white">Platform managed</span>
             </div>
             <div className="space-y-3">
-              <div><label className="text-xs text-neutral-400 mb-1 block">Public key</label><input value={vapiKeys.publicKey} onChange={e=>setVapiKeys(p=>({...p,publicKey:e.target.value}))} type="text" placeholder="pk_..." className="w-full border border-neutral-200 px-3 py-2.5 text-sm font-mono"/></div>
-              <div><label className="text-xs text-neutral-400 mb-1 block">Private key</label><input value={vapiKeys.privateKey} onChange={e=>setVapiKeys(p=>({...p,privateKey:e.target.value}))} type="password" placeholder="sk_..." className="w-full border border-neutral-200 px-3 py-2.5 text-sm font-mono"/></div>
+              <div><label className="text-xs text-neutral-400 mb-1 block">Public key <span className="text-neutral-300">(optional — for browser test calls)</span></label><input value={vapiKeys.publicKey} onChange={e=>setVapiKeys(p=>({...p,publicKey:e.target.value}))} type="text" placeholder="pk_..." className="w-full border border-neutral-200 px-3 py-2.5 text-sm font-mono"/></div>
+              <p className="text-xs text-neutral-300">Your AI agent is deployed using Diali's platform key. No private key needed.</p>
             </div>
           </div>
           {/* Other integrations */}
@@ -2810,10 +2799,10 @@ const App=()=>{
   React.useEffect(()=>{
     if(!userId||!sbReady)return;
     const t=setTimeout(()=>{
-      saveSetting({vapi_public_key:vapiKeys.publicKey,vapi_private_key:vapiKeys.privateKey});
+      saveSetting({vapi_public_key:vapiKeys.publicKey});
     },1000);
     return()=>clearTimeout(t);
-  },[vapiKeys.publicKey,vapiKeys.privateKey]);
+  },[vapiKeys.publicKey]);
 
   /* Handle login */
   const handleLogin=async(email,password)=>{
