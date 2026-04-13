@@ -2259,12 +2259,12 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
           <button className="relative"><span className="w-5 h-5 text-neutral-400">{I.bell}</span><span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-neutral-900 border-2 border-white"/></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div style={{display:pg==="home"?"block":"none"}}>{true?<Home/>:<HomeEmpty/>}</div>
-          <div className="h-full" style={{display:pg==="calls"?"block":"none"}}>{true?<Calls/>:<CallsEmpty/>}</div>
-          <div className="h-full" style={{display:pg==="calendar"?"block":"none"}}>{true?<Calendar/>:<CalendarEmpty/>}</div>
-          <div style={{display:pg==="jobs"?"block":"none"}}>{true?<Jobs/>:<JobsEmpty/>}</div>
-          <div style={{display:pg==="quotes"?"block":"none"}}>{true?<Quotes/>:<QuotesEmpty/>}</div>
-          <div style={{display:pg==="leads"?"block":"none"}}>{true?<Leads profile={profile} setQuoteView={setQuoteView}/>:<LeadsEmpty/>}</div>
+          <div style={{display:pg==="home"?"block":"none"}}>{C.length>0?<Home/>:<HomeEmpty/>}</div>
+          <div className="h-full" style={{display:pg==="calls"?"block":"none"}}>{C.length>0?<Calls/>:<CallsEmpty/>}</div>
+          <div className="h-full" style={{display:pg==="calendar"?"block":"none"}}>{C.length>0?<Calendar/>:<CalendarEmpty/>}</div>
+          <div style={{display:pg==="jobs"?"block":"none"}}>{C.length>0?<Jobs/>:<JobsEmpty/>}</div>
+          <div style={{display:pg==="quotes"?"block":"none"}}>{C.length>0?<Quotes/>:<QuotesEmpty/>}</div>
+          <div style={{display:pg==="leads"?"block":"none"}}>{C.length>0?<Leads profile={profile} setQuoteView={setQuoteView}/>:<LeadsEmpty/>}</div>
           <div className="h-full" style={{display:pg==="agent"?"block":"none"}}><Agent vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} agentCfg={agentCfg}/></div>
           <div className="h-full" style={{display:pg==="settings"?"block":"none"}}><Settings vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={onLogout} profile={profile} onProfileSave={onProfileSave} isDemo={isDemo} curPlan={curPlan} setCurPlan={setCurPlan} curPlanData={curPlanData} requirePlan={requirePlan}/></div>
         </div>
@@ -2873,7 +2873,17 @@ window.addEventListener("load", () => {
       ]);
       const calls = cr.data||[], leads = lr.data||[];
       console.log("Diali loader: got " + calls.length + " calls, " + leads.length + " leads");
-      if (!calls.length && !leads.length) { console.log("Diali loader: no data, keeping demo data"); return; }
+      /* If user has no real data, clear demo data so they see empty states */
+      if (!calls.length && !leads.length) {
+        const isDemoUser = sess.data.session.user.email === "demo@diali.com";
+        if (isDemoUser) { console.log("Diali loader: demo user, keeping demo data"); return; }
+        console.log("Diali loader: real user with no data, clearing demo data");
+        C = [];
+        const root = document.getElementById("root");
+        ReactDOM.unmountComponentAtNode(root);
+        ReactDOM.render(React.createElement(App), root);
+        return;
+      }
       const newC = [];
       calls.forEach((call,i) => {
         const lead = leads.find(l=>l.id===call.lead_id)||{};
