@@ -1193,12 +1193,11 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
 
   const voices=[
     {id:"O7LV5fxosQChiBE7l6Wz",name:"Kim",desc:"Conversational, friendly, engaging",tag:"Default"},
-    {id:"EXAVITQu4vr4xnSDxMaL",name:"Sarah",desc:"Warm, professional",tag:"Popular"},
-    {id:"29vD33N1CtxCmqQRPOHJ",name:"Drew",desc:"Deep, confident",tag:""},
-    {id:"pFZP5JQG7iQjIQuC4Bku",name:"Lily",desc:"Friendly, energetic",tag:""},
-    {id:"TX3LPaxmHKxFdv7VOQHJ",name:"Liam",desc:"Calm, measured",tag:""},
-    {id:"XB0fDUnXU5powFXDhCwa",name:"Charlotte",desc:"Warm, British",tag:""},
-    {id:"onwK4e9ZLuTAKqWW03F9",name:"Daniel",desc:"Authoritative, deep",tag:""}
+    {id:"tMvyQtpCVQ0DkixuYm6J",name:"Asher",desc:"Warm, professional",tag:"Popular"},
+    {id:"Sr9Xhw1be5kyNtGEOV0y",name:"Brady",desc:"Deep, confident",tag:""},
+    {id:"TWutjvRaJqAX89preB4e",name:"Evan",desc:"Calm, measured",tag:""},
+    {id:"LoQnubeEKhw9RDkfeS80",name:"Larry",desc:"Authoritative, steady",tag:""},
+    {id:"hGQkZQUA5RiOXIw7P9iO",name:"Kiora",desc:"Friendly, energetic",tag:""}
   ];
 
   /* Listen for SDK load */
@@ -2363,11 +2362,11 @@ const Onboarding=({onDone})=>{
   const[phone,setPhone]=useState("");
   const[teamSize,setTeamSize]=useState("");
   const[services,setServices]=useState([]);
-  const[voicePick,setVoicePick]=useState("Sarah");
+  const[voicePick,setVoicePick]=useState("Kim");
   const[hours,setHours]=useState({start:"08:00",end:"17:00",weekends:false});
   const[greeting,setGreeting]=useState("Hi, thanks for calling! How can we help you today?");
   const toggleSvc=s=>setServices(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
-  const voiceIdMap={"Kim":"O7LV5fxosQChiBE7l6Wz","Sarah":"EXAVITQu4vr4xnSDxMaL","Marcus":"29vD33N1CtxCmqQRPOHJ","Elena":"pFZP5JQG7iQjIQuC4Bku","James":"TX3LPaxmHKxFdv7VOQHJ"};
+  const voiceIdMap={"Kim":"O7LV5fxosQChiBE7l6Wz","Asher":"tMvyQtpCVQ0DkixuYm6J","Brady":"Sr9Xhw1be5kyNtGEOV0y","Evan":"TWutjvRaJqAX89preB4e","Larry":"LoQnubeEKhw9RDkfeS80","Kiora":"hGQkZQUA5RiOXIw7P9iO"};
   const total=6;
   const finish=()=>onDone({trade,area,phone,teamSize,services,voiceId:voiceIdMap[voicePick]||"O7LV5fxosQChiBE7l6Wz",voiceName:voicePick||"Kim",greeting});
   const next=()=>step<total-1?setStep(step+1):finish();
@@ -2462,7 +2461,7 @@ const Onboarding=({onDone})=>{
             <p className="text-4xl text-neutral-900 tracking-tight mb-3">How should your AI sound?</p>
             <p className="text-neutral-400 mb-12">Pick a voice and customize the greeting. Customers won't know it's AI.</p>
             <div className="space-y-2 mb-10">
-              {[["Sarah","Warm, professional","Popular"],["Marcus","Deep, authoritative",""],["Elena","Friendly, energetic",""],["James","Calm, measured",""]].map(([n,d,tag])=>(
+              {[["Kim","Conversational, friendly","Default"],["Asher","Warm, professional","Popular"],["Brady","Deep, confident",""],["Evan","Calm, measured",""],["Larry","Authoritative, steady",""],["Kiora","Friendly, energetic",""]].map(([n,d,tag])=>(
                 <div key={n} onClick={()=>setVoicePick(n)} className={"flex items-center gap-4 p-4 border-2 cursor-pointer transition-all duration-200 "+(voicePick===n?"border-neutral-900":"border-neutral-200 hover:border-neutral-300")}>
                   <div className={"w-10 h-10 flex items-center justify-center shrink-0 "+(voicePick===n?"bg-neutral-900":"bg-neutral-100")}><span className={"w-4 h-4 "+(voicePick===n?"text-white":"text-neutral-400")}>{I.mic}</span></div>
                   <div className="flex-1"><p className="text-sm text-neutral-900">{n}</p><p className="text-xs text-neutral-400 mt-0.5">{d}</p></div>
