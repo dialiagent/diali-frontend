@@ -98,7 +98,7 @@ lock:<svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24
 };
 
 /* ── Data ── */
-let C=[
+const DEMO_DATA=[
 {id:1,name:"Sarah Mitchell",ph:"(555) 234-5678",addr:"2841 Elm St, Denver CO 80205",time:"2:45 PM",dur:"4:32",issue:"AC unit not cooling — started yesterday morning",urg:"normal",status:"booked",booked:"Tomorrow, 2:00 PM",src:"Google",rev:450,conf:87,score:"hot",tr:[{r:"ai",t:"Hi Sarah, thanks for calling. I hear your AC isn't cooling?"},{r:"c",t:"Right, it just stopped working yesterday."},{r:"ai",t:"I can get a technician out tomorrow afternoon. Does 2 PM work?"},{r:"c",t:"Yeah, that works great."}],notes:"Customer very responsive. Easy close.",sms:[{f:"sys",t:"Appointment confirmed for tomorrow at 2:00 PM",at:"2:47 PM"},{f:"cust",t:"Thanks, see you then",at:"2:48 PM"}]},
 {id:2,name:"James Rodriguez",ph:"(555) 456-7890",addr:"1590 Vine St, Denver CO 80206",time:"1:20 PM",dur:"2:15",issue:"Furnace making strange grinding noises",urg:"urgent",status:"booked",booked:"Today, 5:00 PM",src:"Yelp",rev:350,conf:92,score:"hot",tr:[{r:"ai",t:"Hi James, I understand your furnace is making noise?"},{r:"c",t:"Yeah, like a grinding sound. I'm worried it's dangerous."},{r:"ai",t:"We can get someone out today at 5 PM."},{r:"c",t:"That would be perfect."}],notes:"Safety concern. High priority.",sms:[{f:"sys",t:"Technician dispatch confirmed for today 5:00 PM",at:"1:22 PM"}]},
 {id:3,name:"Elena Vasquez",ph:"(555) 678-9012",addr:"734 Pearl St, Boulder CO 80302",time:"12:15 PM",dur:"3:47",issue:"Seasonal maintenance — spring HVAC checkup",urg:"normal",status:"follow-up",booked:null,src:"Website",rev:250,conf:65,score:"warm",tr:[{r:"ai",t:"Hi Elena, how can I help today?"},{r:"c",t:"I'd like to schedule a spring maintenance check."}],notes:"Good upsell potential.",sms:[{f:"sys",t:"We'll send available times.",at:"12:17 PM"}]},
@@ -112,6 +112,7 @@ let C=[
 {id:11,name:"Jennifer Lee",ph:"(555) 456-7890",addr:"8900 Colorado Blvd, Thornton CO 80229",time:"2 days ago",dur:"7:22",issue:"Commercial building HVAC — 50 units",urg:"normal",status:"booked",booked:"Monday, 9:00 AM",src:"LinkedIn",rev:12000,conf:85,score:"hot",tr:[{r:"ai",t:"Large commercial projects are our specialty."},{r:"c",t:"We need a quote for 50 units."}],notes:"$12K. Strategic account.",sms:[{f:"sys",t:"Meeting scheduled",at:"2 days ago"}]},
 {id:12,name:"Chris Brown",ph:"(555) 678-9012",addr:"2310 Pine Ridge Rd, Denver CO 80210",time:"3 days ago",dur:"2:19",issue:"Warranty question — previous repair",urg:"normal",status:"follow-up",booked:null,src:"Repeat",rev:0,conf:88,score:"hot",tr:[{r:"ai",t:"How can I help?"},{r:"c",t:"Question about my warranty."}],notes:"Existing customer.",sms:[]}
 ];
+let C=[];
 
 /* ── Draft quote line items by lead ──
    Each line optionally includes AI match metadata:
@@ -2971,70 +2972,78 @@ const App=()=>{
 ReactDOM.render(<App/>,document.getElementById("root"));
 </script>
 <script>
-window.addEventListener("load", () => {
-  setTimeout(async () => {
-    try {
-      const sb = window.supabase;
-      if (!sb) { console.log("Diali loader: no supabase"); return; }
-      const sess = await sb.auth.getSession();
-      if (!sess.data.session) { console.log("Diali loader: no session"); return; }
-      console.log("Diali loader: fetching data for " + sess.data.session.user.email);
-      const [cr, lr] = await Promise.all([
-        sb.from("calls").select("*").order("started_at",{ascending:false}).limit(50),
-        sb.from("leads").select("*").order("created_at",{ascending:false}).limit(50),
-      ]);
-      const calls = cr.data||[], leads = lr.data||[];
-      console.log("Diali loader: got " + calls.length + " calls, " + leads.length + " leads");
-      /* If user has no real data, clear demo data so they see empty states */
-      if (!calls.length && !leads.length) {
-        const isDemoUser = sess.data.session.user.email === "demo@diali.com";
-        if (isDemoUser) { console.log("Diali loader: demo user, keeping demo data"); return; }
-        console.log("Diali loader: real user with no data, clearing demo data");
-        C = [];
-        const root = document.getElementById("root");
-        ReactDOM.unmountComponentAtNode(root);
-        ReactDOM.render(React.createElement(App), root);
-        return;
-      }
-      const newC = [];
-      calls.forEach((call,i) => {
-        const lead = leads.find(l=>l.id===call.lead_id)||{};
-        const ds = call.duration_sec||0;
-        let tr = [];
-        if (Array.isArray(call.transcript)) tr = call.transcript.map(m=>({r:m.role==="assistant"?"ai":"caller",t:m.message||m.content||""}));
-        newC.push({
-          id:i+1, name:lead.customer_name||"Unknown Caller",
-          ph:lead.customer_phone||call.from_number||"Unknown",
-          addr:lead.customer_address||"",
-          time:call.started_at?new Date(call.started_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"",
-          dur:Math.floor(ds/60)+":"+String(ds%60).padStart(2,"0"),
-          issue:lead.issue||call.summary||"No description",
-          urg:lead.urgency||"normal", status:lead.status||"new",
-          booked:"", src:lead.source||"Phone", rev:0, conf:75,
-          score:lead.status==="won"?"hot":"warm", tr:tr, notes:lead.notes||"", sms:[]
-        });
-      });
-      const usedIds = calls.map(c=>c.lead_id).filter(Boolean);
-      leads.filter(l=>!usedIds.includes(l.id)).forEach(lead=>{
-        newC.push({
-          id:newC.length+1, name:lead.customer_name||"Unknown",
-          ph:lead.customer_phone||"", addr:lead.customer_address||"",
-          time:lead.created_at?new Date(lead.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"",
-          dur:"0:00", issue:lead.issue||"No description",
-          urg:lead.urgency||"normal", status:lead.status||"new",
-          booked:"", src:lead.source||"Phone", rev:0, conf:70,
-          score:"warm", tr:[], notes:lead.notes||"", sms:[]
-        });
-      });
-      console.log("Diali loader: replacing C with " + newC.length + " real entries");
-      C = newC;
+/* ── Data loader: waits for Supabase session then populates C ── */
+(async function dialiLoader(){
+  /* Wait for Supabase SDK (may still be loading via ESM import) */
+  const waitForSb = () => new Promise(resolve => {
+    if (window.supabase) return resolve(window.supabase);
+    const h = () => resolve(window.supabase);
+    window.addEventListener('supabase-ready', h, {once:true});
+  });
+  try {
+    const sb = await waitForSb();
+    const sess = await sb.auth.getSession();
+    if (!sess.data.session) { console.log("Diali loader: no session"); return; }
+    const email = sess.data.session.user.email;
+    console.log("Diali loader: fetching data for " + email);
+
+    /* Demo user gets sample data */
+    if (email === "demo@diali.com") {
+      console.log("Diali loader: demo user, loading demo data");
+      C = DEMO_DATA.slice();
       const root = document.getElementById("root");
       ReactDOM.unmountComponentAtNode(root);
       ReactDOM.render(React.createElement(App), root);
-      console.log("Diali loader: re-render complete with real data");
-    } catch(e) { console.error("Diali loader:", e); }
-  }, 3000);
-});
+      return;
+    }
+
+    const [cr, lr] = await Promise.all([
+      sb.from("calls").select("*").order("started_at",{ascending:false}).limit(50),
+      sb.from("leads").select("*").order("created_at",{ascending:false}).limit(50),
+    ]);
+    const calls = cr.data||[], leads = lr.data||[];
+    console.log("Diali loader: got " + calls.length + " calls, " + leads.length + " leads");
+
+    /* No data — C is already empty, nothing to do */
+    if (!calls.length && !leads.length) { console.log("Diali loader: no data yet"); return; }
+
+    const newC = [];
+    calls.forEach((call,i) => {
+      const lead = leads.find(l=>l.id===call.lead_id)||{};
+      const ds = call.duration_sec||0;
+      let tr = [];
+      if (Array.isArray(call.transcript)) tr = call.transcript.map(m=>({r:m.role==="assistant"?"ai":"caller",t:m.message||m.content||""}));
+      newC.push({
+        id:i+1, name:lead.customer_name||"Unknown Caller",
+        ph:lead.customer_phone||call.from_number||"Unknown",
+        addr:lead.customer_address||"",
+        time:call.started_at?new Date(call.started_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"",
+        dur:Math.floor(ds/60)+":"+String(ds%60).padStart(2,"0"),
+        issue:lead.issue||call.summary||"No description",
+        urg:lead.urgency||"normal", status:lead.status||"new",
+        booked:"", src:lead.source||"Phone", rev:0, conf:75,
+        score:lead.status==="won"?"hot":"warm", tr:tr, notes:lead.notes||"", sms:[]
+      });
+    });
+    const usedIds = calls.map(c=>c.lead_id).filter(Boolean);
+    leads.filter(l=>!usedIds.includes(l.id)).forEach(lead=>{
+      newC.push({
+        id:newC.length+1, name:lead.customer_name||"Unknown",
+        ph:lead.customer_phone||"", addr:lead.customer_address||"",
+        time:lead.created_at?new Date(lead.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"",
+        dur:"0:00", issue:lead.issue||"No description",
+        urg:lead.urgency||"normal", status:lead.status||"new",
+        booked:"", src:lead.source||"Phone", rev:0, conf:70,
+        score:"warm", tr:[], notes:lead.notes||"", sms:[]
+      });
+    });
+    console.log("Diali loader: loaded " + newC.length + " real entries");
+    C = newC;
+    const root = document.getElementById("root");
+    ReactDOM.unmountComponentAtNode(root);
+    ReactDOM.render(React.createElement(App), root);
+  } catch(e) { console.error("Diali loader:", e); }
+})();
 </script>
 </body>
 </html>
