@@ -231,6 +231,73 @@ const PanelHeader=({onClose,title,sub,right})=><div className="px-7 pt-6 pb-5 bo
 
 const SL=({children})=><p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">{children}</p>;
 
+/* ── Improved UI components for better info digestion & data entry ── */
+
+/* Form field wrapper — better labels, spacing, optional required indicator */
+const FF=({label,required,hint,children,className=""})=>(
+  <div className={className}>
+    <label className="text-sm text-neutral-600 mb-2 block flex items-center gap-1.5">
+      {label}{required&&<span className="text-neutral-300">*</span>}
+    </label>
+    {children}
+    {hint&&<p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">{hint}</p>}
+  </div>
+);
+
+/* Info field — for displaying labeled data in detail panels */
+const IF=({label,value,icon,large})=>(
+  <div className={large?"":"py-2"}>
+    <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">{label}</p>
+    <div className="flex items-center gap-2">
+      {icon&&<span className="w-4 h-4 text-neutral-300 shrink-0">{icon}</span>}
+      <p className={"text-neutral-900 "+(large?"text-2xl tracking-tight":"text-sm")}>{value||"—"}</p>
+    </div>
+  </div>
+);
+
+/* Section title — replaces SL in panels for better visual weight */
+const ST=({icon,title,count,right,className=""})=>(
+  <div className={"flex items-center justify-between mb-3 "+className}>
+    <div className="flex items-center gap-2">
+      {icon&&<span className="w-4 h-4 text-neutral-400">{icon}</span>}
+      <p className="text-sm text-neutral-600 uppercase tracking-widest">{title}</p>
+      {count!=null&&<span className="text-xs text-neutral-300 ml-1">({count})</span>}
+    </div>
+    {right}
+  </div>
+);
+
+/* Info grid — structured 2-col or 3-col data display */
+const IG=({items,cols=2})=>(
+  <div className={"grid gap-px bg-neutral-100 border border-neutral-100 grid-cols-"+cols}>
+    {items.map(([l,v],i)=>(
+      <div key={i} className="bg-white px-4 py-3">
+        <p className="text-xs text-neutral-400 mb-0.5">{l}</p>
+        <p className="text-sm text-neutral-900 capitalize">{v||"—"}</p>
+      </div>
+    ))}
+  </div>
+);
+
+/* Toast notification — appears after save actions */
+const Toast=({message,visible})=>visible?portal(
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-6 py-3 text-sm flex items-center gap-2.5 shadow-lg fi" style={{zIndex:99999}}>
+    <span className="w-4 h-4">{I.check}</span>{message}
+  </div>
+):null;
+
+/* Styled text input — consistent height and hover/focus states */
+const TI=({...props})=><input {...props} className={"w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 focus:border-neutral-900 transition-colors "+(props.className||"")}/>;
+
+/* Styled textarea — consistent styling */
+const TA=({...props})=><textarea {...props} className={"w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 focus:border-neutral-900 transition-colors leading-relaxed "+(props.className||"")}/>;
+
+/* Styled select */
+const SE=({...props})=><select {...props} className={"w-full border border-neutral-200 px-4 py-3 text-sm bg-white hover:border-neutral-300 focus:border-neutral-900 transition-colors "+(props.className||"")}/>;
+
+/* Form section divider with optional label */
+const FD=({label})=>label?<div className="flex items-center gap-3 pt-2"><div className="h-px bg-neutral-100 flex-1"/><span className="text-xs text-neutral-300 uppercase tracking-widest shrink-0">{label}</span><div className="h-px bg-neutral-100 flex-1"/></div>:<div className="h-px bg-neutral-100"/>;
+
 const HomeCallDetail=({c,actions,onClose,checkedActions,toggleAction})=>{
   const[showTr,setShowTr]=useState(false);
   const[showRec,setShowRec]=useState(false);
@@ -240,11 +307,9 @@ const HomeCallDetail=({c,actions,onClose,checkedActions,toggleAction})=>{
       <p className="text-sm text-neutral-700 leading-relaxed">{c.issue}</p>
       {c.addr&&<div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{c.addr}</p></div>}
       {c.booked&&<div className="bg-neutral-900 px-5 py-4 flex items-center gap-4"><div className="w-10 h-10 bg-white/10 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-white">{I.cal}</span></div><div className="flex-1"><p className="text-white">{c.booked}</p><p className="text-xs text-neutral-500 mt-0.5">Scheduled</p></div></div>}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-        {[["Revenue",c.rev?"$"+c.rev.toLocaleString():"—"],["Source",c.src],["Duration",c.dur],["Confidence",c.conf+"%"]].map(([l,v])=>(<div key={l} className="flex items-center justify-between py-2 border-b border-neutral-100"><span className="text-xs text-neutral-400">{l}</span><span className="text-sm text-neutral-900">{v}</span></div>))}
-      </div>
-      {actions[c.id]&&<div><SL>Action items</SL>{actions[c.id].map((a,i)=><CK key={c.id+"-"+i} text={a} done={!!checkedActions[c.id+"_"+i]} onChange={v=>toggleAction(c.id,i,v)}/>)}</div>}
-      {c.notes&&c.notes!=="—"&&<div><SL>Notes</SL><p className="text-sm text-neutral-600 leading-relaxed">{c.notes}</p></div>}
+      <IG items={[["Revenue",c.rev?"$"+c.rev.toLocaleString():"—"],["Source",c.src],["Duration",c.dur],["Confidence",c.conf+"%"]]} cols={2}/>
+      {actions[c.id]&&<div><ST icon={I.check} title="Action items"/>{actions[c.id].map((a,i)=><CK key={c.id+"-"+i} text={a} done={!!checkedActions[c.id+"_"+i]} onChange={v=>toggleAction(c.id,i,v)}/>)}</div>}
+      {c.notes&&c.notes!=="—"&&<div><ST icon={I.msg} title="Notes"/><p className="text-sm text-neutral-600 leading-relaxed">{c.notes}</p></div>}
       <Sec open={showRec} onToggle={()=>setShowRec(!showRec)} title="Call recording"><div className="p-5"><div className="flex items-center gap-4"><button className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-4 h-4 ml-0.5">{I.play}</span></button><Wave pct={45}/><span className="text-xs text-neutral-400 tabular-nums shrink-0">{c.dur}</span></div></div></Sec>
       <Sec open={showTr} onToggle={()=>setShowTr(!showTr)} title="Transcript" count={c.tr?.length||0}><div className="p-5 space-y-2">{c.tr?.map((m,i)=>(<div key={i} className={"flex gap-2.5 "+(m.r==="ai"?"":"justify-end")}>{m.r==="ai"&&<div className="w-6 h-6 bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5"><span className="w-3 h-3 text-neutral-400">{I.bot}</span></div>}<div className={"max-w-[80%] px-3.5 py-2.5 text-sm leading-relaxed "+(m.r==="ai"?"bg-neutral-100 text-neutral-700":"bg-neutral-900 text-white")}>{m.t}</div></div>))}</div></Sec>
     </div>
@@ -286,8 +351,8 @@ const Home=()=>{
           <PanelHeader onClose={()=>setSelAppt(null)} title={selAppt.name} sub={selAppt.ph}/>
           <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
             <div className="bg-neutral-900 px-5 py-5"><p className="text-xs text-neutral-500 uppercase tracking-widest mb-2">Appointment</p><p className="text-2xl text-white tracking-tight">{selAppt.booked}</p></div>
-            <div className="grid grid-cols-3 gap-3">{[["Revenue",selAppt.rev?"$"+selAppt.rev.toLocaleString():"—"],["Source",selAppt.src],["Confidence",selAppt.conf+"%"]].map(([l,v])=>(<div key={l} className="text-center py-3 bg-neutral-50"><p className="text-lg text-neutral-900 tracking-tight">{v}</p><p className="text-xs text-neutral-400 mt-1">{l}</p></div>))}</div>
-            <div><SL>Issue</SL><p className="text-sm text-neutral-700 leading-relaxed">{selAppt.issue}</p></div>
+            <IG items={[["Revenue",selAppt.rev?"$"+selAppt.rev.toLocaleString():"—"],["Source",selAppt.src],["Confidence",selAppt.conf+"%"]]} cols={3}/>
+            <div><ST icon={I.zap} title="Issue"/><p className="text-sm text-neutral-700 leading-relaxed">{selAppt.issue}</p></div>
             {selAppt.addr&&<div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{selAppt.addr}</p></div>}
             <div className="h-px bg-neutral-100"/>
             {actions[selAppt.id]&&<div><SL>Prep checklist</SL>{actions[selAppt.id].map((a,i)=><CK key={"appt-"+selAppt.id+"-"+i} text={a} done={!!checkedActions["appt"+selAppt.id+"_"+i]} onChange={v=>toggleAction("appt"+selAppt.id,i,v)}/>)}</div>}
@@ -451,9 +516,9 @@ const Calls=()=>{
         <PanelHeader onClose={()=>setPanel(null)} title="Reschedule" sub={"Moving appointment for "+(sel?.name||"")}/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
           {sel?.booked&&<div className="bg-neutral-50 px-4 py-3 flex items-center gap-3"><span className="w-4 h-4 text-neutral-300">{I.clock}</span><p className="text-sm text-neutral-500">Current: {sel.booked}</p></div>}
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">New date</label><input type="date" value={reschedDate} onChange={e=>setReschedDate(e.target.value)} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">New time</label><input type="time" value={reschedTime} onChange={e=>setReschedTime(e.target.value)} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Reason (optional)</label><textarea rows={3} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Customer requested..."/></div>
+          <FF label="New date"><TI type="date" value={reschedDate} onChange={e=>setReschedDate(e.target.value)}/></FF>
+          <FF label="New time"><TI type="time" value={reschedTime} onChange={e=>setReschedTime(e.target.value)}/></FF>
+          <FF label="Reason" hint="Optional context for the reschedule"><TA rows={3} placeholder="Customer requested..."/></FF>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
           <button onClick={()=>{if(reschedDate&&reschedTime&&sel){const formatted=new Date(reschedDate+"T"+reschedTime).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})+", "+new Date(reschedDate+"T"+reschedTime).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});setCalls(p=>p.map(c=>c.id===sel.id?{...c,booked:formatted}:c));setSel(prev=>({...prev,booked:formatted}));setReschedDate("");setReschedTime("");}setPanel(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Confirm</button>
@@ -483,12 +548,13 @@ const Calls=()=>{
       <Panel open={panel==="newcall"} onClose={()=>setPanel(null)}>
         <PanelHeader onClose={()=>setPanel(null)} title="Log a new call"/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue</label><textarea rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+          <FF label="Customer name" required><TI type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} placeholder="Full name"/></FF>
+          <FF label="Phone"><TI type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
+          <FF label="Issue"><TA rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
+          <FD label="classification"/>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><select value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Normal</option><option>Urgent</option><option>Emergency</option></select></div>
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Source</label><select value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></select></div>
+            <FF label="Urgency"><SE value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})}><option>Normal</option><option>Urgent</option><option>Emergency</option></SE></FF>
+            <FF label="Source"><SE value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})}><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></SE></FF>
           </div>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
@@ -515,7 +581,7 @@ const Calls=()=>{
           <button onClick={()=>setSel(null)} className="md:hidden flex items-center gap-2 px-4 py-3 border-b border-neutral-100 text-sm text-neutral-500"><span className="w-4 h-4">{I.arrowL}</span>Back to calls</button>
           <div className="p-4 md:p-8 border-b border-neutral-100"><div className="flex items-start justify-between"><div className="flex items-center gap-3 md:gap-5"><Av n={sel.name} s={48}/><div><p className="text-xl md:text-2xl text-neutral-900 tracking-tight">{sel.name}</p><p className="text-sm text-neutral-400 mt-1">{sel.ph}</p></div></div><div className="flex items-center gap-2 md:gap-3"><Bg s={sel.status}/><button className="w-9 h-9 border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 transition-colors"><span className="w-4 h-4 text-neutral-400">{I.phone}</span></button><button className="hidden md:flex w-9 h-9 border border-neutral-200 items-center justify-center hover:bg-neutral-50 transition-colors"><span className="w-4 h-4 text-neutral-400">{I.msg}</span></button></div></div></div>
           <div className="p-4 md:p-8 space-y-6 md:space-y-8">
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">{[["Source",sel.src],["Time",sel.time],["Duration",sel.dur],["Urgency",sel.urg],["Score",sel.score],["Revenue",sel.rev?"$"+sel.rev.toLocaleString():"—"]].map(([l,v])=><div key={l} className="bg-neutral-50 px-3 md:px-4 py-2 md:py-3"><p className="text-xs text-neutral-400 mb-1">{l}</p><p className="text-sm text-neutral-900 capitalize">{v}</p></div>)}</div>
+            <IG items={[["Source",sel.src],["Time",sel.time],["Duration",sel.dur],["Urgency",sel.urg],["Score",sel.score],["Revenue",sel.rev?"$"+sel.rev.toLocaleString():"—"]]} cols={3}/>
             <div><p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Issue</p><p className="text-neutral-700 leading-relaxed">{sel.issue}</p></div>
             {sel.addr&&<div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{sel.addr}</p></div>}
             {sel.booked&&<div className="bg-neutral-900 px-4 md:px-7 py-4 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-3"><div className="flex items-center gap-4 md:gap-5"><div className="w-10 md:w-11 h-10 md:h-11 bg-white/10 flex items-center justify-center shrink-0"><span className="w-5 h-5 text-white">{I.cal}</span></div><div><p className="text-white text-sm md:text-base">{sel.booked}</p><p className="text-xs text-neutral-400 mt-0.5">Scheduled appointment</p></div></div><div className="flex gap-2"><button onClick={()=>setPanel("reschedule")} className="text-xs px-4 py-2.5 bg-white/10 text-white hover:bg-white/20 transition-colors">Reschedule</button><button onClick={()=>setPanel("cancel")} className="text-xs px-4 py-2.5 bg-white/5 text-neutral-400 hover:bg-white/10 transition-colors">Cancel</button></div></div>}
@@ -559,11 +625,13 @@ const Jobs=()=>{
       <Panel open={panel==="newjob"} onClose={()=>setPanel(null)}>
         <PanelHeader onClose={()=>setPanel(null)} title="Create new job"/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer</label><input type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Customer name"/></div>
-          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Time</label><input type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Description</label><textarea rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Job details..."/></div>
-          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Assign to</label><select value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>John S.</option><option>Mike T.</option><option>You</option></select></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Revenue estimate</label><input type="text" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="$0"/></div></div>
+          <FF label="Customer" required><TI type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} placeholder="Customer name"/></FF>
+          <FD label="Schedule"/>
+          <div className="grid grid-cols-2 gap-3"><FF label="Date"><TI type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})}/></FF><FF label="Time"><TI type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})}/></FF></div>
+          <FF label="Address"><TI type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} placeholder="Street address"/></FF>
+          <FF label="Description"><TA rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} placeholder="Job details..."/></FF>
+          <FD label="Staffing & Budget"/>
+          <div className="grid grid-cols-2 gap-3"><FF label="Assign to"><SE value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})}><option>John S.</option><option>Mike T.</option><option>You</option></SE></FF><FF label="Revenue estimate"><TI type="text" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} placeholder="$0"/></FF></div>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
           <button onClick={()=>{if(!newJob.cust)return;const nj={id:Date.now(),day:newJob.date||"TBD",time:newJob.time||"TBD",cust:newJob.cust,ph:"",addr:newJob.addr,issue:newJob.issue,tech:newJob.tech,rev:parseInt(newJob.rev)||0,st:"Confirmed",pct:0,checklist:[],parts:[],notes:""};setJobs(p=>[nj,...p]);setNewJob({cust:"",date:"",time:"",addr:"",issue:"",tech:"John S.",rev:""});setPanel(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Create job</button>
@@ -575,17 +643,17 @@ const Jobs=()=>{
         {selJob&&<>
           <PanelHeader onClose={()=>setSelJob(null)} title={selJob.cust} sub={selJob.ph} right={<span className={"text-xs px-3 py-1 "+(selJob.st==="Confirmed"?"bg-neutral-900 text-white":selJob.st==="Completed"?"bg-neutral-200 text-neutral-500":"bg-neutral-200 text-neutral-600")}>{selJob.st}</span>}/>
           <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-            <div className="grid grid-cols-4 gap-3">{[["Date",selJob.day],["Time",selJob.time],["Tech",selJob.tech],["Revenue","$"+selJob.rev.toLocaleString()]].map(([l,v])=>(<div key={l} className="text-center py-3 bg-neutral-50"><p className="text-sm text-neutral-900">{v}</p><p className="text-xs text-neutral-400 mt-1">{l}</p></div>))}</div>
+            <IG items={[["Date",selJob.day],["Time",selJob.time],["Tech",selJob.tech],["Revenue","$"+selJob.rev.toLocaleString()]]} cols={4}/>
             <div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{selJob.addr}</p></div>
             <div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.zap}</span><p className="text-sm text-neutral-700">{selJob.issue}</p></div>
             <div className="h-px bg-neutral-100"/>
-            <div><SL>Progress</SL><div className="flex items-center gap-4"><div className="flex-1 h-1.5 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:selJob.pct+"%"}}/></div><span className="text-xs text-neutral-400 tabular-nums w-10 text-right">{selJob.pct}%</span></div></div>
+            <div><ST icon={I.chart} title="Progress"/><div className="flex items-center gap-4"><div className="flex-1 h-1.5 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:selJob.pct+"%"}}/></div><span className="text-xs text-neutral-400 tabular-nums w-10 text-right">{selJob.pct}%</span></div></div>
             <div className="h-px bg-neutral-100"/>
             <div><SL>Checklist — {selJob.checklist?.length||0} items</SL>{selJob.checklist?.map((t,i)=><CK key={selJob.id+"-"+i} text={t} done={!!(selJob.checked&&selJob.checked[i])} onChange={v=>{const nc=[...(selJob.checked||selJob.checklist.map(()=>false))];nc[i]=v;setJobs(p=>p.map(j=>j.id===selJob.id?{...j,checked:nc}:j));setSelJob(prev=>({...prev,checked:nc}));}}/>)}</div>
             <div className="h-px bg-neutral-100"/>
             <div><SL>Parts and materials</SL><div className="flex flex-wrap gap-2">{selJob.parts?.map((p,i)=>(<span key={i} className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1.5">{p}</span>))}</div></div>
             <div className="h-px bg-neutral-100"/>
-            <div><SL>Tech notes</SL><p className="text-sm text-neutral-700 leading-relaxed">{selJob.notes}</p></div>
+            <div><ST icon={I.msg} title="Tech notes"/><p className="text-sm text-neutral-700 leading-relaxed">{selJob.notes}</p></div>
           </div>
           <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
             {selJob.st!=="Completed"&&<button onClick={()=>{setJobs(p=>p.map(j=>j.id===selJob.id?{...j,st:"Completed",pct:100}:j));setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark complete</button>}
@@ -687,11 +755,11 @@ const Leads=({profile,setQuoteView})=>{
         {selLead&&<>
           <PanelHeader onClose={()=>setSelLead(null)} title={selLead.name} sub={selLead.ph} right={<div className="flex items-center gap-3"><Bg s={selLead.status}/><div className="flex items-center gap-2"><Dot s={selLead.score}/><span className="text-xs text-neutral-400 capitalize">{selLead.score}</span></div></div>}/>
           <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-            <div className="grid grid-cols-3 gap-3">{[["Value",selLead.rev?"$"+selLead.rev.toLocaleString():"—"],["Source",selLead.src],["AI Score",selLead.conf+"%"]].map(([l,v])=>(<div key={l} className="text-center py-3 bg-neutral-50"><p className="text-lg text-neutral-900 tracking-tight">{v}</p><p className="text-xs text-neutral-400 mt-1">{l}</p></div>))}</div>
-            <div><SL>Issue</SL><p className="text-sm text-neutral-700 leading-relaxed">{selLead.issue}</p></div>
+            <IG items={[["Value",selLead.rev?"$"+selLead.rev.toLocaleString():"—"],["Source",selLead.src],["AI Score",selLead.conf+"%"]]} cols={3}/>
+            <div><ST icon={I.zap} title="Issue"/><p className="text-sm text-neutral-700 leading-relaxed">{selLead.issue}</p></div>
             {selLead.addr&&<div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{selLead.addr}</p></div>}
             <div className="h-px bg-neutral-100"/>
-            {timeline[selLead.id]&&<div><SL>Activity</SL><div className="relative ml-3"><div className="absolute left-0 top-2 bottom-2 w-px bg-neutral-200"/>{timeline[selLead.id].map((e,i)=>(<div key={i} className="flex items-start gap-4 py-2.5 relative"><div className={"w-2 h-2 shrink-0 mt-1.5 relative z-10 -ml-[3.5px] "+(e.t==="—"?"bg-neutral-300":"bg-neutral-900")}/><div className="flex-1 min-w-0"><p className="text-sm text-neutral-700">{e.a}</p><p className="text-xs text-neutral-400 mt-0.5">{e.t}</p></div></div>))}</div></div>}
+            {timeline[selLead.id]&&<div><ST icon={I.clock} title="Activity"/><div className="relative ml-3"><div className="absolute left-0 top-2 bottom-2 w-px bg-neutral-200"/>{timeline[selLead.id].map((e,i)=>(<div key={i} className="flex items-start gap-4 py-2.5 relative"><div className={"w-2 h-2 shrink-0 mt-1.5 relative z-10 -ml-[3.5px] "+(e.t==="—"?"bg-neutral-300":"bg-neutral-900")}/><div className="flex-1 min-w-0"><p className="text-sm text-neutral-700">{e.a}</p><p className="text-xs text-neutral-400 mt-0.5">{e.t}</p></div></div>))}</div></div>}
             <div className="h-px bg-neutral-100"/>
             {nextSteps[selLead.id]&&<div className="bg-neutral-900 p-5"><div className="flex items-center gap-2 mb-2"><span className="w-3.5 h-3.5 text-neutral-500">{I.zap}</span><p className="text-xs text-neutral-400 uppercase tracking-widest">AI next step</p></div><p className="text-sm text-white leading-relaxed">{nextSteps[selLead.id]}</p></div>}
             {leadDraftMeta[selLead.id]&&!quoteSent[selLead.id]&&<div className="border border-neutral-900">
@@ -913,14 +981,8 @@ const Quotes=()=>{
             sub={editing?"Changes apply to future quotes":"Add a new service, part, or labor rate"}
           />
           <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-            <div>
-              <SL>Name</SL>
-              <input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Standard diagnostic" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/>
-            </div>
-            <div>
-              <SL>Description</SL>
-              <textarea value={draft.desc} onChange={e=>setDraft({...draft,desc:e.target.value})} rows={2} placeholder="Short description shown to customers" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/>
-            </div>
+            <FF label="Name" required><TI value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Standard diagnostic"/></FF>
+            <FF label="Description"><TA value={draft.desc} onChange={e=>setDraft({...draft,desc:e.target.value})} rows={2} placeholder="Short description shown to customers"/></FF>
             <div>
               <SL>Category</SL>
               <div className="grid grid-cols-5 gap-2">
@@ -929,28 +991,19 @@ const Quotes=()=>{
                 ))}
               </div>
             </div>
+            <FD label="Pricing"/>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <SL>Rate</SL>
-                <div className="relative">
+                <FF label="Rate"><div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span>
                   <input value={draft.rate} onChange={e=>setDraft({...draft,rate:parseFloat(e.target.value)||0})} type="number" min="0" step="0.01" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums hover:border-neutral-300 transition-colors"/>
-                </div>
+                </div></FF>
               </div>
               <div>
-                <SL>Unit</SL>
-                <select value={draft.unit} onChange={e=>setDraft({...draft,unit:e.target.value})} className="w-full border border-neutral-200 px-3 py-3 text-sm bg-white hover:border-neutral-300 transition-colors">
-                  <option value="each">each</option>
-                  <option value="hour">hour</option>
-                  <option value="lb">lb</option>
-                  <option value="ft">linear ft</option>
-                  <option value="sqft">sq ft</option>
-                  <option value="day">day</option>
-                  <option value="year">year</option>
-                </select>
+                <FF label="Unit"><SE value={draft.unit} onChange={e=>setDraft({...draft,unit:e.target.value})}><option value="each">each</option><option value="hour">hour</option><option value="lb">lb</option><option value="ft">linear ft</option><option value="sqft">sq ft</option><option value="day">day</option><option value="year">year</option></SE></FF>
               </div>
               <div>
-                <SL>Taxable</SL>
+                <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Taxable</p>
                 <div className="border border-neutral-200 px-3 py-[13px] flex items-center justify-between">
                   <span className="text-sm text-neutral-500">{draft.tax?"Yes":"No"}</span>
                   <Toggle on={draft.tax} onChange={()=>setDraft({...draft,tax:!draft.tax})}/>
@@ -976,23 +1029,17 @@ const Quotes=()=>{
               </div>
             )}
             {/* Ballpark range — what Diali quotes on the phone */}
+            <FD label="Ballpark Range"/>
             <div>
-              <SL>Phone ballpark range</SL>
-              <p className="text-xs text-neutral-400 mb-3 leading-relaxed -mt-2">Diali gives callers this range when asked about cost. Never a firm quote — always says "our tech needs to inspect for an exact price."</p>
+              <p className="text-xs text-neutral-400 mb-3 leading-relaxed">Diali gives callers this range when asked about cost. Never a firm quote — always says "our tech needs to inspect for an exact price."</p>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-neutral-400 mb-1.5 block">Low</label>
-                  <div className="relative">
+                <FF label="Low"><div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span>
                     <input value={draft.rangeLow||0} onChange={e=>setDraft({...draft,rangeLow:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums hover:border-neutral-300 transition-colors"/>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 mb-1.5 block">High</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span>
-                    <input value={draft.rangeHigh||0} onChange={e=>setDraft({...draft,rangeHigh:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums hover:border-neutral-300 transition-colors"/>
-                  </div>
+                  </div></FF>
+                <FF label="High"><div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span>
+                  <input value={draft.rangeHigh||0} onChange={e=>setDraft({...draft,rangeHigh:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums hover:border-neutral-300 transition-colors"/>
                 </div>
               </div>
             </div>
@@ -1866,15 +1913,16 @@ const CalendarEmpty=()=>{
     <Panel open={addPanel} onClose={()=>setAddPanel(false)}>
       <PanelHeader onClose={()=>setAddPanel(false)} title="New appointment" sub="Add a manual booking"/>
       <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newAppt.name} onChange={e=>setNewAppt({...newAppt,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
+        <FF label="Customer name" required><TI type="text" value={newAppt.name} onChange={e=>setNewAppt({...newAppt,name:e.target.value})} placeholder="Full name"/></FF>
+        <FF label="Phone"><TI type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
+        <FF label="Address"><TI type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} placeholder="Street address"/></FF>
+        <FD label="When"/>
         <div className="grid grid-cols-3 gap-3">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Start</label><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">End</label><input type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+          <FF label="Date"><TI type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})}/></FF>
+          <FF label="Start"><TI type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})}/></FF>
+          <FF label="End"><TI type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})}/></FF>
         </div>
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue / description</label><textarea rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+        <FF label="Issue / description"><TA rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
       </div>
       <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={()=>{if(!newAppt.name)return;const fmtT=t=>{if(!t)return"TBD";const[h,m]=t.split(":");const hr=parseInt(h);return(hr>12?hr-12:hr===0?12:hr)+":"+m+" "+(hr>=12?"PM":"AM");};const nb={id:Date.now(),name:newAppt.name,phone:newAppt.phone,address:newAppt.address,issue:newAppt.issue,time:fmtT(newAppt.time),timeEnd:fmtT(newAppt.timeEnd),date:newAppt.date||"TBD",status:"pending",urgency:newAppt.urgency||"standard",source:"Manual"};setAppts(p=>[nb,...p]);setNewAppt({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});setAddPanel(false);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add appointment</button></div>
     </Panel>
@@ -1964,15 +2012,16 @@ const Calendar=()=>{
       <Panel open={addPanel} onClose={()=>setAddPanel(false)}>
         <PanelHeader onClose={()=>setAddPanel(false)} title="New appointment" sub="Add a manual booking"/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newAppt.name} onChange={e=>setNewAppt({...newAppt,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
+          <FF label="Customer name" required><TI type="text" value={newAppt.name} onChange={e=>setNewAppt({...newAppt,name:e.target.value})} placeholder="Full name"/></FF>
+          <FF label="Phone"><TI type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
+          <FF label="Address"><TI type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} placeholder="Street address"/></FF>
+          <FD label="When"/>
           <div className="grid grid-cols-3 gap-3">
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Start</label><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">End</label><input type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+            <FF label="Date"><TI type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})}/></FF>
+            <FF label="Start"><TI type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})}/></FF>
+            <FF label="End"><TI type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})}/></FF>
           </div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue / description</label><textarea rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+          <FF label="Issue / description"><TA rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
           <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><div className="grid grid-cols-3 gap-2">{[["standard","Standard"],["urgent","Urgent"],["emergency","Emergency"]].map(([k,l])=><button key={k} onClick={()=>setNewAppt({...newAppt,urgency:k})} className={"text-sm py-2.5 border transition-colors "+(newAppt.urgency===k?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{l}</button>)}</div></div>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
@@ -2733,12 +2782,13 @@ const CallsEmpty=()=>{
     <Panel open={panel==="newcall"} onClose={()=>setPanel(null)}>
       <PanelHeader onClose={()=>setPanel(null)} title="Log a new call"/>
       <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer name</label><input type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Full name"/></div>
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Phone</label><input type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="(555) 000-0000"/></div>
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Issue</label><textarea rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Describe the issue..."/></div>
+        <FF label="Customer name" required><TI type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} placeholder="Full name"/></FF>
+        <FF label="Phone"><TI type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
+        <FF label="Issue"><TA rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
+        <FD label="classification"/>
         <div className="grid grid-cols-2 gap-4">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><select value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Normal</option><option>Urgent</option><option>Emergency</option></select></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Source</label><select value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></select></div>
+          <FF label="Urgency"><SE value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})}><option>Normal</option><option>Urgent</option><option>Emergency</option></SE></FF>
+          <FF label="Source"><SE value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})}><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></SE></FF>
         </div>
       </div>
       <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveCall} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save call</button></div>
@@ -2767,11 +2817,13 @@ const JobsEmpty=()=>{
       <Panel open={panel==="newjob"} onClose={()=>setPanel(null)}>
         <PanelHeader onClose={()=>setPanel(null)} title="Create new job"/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Customer</label><input type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Customer name"/></div>
-          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Date</label><input type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Time</label><input type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Address</label><input type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Street address"/></div>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Description</label><textarea rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="Job details..."/></div>
-          <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Assign to</label><select value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm bg-white"><option>Unassigned</option><option>Tech 1</option><option>Tech 2</option></select></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Revenue estimate</label><input type="text" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} className="w-full border border-neutral-200 px-4 py-3 text-sm" placeholder="$0"/></div></div>
+          <FF label="Customer" required><TI type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} placeholder="Customer name"/></FF>
+          <FD label="Schedule"/>
+          <div className="grid grid-cols-2 gap-3"><FF label="Date"><TI type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})}/></FF><FF label="Time"><TI type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})}/></FF></div>
+          <FF label="Address"><TI type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} placeholder="Street address"/></FF>
+          <FF label="Description"><TA rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} placeholder="Job details..."/></FF>
+          <FD label="Staffing & Budget"/>
+          <div className="grid grid-cols-2 gap-3"><FF label="Assign to"><SE value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})}><option>Unassigned</option><option>Tech 1</option><option>Tech 2</option></SE></FF><FF label="Revenue estimate"><TI type="text" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} placeholder="$0"/></FF></div>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveJob} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Create job</button></div>
       </Panel>
@@ -2830,10 +2882,11 @@ const QuotesEmpty=()=>{
     <Panel open={adding} onClose={()=>setAdding(false)}>
       <PanelHeader onClose={()=>setAdding(false)} title="Add pricebook item" sub="Add a new service, part, or labor rate"/>
       <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Name</label><input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Standard diagnostic" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-        <div><label className="text-xs text-neutral-400 mb-1.5 block">Description</label><textarea value={draft.desc} onChange={e=>setDraft({...draft,desc:e.target.value})} rows={2} placeholder="Short description" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
+        <FF label="Name" required><TI value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Standard diagnostic"/></FF>
+        <FF label="Description"><TA value={draft.desc} onChange={e=>setDraft({...draft,desc:e.target.value})} rows={2} placeholder="Short description"/></FF>
         <div><label className="text-xs text-neutral-400 mb-1.5 block">Category</label><div className="grid grid-cols-5 gap-2">{["Service","Labor","Parts","Maintenance","Install"].map(c=><button key={c} onClick={()=>setDraft({...draft,cat:c})} className={"text-xs py-2.5 border transition-colors "+(draft.cat===c?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{c}</button>)}</div></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-neutral-400 mb-1.5 block">Rate</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span><input value={draft.rate} onChange={e=>setDraft({...draft,rate:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums"/></div></div><div><label className="text-xs text-neutral-400 mb-1.5 block">Unit</label><select value={draft.unit} onChange={e=>setDraft({...draft,unit:e.target.value})} className="w-full border border-neutral-200 px-3 py-3 text-sm bg-white"><option value="each">each</option><option value="hour">hour</option><option value="lb">lb</option><option value="ft">linear ft</option></select></div></div>
+        <FD label="Pricing"/>
+        <div className="grid grid-cols-2 gap-3"><div><FF label="Rate"><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-400 pointer-events-none">$</span><input value={draft.rate} onChange={e=>setDraft({...draft,rate:parseFloat(e.target.value)||0})} type="number" min="0" className="w-full border border-neutral-200 pl-8 pr-3 py-3 text-sm tabular-nums"/></div></FF></div><div><FF label="Unit"><SE value={draft.unit} onChange={e=>setDraft({...draft,unit:e.target.value})}><option value="each">each</option><option value="hour">hour</option><option value="lb">lb</option><option value="ft">linear ft</option></SE></FF></div></div>
       </div>
       <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveItem} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add item</button></div>
     </Panel>
