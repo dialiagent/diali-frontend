@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diali — AI front office for home service contractors</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-weight:400;border-radius:0!important}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;color:#171717;background:#fafafa;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.mono{font-family:'DM Mono',monospace}
+
+/* ── Layout ── */
+.w{max-width:1200px;margin:0 auto;padding:0 24px;position:relative}
+@media(min-width:768px){.w{padding:0 48px}}
+
+/* ── Nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(250,250,250,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #f0f0f0;transition:all .3s}
+nav .w{display:flex;align-items:center;height:64px;gap:40px;max-width:1400px;padding:0 24px}
+@media(min-width:768px){nav .w{padding:0 32px}}
+.brand{display:flex;align-items:center}
+.brand svg{width:24px;height:24px;display:block}
+.nav-links{display:none;gap:28px;align-items:center}
+.nav-links a{font-size:14px;color:#525252;transition:color .2s;display:flex;align-items:center;gap:4px}
+.nav-links a:hover{color:#171717}
+.nav-links svg{width:10px;height:10px;opacity:.5}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+@media(min-width:900px){.nav-links{display:flex}}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;transition:all .15s;white-space:nowrap}
+.btn-dark{background:#171717;color:#fff;padding:9px 18px}
+.btn-dark:hover{background:#000}
+.btn-light{background:#fff;color:#171717;padding:9px 18px;border:1px solid #e5e5e5}
+.btn-light:hover{border-color:#171717}
+.btn-ghost{color:#171717;padding:9px 14px;font-size:14px}
+.btn-ghost:hover{background:#f5f5f5}
+.btn-lg{padding:13px 26px;font-size:15px}
+
+/* ── Announcement pill ── */
+.announce{display:inline-flex;align-items:center;gap:0;padding:0;background:#f5f5f5;border:1px solid #e5e5e5;font-size:13px;margin-bottom:40px}
+.announce-tag{background:#171717;color:#fff;padding:5px 12px;font-size:12px;letter-spacing:-.2px}
+.announce-text{padding:5px 16px 5px 12px;color:#525252;display:flex;align-items:center;gap:8px}
+.announce-text svg{width:12px;height:12px}
+
+/* ── Hero ── */
+.hero{padding:160px 0 0;position:relative;text-align:center;overflow:hidden}
+.hero-inner{position:relative;z-index:2;padding:0 24px}
+.hero h1{font-size:clamp(44px,6.5vw,84px);line-height:.98;letter-spacing:-3px;margin:0 auto 28px;max-width:900px}
+.hero p{font-size:clamp(17px,1.4vw,20px);color:#525252;max-width:620px;line-height:1.55;margin:0 auto 40px}
+.hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* Grid background */
+.grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(#e5e5e5 1px,transparent 1px),linear-gradient(90deg,#e5e5e5 1px,transparent 1px);background-size:88px 88px;mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 40%,transparent 85%);-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 40%,transparent 85%);opacity:.6}
+.hero::before{content:"+";position:absolute;top:180px;left:calc(50% - 480px);font-size:20px;color:#a3a3a3;font-weight:400}
+.hero::after{content:"+";position:absolute;top:180px;right:calc(50% - 480px);font-size:20px;color:#a3a3a3;font-weight:400}
+
+/* ── Hero graphic (phone + waveform) ── */
+.hero-graphic{margin:80px auto 0;max-width:1100px;position:relative;padding:0 24px}
+.hero-device{background:#fff;border:1px solid #e5e5e5;padding:32px;display:grid;grid-template-columns:1fr;gap:24px;box-shadow:0 30px 80px -40px rgba(23,23,23,.15)}
+@media(min-width:900px){.hero-device{grid-template-columns:1.1fr 1fr;gap:40px;padding:40px}}
+.device-call{border:1px solid #f0f0f0;padding:24px;background:#fafafa}
+.device-call-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.device-call-head .live{display:flex;align-items:center;gap:8px;font-size:12px;color:#525252;letter-spacing:-.2px}
+.live-dot{width:6px;height:6px;background:#171717;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.device-call-head .time{font-size:11px;color:#a3a3a3;letter-spacing:.5px;text-transform:uppercase}
+.device-call-caller{display:flex;align-items:center;gap:14px;padding:14px;background:#fff;border:1px solid #f0f0f0;margin-bottom:16px}
+.avatar{width:36px;height:36px;background:#171717;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.caller-info{flex:1;min-width:0}
+.caller-name{font-size:13px;color:#171717;margin-bottom:2px}
+.caller-meta{font-size:11px;color:#a3a3a3}
+.caller-status{font-size:10px;color:#171717;text-transform:uppercase;letter-spacing:.5px;border:1px solid #e5e5e5;padding:4px 8px}
+.wave{display:flex;align-items:end;gap:2px;height:32px;margin-bottom:16px}
+.wave span{flex:1;background:#171717;opacity:.15;animation:wave 1.8s ease-in-out infinite}
+.wave span:nth-child(odd){opacity:.35}
+.wave span:nth-child(3n){opacity:.5}
+.wave span:nth-child(4n){animation-delay:.2s}
+.wave span:nth-child(5n){animation-delay:.4s}
+@keyframes wave{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.transcript{font-size:12px;color:#525252;line-height:1.7;max-height:120px;overflow:hidden}
+.transcript .role{color:#a3a3a3;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-right:8px}
+.transcript div{margin-bottom:6px;opacity:0;animation:fadeIn .5s forwards}
+.transcript div:nth-child(1){animation-delay:.2s}
+.transcript div:nth-child(2){animation-delay:1.2s}
+.transcript div:nth-child(3){animation-delay:2.2s}
+.transcript div:nth-child(4){animation-delay:3.2s}
+@keyframes fadeIn{to{opacity:1}}
+
+.device-panel{display:flex;flex-direction:column;gap:16px}
+.panel-label{font-size:10px;color:#a3a3a3;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.panel-card{border:1px solid #f0f0f0;padding:16px;background:#fafafa}
+.panel-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 0;border-bottom:1px solid #f5f5f5}
+.panel-row:last-child{border-bottom:none}
+.panel-row .k{color:#a3a3a3;text-transform:uppercase;letter-spacing:.5px;font-size:10px}
+.panel-row .v{color:#171717}
+.panel-booked{display:flex;align-items:center;gap:10px;padding:12px;background:#171717;color:#fff;font-size:12px;margin-top:4px}
+.panel-booked svg{width:14px;height:14px}
+.panel-booked .amt{margin-left:auto;font-size:13px}
+
+/* ── Section ── */
+section{padding:120px 0;position:relative}
+.section-label{font-size:11px;color:#a3a3a3;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+.section-title{font-size:clamp(32px,4vw,48px);line-height:1.05;letter-spacing:-1.8px;max-width:720px;margin-bottom:20px}
+.section-desc{font-size:17px;color:#525252;line-height:1.6;max-width:560px}
+
+/* ── Stats strip ── */
+.stats-strip{border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:60px 0;background:#fff}
+.stats-grid{display:grid;grid-template-columns:1fr;gap:40px}
+@media(min-width:768px){.stats-grid{grid-template-columns:repeat(3,1fr);gap:0}}
+.stat-item{padding:0 24px;text-align:left}
+@media(min-width:768px){.stat-item{border-left:1px solid #f0f0f0;padding:0 40px}.stat-item:first-child{border-left:none;padding-left:24px}}
+.stat-quote{font-size:15px;color:#171717;line-height:1.5;letter-spacing:-.3px;margin-bottom:16px}
+.stat-big{font-size:28px;color:#171717;letter-spacing:-1px;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.stat-label{font-size:11px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1.5px}
+
+/* ── Tabs section ── */
+.tabs-section{background:#fafafa;padding:140px 0}
+.tabs-head{display:grid;grid-template-columns:1fr;gap:60px;margin-bottom:60px;align-items:end}
+@media(min-width:900px){.tabs-head{grid-template-columns:1fr auto;gap:80px}}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid #e5e5e5;margin-bottom:0}
+.tab{padding:14px 20px;font-size:14px;color:#a3a3a3;border-bottom:1px solid transparent;margin-bottom:-1px;transition:all .2s;position:relative}
+.tab:hover{color:#525252}
+.tab.active{color:#171717;border-bottom-color:#171717}
+.tab-panel{display:none;background:#fff;border:1px solid #e5e5e5;padding:48px;min-height:480px}
+.tab-panel.active{display:grid;grid-template-columns:1fr;gap:40px;align-items:start}
+@media(min-width:900px){.tab-panel.active{grid-template-columns:380px 1fr;gap:64px}}
+.tab-content h3{font-size:28px;letter-spacing:-1.2px;line-height:1.1;margin-bottom:16px}
+.tab-content p{font-size:15px;color:#525252;line-height:1.65;margin-bottom:28px}
+.tab-features{list-style:none}
+.tab-features li{font-size:13px;color:#525252;padding:10px 0;border-top:1px solid #f5f5f5;display:flex;align-items:center;gap:12px}
+.tab-features li:first-child{border-top:none}
+.tab-features svg{width:12px;height:12px;flex-shrink:0;stroke:#171717;stroke-width:2;fill:none}
+.tab-visual{background:#fafafa;border:1px solid #f0f0f0;padding:32px;min-height:380px;position:relative}
+
+/* ── Split section ── */
+.split-section{background:#171717;color:#fff;padding:140px 0;position:relative;overflow:hidden}
+.split-section::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:88px 88px;pointer-events:none}
+.split-grid{display:grid;grid-template-columns:1fr;gap:60px;position:relative;z-index:1}
+@media(min-width:900px){.split-grid{grid-template-columns:1fr 1fr;gap:100px;align-items:center}}
+.split-left .section-label{color:#737373}
+.split-left h2{font-size:clamp(32px,4vw,56px);line-height:1.02;letter-spacing:-2px;margin-bottom:28px}
+.split-left h2 em{font-style:italic;color:#737373}
+.split-left p{font-size:17px;color:#a3a3a3;line-height:1.65;margin-bottom:40px;max-width:480px}
+.split-stats{display:flex;flex-direction:column;gap:0}
+.split-stats .divider{height:1px;background:#262626;margin:20px 0}
+.split-stat-row{display:flex;align-items:center;justify-content:space-between}
+.split-stat-row .k{font-size:11px;color:#737373;text-transform:uppercase;letter-spacing:1.5px}
+.split-stat-row .v{font-size:28px;color:#fff;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+
+.terminal{background:#0a0a0a;border:1px solid #262626;padding:0;font-family:'DM Mono',monospace}
+.terminal-head{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #262626}
+.terminal-dots{display:flex;gap:6px}
+.terminal-dots span{width:8px;height:8px;background:#262626}
+.terminal-title{font-size:11px;color:#525252;letter-spacing:.5px}
+.terminal-body{padding:28px 24px;font-size:12px;line-height:1.9;color:#a3a3a3}
+.terminal-body .c{color:#525252}
+.terminal-body .k{color:#fff}
+.terminal-body .s{color:#737373}
+.terminal-body .p{color:#fff}
+
+/* ── Features grid ── */
+.features-section{padding:140px 0;background:#fff}
+.features-head{text-align:left;margin-bottom:60px}
+.features-grid{display:grid;grid-template-columns:1fr;border:1px solid #e5e5e5;background:#e5e5e5;gap:1px}
+@media(min-width:768px){.features-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1024px){.features-grid{grid-template-columns:1fr 1fr 1fr}}
+.feature{background:#fff;padding:40px;min-height:240px;display:flex;flex-direction:column;transition:background .2s}
+.feature:hover{background:#fafafa}
+.feature-num{font-size:10px;color:#a3a3a3;letter-spacing:2px;margin-bottom:24px;font-family:'DM Mono',monospace}
+.feature h4{font-size:18px;letter-spacing:-.5px;margin-bottom:10px}
+.feature p{font-size:14px;color:#737373;line-height:1.6;flex:1}
+.feature-link{font-size:13px;color:#171717;margin-top:20px;display:flex;align-items:center;gap:6px}
+.feature-link svg{width:10px;height:10px;transition:transform .2s}
+.feature:hover .feature-link svg{transform:translateX(3px)}
+
+/* ── Pricing ── */
+.pricing-section{background:#fafafa;padding:140px 0}
+.pricing-head{text-align:center;margin-bottom:72px}
+.pricing-head .section-title,.pricing-head .section-desc{margin-left:auto;margin-right:auto}
+.pricing-head .section-desc{text-align:center}
+.pricing-grid{display:grid;grid-template-columns:1fr;gap:1px;background:#e5e5e5;border:1px solid #e5e5e5;max-width:1100px;margin:0 auto}
+@media(min-width:900px){.pricing-grid{grid-template-columns:repeat(3,1fr)}}
+.tier{background:#fff;padding:48px 40px;display:flex;flex-direction:column}
+.tier.featured{background:#171717;color:#fff}
+.tier-name{font-size:13px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px}
+.tier.featured .tier-name{color:#737373}
+.tier-price{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+.tier-price .amt{font-size:44px;letter-spacing:-2px;font-variant-numeric:tabular-nums}
+.tier-price .per{font-size:14px;color:#a3a3a3}
+.tier.featured .tier-price .per{color:#737373}
+.tier-desc{font-size:14px;color:#737373;line-height:1.55;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #f0f0f0}
+.tier.featured .tier-desc{color:#a3a3a3;border-bottom-color:#262626}
+.tier-features{list-style:none;flex:1;margin-bottom:32px}
+.tier-features li{font-size:13px;padding:10px 0;color:#525252;display:flex;align-items:center;gap:12px}
+.tier.featured .tier-features li{color:#d4d4d4}
+.tier-features svg{width:11px;height:11px;stroke:#171717;stroke-width:2;fill:none;flex-shrink:0}
+.tier.featured .tier-features svg{stroke:#fff}
+.tier-cta{padding:13px;font-size:14px;text-align:center;border:1px solid #171717;background:#fff;color:#171717;transition:all .2s;display:block}
+.tier-cta:hover{background:#171717;color:#fff}
+.tier.featured .tier-cta{background:#fff;color:#171717;border-color:#fff}
+.tier.featured .tier-cta:hover{background:#f5f5f5}
+
+/* ── Big CTA ── */
+.cta-section{padding:140px 0;text-align:center;background:#fff;border-top:1px solid #f0f0f0}
+.cta-section h2{font-size:clamp(36px,5vw,64px);line-height:1;letter-spacing:-2.5px;margin-bottom:28px;max-width:800px;margin-left:auto;margin-right:auto}
+.cta-section p{font-size:17px;color:#525252;line-height:1.6;max-width:520px;margin:0 auto 40px}
+.cta-bullets{display:grid;grid-template-columns:1fr;gap:8px;max-width:440px;margin:0 auto 40px;text-align:left}
+@media(min-width:600px){.cta-bullets{grid-template-columns:1fr 1fr}}
+.cta-bullets div{font-size:13px;color:#525252;display:flex;align-items:center;gap:10px;padding:10px 0}
+.cta-bullets svg{width:12px;height:12px;stroke:#171717;stroke-width:2;fill:none;flex-shrink:0}
+.cta-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* ── Footer ── */
+footer{background:#fafafa;border-top:1px solid #e5e5e5;padding:80px 0 40px}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;margin-bottom:64px}
+@media(max-width:768px){.foot-grid{grid-template-columns:1fr 1fr;gap:40px}}
+.foot-brand{display:flex;align-items:center;margin-bottom:20px}
+.foot-brand svg{width:24px;height:24px;display:block}
+.foot-tag{font-size:14px;color:#737373;line-height:1.6;max-width:280px}
+.foot-col h5{font-size:12px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px}
+.foot-col ul{list-style:none}
+.foot-col li{margin-bottom:12px}
+.foot-col a{font-size:14px;color:#525252;transition:color .2s}
+.foot-col a:hover{color:#171717}
+.foot-bottom{border-top:1px solid #e5e5e5;padding-top:32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.foot-bottom p{font-size:13px;color:#a3a3a3}
+.foot-socials{display:flex;gap:16px}
+.foot-socials a{font-size:13px;color:#a3a3a3}
+.foot-socials a:hover{color:#171717}
+
+/* ── Scroll reveal ── */
+.sr{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.sr.v{opacity:1;transform:translateY(0)}
+.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}.d4{transition-delay:.32s}
+
+/* Accent: italic serif feel */
+em{font-style:italic;color:#a3a3a3}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav>
+  <div class="w">
+    <a href="#" class="brand" aria-label="Diali">
+      <svg viewBox="0 0 29 29" fill="none">
+        <rect y="14.1415" width="8" height="8" transform="rotate(-45 0 14.1415)" fill="#171717"/>
+        <rect x="11.3125" y="14.1415" width="12" height="12" transform="rotate(-45 11.3125 14.1415)" fill="#171717"/>
+        <rect x="14.1406" y="14.1415" width="4" height="4" transform="rotate(-45 14.1406 14.1415)" fill="#fafafa"/>
+        <rect x="11.3125" y="25.454" width="4" height="4" transform="rotate(-45 11.3125 25.454)" fill="#171717"/>
+      </svg>
+    </a>
+    <div class="nav-links">
+      <a href="#product">Product <svg viewBox="0 0 10 10"><path d="M2 4l3 3 3-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#customers">Customers</a>
+      <a href="#docs">Docs</a>
+    </div>
+    <div class="nav-right">
+      <a href="Diali_v1.html" class="btn btn-ghost">Log in</a>
+      <a href="Diali_v1.html" class="btn btn-dark">Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <div class="grid-bg"></div>
+  <div class="hero-inner">
+    <div class="announce">
+      <span class="announce-tag">New</span>
+      <span class="announce-text">Diali now books jobs in 42 languages <svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></span>
+    </div>
+    <h1>Your AI front office<br>for home services.</h1>
+    <p>Diali answers every call, books jobs, qualifies leads, and sends quotes — so you never miss revenue again.</p>
+    <div class="hero-actions">
+      <a href="Diali_v1.html" class="btn btn-dark btn-lg">
+        <svg width="14" height="14" viewBox="0 0 29 29" fill="none">
+          <rect y="14.1415" width="8" height="8" transform="rotate(-45 0 14.1415)" fill="#fff"/>
+          <rect x="11.3125" y="14.1415" width="12" height="12" transform="rotate(-45 11.3125 14.1415)" fill="#fff"/>
+          <rect x="14.1406" y="14.1415" width="4" height="4" transform="rotate(-45 14.1406 14.1415)" fill="#171717"/>
+          <rect x="11.3125" y="25.454" width="4" height="4" transform="rotate(-45 11.3125 25.454)" fill="#fff"/>
+        </svg>
+        Start free trial
+      </a>
+      <a href="#product" class="btn btn-light btn-lg">Get a demo</a>
+    </div>
+  </div>
+
+  <!-- Hero graphic -->
+  <div class="hero-graphic sr">
+    <div class="hero-device">
+      <div class="device-call">
+        <div class="device-call-head">
+          <div class="live"><span class="live-dot"></span>Live call in progress</div>
+          <div class="time">2:47 PM</div>
+        </div>
+        <div class="device-call-caller">
+          <div class="avatar">MC</div>
+          <div class="caller-info">
+            <div class="caller-name">Maria Chen</div>
+            <div class="caller-meta">(415) 555-0142 · First-time caller</div>
+          </div>
+          <div class="caller-status">Routing</div>
+        </div>
+        <div class="wave">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="transcript">
+          <div><span class="role">Diali</span>Hi, thanks for calling Martinez HVAC. How can we help you today?</div>
+          <div><span class="role">Caller</span>My AC just stopped working and it's really hot in here.</div>
+          <div><span class="role">Diali</span>I'm sorry to hear that. I can get a technician out today between 3–5 PM. Does that work?</div>
+          <div><span class="role">Caller</span>Yes, that would be perfect. Thank you.</div>
+        </div>
+      </div>
+
+      <div class="device-panel">
+        <div>
+          <div class="panel-label">Call summary</div>
+          <div class="panel-card">
+            <div class="panel-row"><span class="k">Issue</span><span class="v">AC unit failure</span></div>
+            <div class="panel-row"><span class="k">Priority</span><span class="v">Same-day</span></div>
+            <div class="panel-row"><span class="k">Service area</span><span class="v">Mission District</span></div>
+            <div class="panel-row"><span class="k">Est. duration</span><span class="v">90 min</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel-label">Booking</div>
+          <div class="panel-card">
+            <div class="panel-row"><span class="k">Technician</span><span class="v">Carlos R.</span></div>
+            <div class="panel-row"><span class="k">Window</span><span class="v">3:00 – 5:00 PM</span></div>
+            <div class="panel-row"><span class="k">Confirmation</span><span class="v">#A24-887</span></div>
+          </div>
+          <div class="panel-booked">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+            Job booked · SMS sent
+            <span class="amt">+$285</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ STATS STRIP ═══════════════ -->
+<section class="stats-strip" style="padding:60px 0">
+  <div class="w">
+    <div class="stats-grid">
+      <div class="stat-item sr">
+        <p class="stat-quote">"We're booking <em>3x more jobs</em> without hiring a single receptionist."</p>
+        <div class="stat-big">+312%</div>
+        <div class="stat-label">Martinez HVAC · Booked Jobs</div>
+      </div>
+      <div class="stat-item sr d1">
+        <p class="stat-quote">"Diali answers at 2 AM. That used to be <em>lost revenue</em> for us."</p>
+        <div class="stat-big">98.4%</div>
+        <div class="stat-label">Apex Plumbing · Answer Rate</div>
+      </div>
+      <div class="stat-item sr d2">
+        <p class="stat-quote">"Quotes go out before the customer even hangs up. <em>Game changer.</em>"</p>
+        <div class="stat-big">4.2 min</div>
+        <div class="stat-label">Stellar Roofing · Avg. Quote Time</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ TABS SECTION ═══════════════ -->
+<section class="tabs-section" id="product">
+  <div class="w">
+    <div class="tabs-head">
+      <div>
+        <div class="section-label">Your customers, handled.</div>
+        <h2 class="section-title">Every call, every job,<br>every hour of the day.</h2>
+      </div>
+      <p class="section-desc">Diali handles what your receptionist, dispatcher, and quoter do — automatically, around the clock, and at a fraction of the cost.</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="intake">Call intake</button>
+      <button class="tab" data-tab="booking">Booking</button>
+      <button class="tab" data-tab="quotes">Instant quotes</button>
+      <button class="tab" data-tab="dispatch">Dispatch</button>
+      <button class="tab" data-tab="followup">Follow-ups</button>
+    </div>
+
+    <!-- Tab Panel: Call Intake -->
+    <div class="tab-panel active" data-panel="intake">
+      <div class="tab-content">
+        <h3>Answer every call in under one ring.</h3>
+        <p>Diali picks up in under 800ms, identifies the caller, and routes the conversation based on what your business actually sells.</p>
+        <ul class="tab-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Sub-second answer time</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Trained on your trade & services</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Multilingual (42 languages)</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>CRM & calendar integrations</li>
+        </ul>
+      </div>
+      <div class="tab-visual">
+        <div class="panel-label">INCOMING · +1 (415) 555-0142</div>
+        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
+          <div class="avatar">MC</div>
+          <div>
+            <div style="font-size:14px">Maria Chen</div>
+            <div style="font-size:11px;color:#a3a3a3">First-time caller · Mission District</div>
+          </div>
+        </div>
+        <div class="panel-row"><span class="k">Detected intent</span><span class="v">Emergency service</span></div>
+        <div class="panel-row"><span class="k">Sentiment</span><span class="v">Urgent · Concerned</span></div>
+        <div class="panel-row"><span class="k">Response time</span><span class="v">0.7s</span></div>
+        <div class="panel-row"><span class="k">Language</span><span class="v">English (US)</span></div>
+        <div class="panel-row"><span class="k">Confidence</span><span class="v">98.2%</span></div>
+      </div>
+    </div>
+
+    <!-- Hidden tab panels (populated via JS) -->
+    <div class="tab-panel" data-panel="booking">
+      <div class="tab-content">
+        <h3>Fill your calendar while you sleep.</h3>
+        <p>Diali checks technician availability in real-time and books jobs directly into your dispatch board — no human required.</p>
+        <ul class="tab-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Real-time calendar sync</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Geofenced technician matching</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>SMS & email confirmations</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>ServiceTitan, HCP, Jobber sync</li>
+        </ul>
+      </div>
+      <div class="tab-visual">
+        <div class="panel-label">TODAY · TUE APR 9</div>
+        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
+        <div class="panel-row"><span class="k">8:00 AM · Carlos R.</span><span class="v">Booked</span></div>
+        <div class="panel-row"><span class="k">10:30 AM · Jamal T.</span><span class="v">Booked</span></div>
+        <div class="panel-row"><span class="k">1:00 PM · Carlos R.</span><span class="v">Booked</span></div>
+        <div class="panel-row"><span class="k">3:00 PM · Jamal T.</span><span class="v">Just booked</span></div>
+        <div class="panel-row"><span class="k">5:30 PM · Carlos R.</span><span class="v">Available</span></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="quotes">
+      <div class="tab-content">
+        <h3>Draft quotes before the call ends.</h3>
+        <p>Diali never commits your business to a firm price on the phone — only ballpark ranges. The moment a call wraps, Diali drafts a full quote from your pricebook so you can review and send in a single tap.</p>
+        <ul class="tab-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Rule-based matching from call transcripts</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Ballpark ranges only on-call, never firm</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>You review and send — you stay in control</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>SMS/email delivery with one-tap approval</li>
+        </ul>
+      </div>
+      <div class="tab-visual">
+        <div class="panel-label">DRAFT · Q-4428 · READY FOR REVIEW</div>
+        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
+        <div class="panel-row"><span class="k">Diagnostic <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$95</span></div>
+        <div class="panel-row"><span class="k">R-410A refrigerant (3 lb) <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$255</span></div>
+        <div class="panel-row"><span class="k">Coil cleaning <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$150</span></div>
+        <div class="panel-row"><span class="k">Labor (2h) <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$250</span></div>
+        <div class="panel-row" style="padding-top:16px;margin-top:4px;border-top:1px solid #e5e5e5"><span class="k" style="color:#171717">Total</span><span class="v" style="font-size:18px">$750.00</span></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="dispatch">
+      <div class="tab-content">
+        <h3>Dispatch without the dispatcher.</h3>
+        <p>Diali assigns jobs to the right tech based on skill, location, and workload — and routes them in real-time as the day changes.</p>
+        <ul class="tab-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Skill-based routing</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Live traffic optimization</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Auto-rescheduling on delays</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>ETA updates to customers</li>
+        </ul>
+      </div>
+      <div class="tab-visual">
+        <div class="panel-label">DISPATCH · LIVE</div>
+        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
+        <div class="panel-row"><span class="k">Carlos R. · Mission</span><span class="v">En route</span></div>
+        <div class="panel-row"><span class="k">Jamal T. · Noe Valley</span><span class="v">On job</span></div>
+        <div class="panel-row"><span class="k">Dana K. · Sunset</span><span class="v">Traveling</span></div>
+        <div class="panel-row"><span class="k">Avg. ETA accuracy</span><span class="v">±4 min</span></div>
+        <div class="panel-row"><span class="k">Today's jobs</span><span class="v">28 / 32</span></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="followup">
+      <div class="tab-content">
+        <h3>Close the loop on every job.</h3>
+        <p>After the job is done, Diali follows up for reviews, upsells maintenance plans, and books the next visit automatically.</p>
+        <ul class="tab-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Google & Yelp review asks</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Maintenance plan upsells</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Recurring service booking</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>NPS & feedback collection</li>
+        </ul>
+      </div>
+      <div class="tab-visual">
+        <div class="panel-label">FOLLOW-UPS · LAST 7 DAYS</div>
+        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
+        <div class="panel-row"><span class="k">Review asks sent</span><span class="v">128</span></div>
+        <div class="panel-row"><span class="k">New Google reviews</span><span class="v">+42</span></div>
+        <div class="panel-row"><span class="k">Maintenance plans sold</span><span class="v">14</span></div>
+        <div class="panel-row"><span class="k">Rebookings</span><span class="v">31</span></div>
+        <div class="panel-row"><span class="k">Avg. rating</span><span class="v">4.9 ★</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SPLIT SECTION (Dark) ═══════════════ -->
+<section class="split-section">
+  <div class="w">
+    <div class="split-grid">
+      <div class="split-left sr">
+        <div class="section-label">Infrastructure</div>
+        <h2>Scale your business <em>without</em> hiring another person.</h2>
+        <p>Diali runs on enterprise-grade voice infrastructure. It never sleeps, never takes a break, and never has a bad day. One Diali handles the workload of a 10-person call center.</p>
+        <div class="split-stats">
+          <div class="split-stat-row"><span class="k">Calls handled / month</span><span class="v">2.4M+</span></div>
+          <div class="divider"></div>
+          <div class="split-stat-row"><span class="k">Avg. answer time</span><span class="v">0.8s</span></div>
+          <div class="divider"></div>
+          <div class="split-stat-row"><span class="k">Uptime SLA</span><span class="v">99.99%</span></div>
+          <div class="divider"></div>
+          <div class="split-stat-row"><span class="k">Languages supported</span><span class="v">42</span></div>
+        </div>
+      </div>
+
+      <div class="sr d1">
+        <div class="terminal">
+          <div class="terminal-head">
+            <div class="terminal-dots"><span></span><span></span><span></span></div>
+            <div class="terminal-title">~ diali / call-handler.ts</div>
+          </div>
+          <div class="terminal-body">
+            <div><span class="c">// Diali picks up in under 800ms</span></div>
+            <div><span class="k">const</span> <span class="p">call</span> = <span class="k">await</span> diali.<span class="p">answer</span>(<span class="s">incoming</span>)</div>
+            <br>
+            <div><span class="c">// Understands intent instantly</span></div>
+            <div><span class="k">const</span> <span class="p">intent</span> = <span class="k">await</span> call.<span class="p">detectIntent</span>({</div>
+            <div>&nbsp;&nbsp;business: <span class="s">'hvac'</span>,</div>
+            <div>&nbsp;&nbsp;priceBook: priceBook.<span class="p">latest</span>()</div>
+            <div>})</div>
+            <br>
+            <div><span class="c">// Books the job in your calendar</span></div>
+            <div><span class="k">const</span> <span class="p">booking</span> = <span class="k">await</span> call.<span class="p">book</span>({</div>
+            <div>&nbsp;&nbsp;window: <span class="s">'same-day'</span>,</div>
+            <div>&nbsp;&nbsp;tech: diali.<span class="p">matchTech</span>(intent)</div>
+            <div>})</div>
+            <br>
+            <div><span class="c">// Revenue: +$285 · Time: 2m 47s</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FEATURES GRID ═══════════════ -->
+<section class="features-section" id="features">
+  <div class="w">
+    <div class="features-head sr">
+      <div class="section-label">Everything you need</div>
+      <h2 class="section-title">Built for how contractors actually work.</h2>
+      <p class="section-desc" style="margin-top:20px">Purpose-built for HVAC, plumbing, electrical, and roofing — not a generic AI bolted onto a phone line.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature sr">
+        <div class="feature-num">01 / VOICE</div>
+        <h4>Natural-sounding AI</h4>
+        <p>Voices trained on real contractor calls — no robotic scripts, no "press 1 for English."</p>
+        <div class="feature-link">Learn more <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+      </div>
+      <div class="feature sr d1">
+        <div class="feature-num">02 / CRM</div>
+        <h4>Deep integrations</h4>
+        <p>ServiceTitan, Housecall Pro, Jobber, FieldEdge — Diali writes to all of them in real-time.</p>
+        <div class="feature-link">View integrations <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+      </div>
+      <div class="feature sr d2">
+        <div class="feature-num">03 / PRICING</div>
+        <h4>Your pricebook, live</h4>
+        <p>Diali quotes from your live pricing — not last year's PDF. Margins stay protected automatically.</p>
+        <div class="feature-link">See pricing engine <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+      </div>
+      <div class="feature sr">
+        <div class="feature-num">04 / ROUTING</div>
+        <h4>Smart dispatch</h4>
+        <p>Matches jobs to the right tech based on skill, location, traffic, and current workload.</p>
+        <div class="feature-link">How routing works <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+      </div>
+      <div class="feature sr d1">
+        <div class="feature-num">05 / ANALYTICS</div>
+        <h4>Call insights</h4>
+        <p>See every call, transcript, outcome, and revenue impact in a single dashboard.</p>
+        <div class="feature-link">Explore dashboard <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+      </div>
+      <div class="feature sr d2">
+        <div class="feature-num">06 / COMPLIANCE</div>
+        <h4>Secure & compliant</h4>
+        <p>SOC 2 Type II, HIPAA-ready, and call recording with full opt-in consent handling.</p>
+        <div class="feature-link">Security overview <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PRICING ═══════════════ -->
+<section class="pricing-section" id="pricing">
+  <div class="w">
+    <div class="pricing-head sr">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple, per-minute pricing.</h2>
+      <p class="section-desc">Pay only for the time Diali is actually on the phone. Cancel anytime.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="tier sr">
+        <div class="tier-name">Starter</div>
+        <div class="tier-price"><span class="amt">$99</span><span class="per">/ month</span></div>
+        <p class="tier-desc">For solo operators and new contractors testing the waters.</p>
+        <ul class="tier-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Up to 500 minutes / mo</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>1 phone number</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Basic calendar sync</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Email & SMS alerts</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Community support</li>
+        </ul>
+        <a href="Diali_v1.html" class="tier-cta">Start free trial</a>
+      </div>
+      <div class="tier featured sr d1">
+        <div class="tier-name">Pro · Most popular</div>
+        <div class="tier-price"><span class="amt">$299</span><span class="per">/ month</span></div>
+        <p class="tier-desc">Everything a growing shop needs to fully automate intake and dispatch.</p>
+        <ul class="tier-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Up to 2,000 minutes / mo</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Unlimited numbers</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>CRM integrations (all)</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Instant quotes from pricebook</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Priority support</li>
+        </ul>
+        <a href="Diali_v1.html" class="tier-cta">Start free trial</a>
+      </div>
+      <div class="tier sr d2">
+        <div class="tier-name">Enterprise</div>
+        <div class="tier-price"><span class="amt">Custom</span></div>
+        <p class="tier-desc">For multi-location operators and franchise networks. Volume pricing.</p>
+        <ul class="tier-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Unlimited minutes</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Multi-location routing</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Custom voice training</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Dedicated CSM</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>99.99% uptime SLA</li>
+        </ul>
+        <a href="Diali_v1.html" class="tier-cta">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ BIG CTA ═══════════════ -->
+<section class="cta-section">
+  <div class="w">
+    <h2 class="sr">Stop missing calls.<br>Start booking jobs.</h2>
+    <p class="sr d1">Set up takes under 10 minutes. Your first 100 minutes are on us.</p>
+    <div class="cta-actions sr d2">
+      <a href="Diali_v1.html" class="btn btn-dark btn-lg">Start free trial</a>
+      <a href="#" class="btn btn-light btn-lg">Book a 15-min demo</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="w">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand" aria-label="Diali">
+          <svg viewBox="0 0 29 29" fill="none">
+            <rect y="14.1415" width="8" height="8" transform="rotate(-45 0 14.1415)" fill="#171717"/>
+            <rect x="11.3125" y="14.1415" width="12" height="12" transform="rotate(-45 11.3125 14.1415)" fill="#171717"/>
+            <rect x="14.1406" y="14.1415" width="4" height="4" transform="rotate(-45 14.1406 14.1415)" fill="#fafafa"/>
+            <rect x="11.3125" y="25.454" width="4" height="4" transform="rotate(-45 11.3125 25.454)" fill="#171717"/>
+          </svg>
+        </div>
+        <p class="foot-tag">The AI front office for home service contractors. Answer every call. Book every job.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">Integrations</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Changelog</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Customers</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="#">Docs</a></li>
+          <li><a href="#">Guides</a></li>
+          <li><a href="#">Security</a></li>
+          <li><a href="#">Status</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Diali, Inc. All rights reserved.</p>
+      <div class="foot-socials">
+        <a href="#">Twitter</a>
+        <a href="#">LinkedIn</a>
+        <a href="#">GitHub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll reveal
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('v');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+document.querySelectorAll('.sr').forEach(el => io.observe(el));
+
+// Tabs
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.tab-panel');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    tabs.forEach(t => t.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector(`.tab-panel[data-panel="${target}"]`).classList.add('active');
+  });
+});
+
+// Nav shadow on scroll
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 10) nav.classList.add('scrolled');
+  else nav.classList.remove('scrolled');
+});
+</script>
+</body>
+</html>
