@@ -1201,24 +1201,22 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   ];
   const[playingVoice,setPlayingVoice]=useState(null);
   const[loadingVoice,setLoadingVoice]=useState(null);
+  const[previewErr,setPreviewErr]=useState(null);
   const audioRef=React.useRef(null);
   const previewVoice=(vId,e)=>{
     e.stopPropagation();
-    /* Stop current playback */
+    setPreviewErr(null);
     if(audioRef.current){audioRef.current.pause();audioRef.current=null;}
     if(playingVoice===vId){setPlayingVoice(null);return;}
     setLoadingVoice(vId);setPlayingVoice(null);
-    const text="Hi, thanks for calling! I can help you schedule a service appointment or answer any questions you might have. What's going on today?";
-    fetch("https://api.elevenlabs.io/v1/text-to-speech/"+vId+"/stream?output_format=mp3_44100_64",{
-      method:"POST",headers:{"Content-Type":"application/json","xi-api-key":"sk_2035a5f2d5adc7f64fb91dfe6f9e88266bbd69a8f3fbb2cd"},
-      body:JSON.stringify({text,model_id:"eleven_turbo_v2_5",voice_settings:{stability:0.5,similarity_boost:0.75}})
-    }).then(r=>{if(!r.ok)throw new Error("ElevenLabs error "+r.status);return r.blob();}).then(blob=>{
+    fetch("/api/voice-preview?voiceId="+encodeURIComponent(vId))
+    .then(r=>{if(!r.ok)return r.json().then(d=>{throw new Error(d.error||"Preview failed")});return r.blob();}).then(blob=>{
       const url=URL.createObjectURL(blob);
       const a=new Audio(url);
       a.onended=()=>{setPlayingVoice(null);audioRef.current=null;URL.revokeObjectURL(url);};
       a.onerror=()=>{setPlayingVoice(null);setLoadingVoice(null);audioRef.current=null;};
       audioRef.current=a;setPlayingVoice(vId);setLoadingVoice(null);a.play();
-    }).catch(err=>{console.error("Voice preview error:",err);setLoadingVoice(null);setPlayingVoice(null);});
+    }).catch(err=>{console.error("Voice preview error:",err);setLoadingVoice(null);setPlayingVoice(null);setPreviewErr(err.message||"Preview unavailable");setTimeout(()=>setPreviewErr(null),4000);});
   };
 
   /* Listen for SDK load */
@@ -1495,6 +1493,7 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
               </div>
             </div>))}
           </div>
+          {previewErr&&<div className="mt-4 bg-neutral-900 text-white px-4 py-3 text-sm flex items-center gap-3"><span className="w-4 h-4 shrink-0">{I.x}</span>{previewErr}</div>}
           <p className="text-xs text-neutral-300 mt-6">Voice IDs from ElevenLabs. You can use any ElevenLabs voice ID — including cloned voices.</p>
           <div className="mt-4"><label className="text-xs text-neutral-400 mb-1.5 block">Custom voice ID (optional)</label><input value={voiceId} onChange={e=>setVoiceId(e.target.value)} className="w-full border border-neutral-200 px-4 py-3 text-sm font-mono" placeholder="Enter any ElevenLabs voice ID"/></div>
         </div>}
@@ -2456,11 +2455,8 @@ const Onboarding=({onDone})=>{
     if(obPlaying===name){setObPlaying(null);return;}
     const vid=obVoiceIdMap2[name];if(!vid)return;
     setObLoading(name);setObPlaying(null);
-    const text="Hi, thanks for calling! I can help you schedule a service appointment or answer any questions. What's going on today?";
-    fetch("https://api.elevenlabs.io/v1/text-to-speech/"+vid+"/stream?output_format=mp3_44100_64",{
-      method:"POST",headers:{"Content-Type":"application/json","xi-api-key":"sk_2035a5f2d5adc7f64fb91dfe6f9e88266bbd69a8f3fbb2cd"},
-      body:JSON.stringify({text,model_id:"eleven_turbo_v2_5",voice_settings:{stability:0.5,similarity_boost:0.75}})
-    }).then(r=>{if(!r.ok)throw new Error("err");return r.blob();}).then(blob=>{
+    fetch("/api/voice-preview?voiceId="+encodeURIComponent(vid))
+    .then(r=>{if(!r.ok)throw new Error("err");return r.blob();}).then(blob=>{
       const url=URL.createObjectURL(blob);
       const a=new Audio(url);
       a.onended=()=>{setObPlaying(null);obAudioRef.current=null;URL.revokeObjectURL(url);};
