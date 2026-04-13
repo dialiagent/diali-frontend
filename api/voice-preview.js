@@ -1,8 +1,8 @@
 /**
  * Vercel Serverless Function — /api/voice-preview
  *
- * Proxies ElevenLabs text-to-speech so the API key stays server-side.
- * Returns an MP3 audio buffer. Cached for 7 days per voice.
+ * Fetches the ElevenLabs preview_url for a voice (pre-recorded sample)
+ * and redirects to it. No TTS credits consumed — works on free tier.
  *
  * Env var required: ELEVENLABS_API_KEY
  *
@@ -17,9 +17,6 @@ const ALLOWED_VOICES = new Set([
   'LoQnubeEKhw9RDkfeS80', // Larry
   'hGQkZQUA5RiOXIw7P9iO', // Kiora
 ]);
-
-const PREVIEW_TEXT =
-  "Hi, thanks for calling! I can help you schedule a service appointment or answer any questions you might have. What's going on today?";
 
 module.exports = async (req, res) => {
   /* Only GET */
@@ -42,19 +39,12 @@ module.exports = async (req, res) => {
   }
 
   try {
+    /* Fetch voice metadata — includes a preview_url with a pre-recorded sample */
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://api.elevenlabs.io/v1/voices/${voiceId}`,
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          text: PREVIEW_TEXT,
-          model_id: 'eleven_turbo_v2_5',
-          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-        }),
+        method: 'GET',
+        headers: { 'xi-api-key': apiKey },
       }
     );
 
@@ -64,13 +54,16 @@ module.exports = async (req, res) => {
       return res.status(502).json({ error: 'Voice service error' });
     }
 
-    const buffer = Buffer.from(await response.arrayBuffer());
+    const data = await response.json();
+    const previewUrl = data.preview_url;
 
-    /* Cache aggressively — same voice + same text = same audio */
-    res.setHeader('Content-Type', 'audio/mpeg');
+    if (!previewUrl) {
+      return res.status(404).json({ error: 'No preview available for this voice' });
+    }
+
+    /* Redirect to the CDN-hosted sample — fast, free, cacheable */
     res.setHeader('Cache-Control', 'public, s-maxage=604800, max-age=604800'); // 7 days
-    res.setHeader('Content-Length', buffer.length);
-    return res.send(buffer);
+    return res.redirect(302, previewUrl);
   } catch (err) {
     console.error('Voice preview error:', err);
     return res.status(500).json({ error: 'Preview failed' });
