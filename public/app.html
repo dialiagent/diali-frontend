@@ -790,12 +790,9 @@ const Jobs=()=>{
       </div>
 
       {/* Filter chips */}
-      <div className="flex items-center gap-2 mb-5 overflow-x-auto">
+      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 mb-4">
         {[["all","All",jobs.length],["today","Today",jobs.filter(j=>dayBucket(j.day)==="today").length],["week","This week",jobs.filter(j=>{const b=dayBucket(j.day);return b==="today"||b==="week";}).length],["progress","In progress",jobs.filter(j=>j.pct>0&&j.pct<100).length]].map(([k,label,n])=>(
-          <button key={k} onClick={()=>setFilter(k)} className={"flex items-center gap-2 px-3.5 py-1.5 text-xs transition-all duration-200 shrink-0 "+(filter===k?"bg-neutral-900 text-white":"bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400")}>
-            <span>{label}</span>
-            <span className={"tabular-nums "+(filter===k?"text-neutral-400":"text-neutral-300")}>{n}</span>
-          </button>
+          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(filter===k?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{label}{k!=="all"&&<span className={"ml-1.5 tabular-nums "+(filter===k?"text-neutral-500":"text-neutral-300")}>{n}</span>}</button>
         ))}
       </div>
 
@@ -1162,12 +1159,9 @@ const Leads=({profile,setQuoteView})=>{
       </div>
 
       {/* Filter chips */}
-      <div className="flex items-center gap-2 mb-5 overflow-x-auto">
+      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 mb-4">
         {[["all","All",C.filter(l=>l.status!=="declined").length],["hot","Hot",C.filter(isHot).length],["urgent","Urgent",C.filter(l=>l.urg==="urgent"||l.urg==="emergency").length],["today","Today",C.filter(l=>{const f=freshness(l.time);return f==="now"||f==="today";}).length],["week","This week",C.filter(l=>freshness(l.time)!=="older").length]].map(([k,label,n])=>(
-          <button key={k} onClick={()=>setFilter(k)} className={"flex items-center gap-2 px-3.5 py-1.5 text-xs transition-all duration-200 shrink-0 "+(filter===k?"bg-neutral-900 text-white":"bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400")}>
-            <span>{label}</span>
-            <span className={"tabular-nums "+(filter===k?"text-neutral-400":"text-neutral-300")}>{n}</span>
-          </button>
+          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(filter===k?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{label}{k!=="all"&&<span className={"ml-1.5 tabular-nums "+(filter===k?"text-neutral-500":"text-neutral-300")}>{n}</span>}</button>
         ))}
       </div>
 
@@ -1505,17 +1499,11 @@ const Quotes=()=>{
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-        <div className="relative md:w-80">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 pointer-events-none">{I.search}</span>
-          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search pricebook..." className="w-full border border-neutral-200 pl-11 pr-4 py-2.5 text-sm hover:border-neutral-300 focus:border-neutral-400 focus:outline-none transition-colors"/>
-        </div>
-        <div className="flex gap-1 overflow-x-auto -mx-1 px-1">
-          {cats.map(c=>(
-            <button key={c} onClick={()=>setCat(c)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(cat===c?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{c}{c!=="All"&&<span className="ml-1.5 text-neutral-500">{items.filter(i=>i.cat===c).length}</span>}</button>
-          ))}
-        </div>
+      {/* Filter chips */}
+      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 mb-4">
+        {cats.map(c=>(
+          <button key={c} onClick={()=>setCat(c)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(cat===c?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{c}{c!=="All"&&<span className={"ml-1.5 tabular-nums "+(cat===c?"text-neutral-500":"text-neutral-300")}>{items.filter(i=>i.cat===c).length}</span>}</button>
+        ))}
       </div>
 
       {/* Table */}
