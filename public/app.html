@@ -667,6 +667,7 @@ const Jobs=()=>{
   const[view,setView]=useState("board");
   const[panel,setPanel]=useState(null);
   const[selJob,setSelJob]=useState(null);
+  const[loadedReal,setLoadedReal]=useState(false);
   const[jobs,setJobs]=useState([
     {id:1,day:"Today",time:"2:30 PM",cust:"Michael Chen",ph:"(555) 890-1234",addr:"1842 Elm St, Denver CO 80205",issue:"Water leak inspection",tech:"John S.",rev:600,st:"Confirmed",pct:30,checklist:["Inspect water source and identify leak origin","Check condensate drain line for blockage","Test water pressure at furnace connection","Inspect surrounding drywall for water damage","Document findings with photos","Provide written repair estimate"],parts:["Condensate drain fitting","PVC cement and primer","Wet/dry vacuum","Moisture meter"],notes:"Customer reports water pooling near furnace base. Likely condensate line. Bring wet vac. Homeowner has dog — ring doorbell first."},
     {id:2,day:"Today",time:"5:00 PM",cust:"James Rodriguez",ph:"(555) 456-7890",addr:"567 Oak Ave, Denver CO 80220",issue:"Furnace noise repair",tech:"Mike T.",rev:350,st:"Confirmed",pct:0,checklist:["Run furnace and identify grinding source","Inspect blower motor and bearings","Check belt tension and alignment","Inspect inducer motor","Lubricate all moving parts","Run safety combustion test"],parts:["Blower motor bearings","Fan belt (size B-48)","High-temp lubricant","CO detector"],notes:"Grinding started 2 days ago. Customer worried about safety. Check gas connections first. Unit is 8 years old — may need blower motor replacement."},
@@ -677,6 +678,35 @@ const Jobs=()=>{
     {id:7,day:"Today",time:"11:00 AM",cust:"Karen Price",ph:"(555) 333-4444",addr:"78 Sunset Dr, Denver CO 80211",issue:"Duct cleaning — whole home",tech:"Mike T.",rev:325,st:"Completed",pct:100,checklist:["Clean supply and return ducts","Sanitize vent covers","Replace all filters","Final airflow test"],parts:["HEPA filter set","Sanitization spray"],notes:"Completed on time. Customer very satisfied. Upsold annual maintenance plan."},
     {id:8,day:"Yesterday",time:"3:00 PM",cust:"Tom Bradley",ph:"(555) 555-6666",addr:"321 Aspen Way, Lakewood CO",issue:"Thermostat replacement",tech:"John S.",rev:275,st:"Completed",pct:100,checklist:["Remove old thermostat","Install Ecobee Smart thermostat","Configure WiFi and app","Test heating and cooling cycles"],parts:["Ecobee Smart Thermostat","Wire nuts","Wall plate"],notes:"Clean install. Customer walked through app setup. Left 5-star review."}
   ]);
+  /* Load real appointments from Supabase. If any exist, replace the demo seed.
+     Demo Joe-Martinez user keeps the seed since he has no real bookings. */
+  React.useEffect(()=>{
+    let stop=false;
+    (async()=>{
+      try{
+        const sess=await window.supabase.auth.getSession();
+        const uid=sess?.data?.session?.user?.id;
+        if(!uid)return;
+        const{data,error}=await window.supabase
+          .from("appointments")
+          .select("id,starts_at,ends_at,title,location,notes,status,quote_id,tech,revenue_estimate,progress_pct,checklist,checklist_done,parts,tech_notes,leads(customer_name,customer_phone,customer_address,issue,urgency,source,status)")
+          .eq("user_id",uid)
+          .order("starts_at",{ascending:false})
+          .limit(200);
+        if(stop||error||!data||data.length===0)return;
+        setJobs(data.map(apptToJob));
+        setLoadedReal(true);
+      }catch(e){console.warn("jobs load:",e.message);}
+    })();
+    return()=>{stop=true;};
+  },[]);
+  /* Persist a single field change back to the appointments table — only for
+     real (loaded) jobs; demo seed edits stay local. */
+  const persistJob=async(id,patch)=>{
+    if(!loadedReal)return;
+    try{await window.supabase.from("appointments").update(patch).eq("id",id);}
+    catch(e){console.warn("job persist:",e.message);}
+  };
   const totalRev=jobs.reduce((a,j)=>a+j.rev,0);
   const[newJob,setNewJob]=useState({cust:"",date:"",time:"",addr:"",issue:"",tech:"John S.",rev:""});
   const[filter,setFilter]=useState("all");
@@ -738,14 +768,14 @@ const Jobs=()=>{
             <div className="h-px bg-neutral-100"/>
             <div><ST icon={I.chart} title="Progress"/><div className="flex items-center gap-4"><div className="flex-1 h-1.5 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:selJob.pct+"%"}}/></div><span className="text-xs text-neutral-400 tabular-nums w-10 text-right">{selJob.pct}%</span></div></div>
             <div className="h-px bg-neutral-100"/>
-            <div><SL>Checklist — {selJob.checklist?.length||0} items</SL>{selJob.checklist?.map((t,i)=><CK key={selJob.id+"-"+i} text={t} done={!!(selJob.checked&&selJob.checked[i])} onChange={v=>{const nc=[...(selJob.checked||selJob.checklist.map(()=>false))];nc[i]=v;setJobs(p=>p.map(j=>j.id===selJob.id?{...j,checked:nc}:j));setSelJob(prev=>({...prev,checked:nc}));}}/>)}</div>
+            <div><SL>Checklist — {selJob.checklist?.length||0} items</SL>{selJob.checklist?.map((t,i)=><CK key={selJob.id+"-"+i} text={t} done={!!(selJob.checked&&selJob.checked[i])} onChange={v=>{const nc=[...(selJob.checked||selJob.checklist.map(()=>false))];nc[i]=v;setJobs(p=>p.map(j=>j.id===selJob.id?{...j,checked:nc}:j));setSelJob(prev=>({...prev,checked:nc}));persistJob(selJob.id,{checklist_done:nc});}}/>)}</div>
             <div className="h-px bg-neutral-100"/>
             <div><SL>Parts and materials</SL><div className="flex flex-wrap gap-2">{selJob.parts?.map((p,i)=>(<span key={i} className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1.5">{p}</span>))}</div></div>
             <div className="h-px bg-neutral-100"/>
             <div><ST icon={I.msg} title="Tech notes"/><p className="text-sm text-neutral-700 leading-relaxed">{selJob.notes}</p></div>
           </div>
           <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
-            {selJob.st!=="Completed"&&<button onClick={()=>{setJobs(p=>p.map(j=>j.id===selJob.id?{...j,st:"Completed",pct:100}:j));setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark complete</button>}
+            {selJob.st!=="Completed"&&<button onClick={()=>{setJobs(p=>p.map(j=>j.id===selJob.id?{...j,st:"Completed",pct:100}:j));persistJob(selJob.id,{status:"completed",progress_pct:100});setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark complete</button>}
             {selJob.st!=="Completed"&&<button onClick={()=>setSelJob(null)} className="flex-1 border border-neutral-200 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">Reschedule</button>}
             {selJob.st==="Completed"&&<button onClick={()=>setSelJob(null)} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.phone}</span>Call customer</button>}
             {selJob.st==="Completed"&&<button onClick={()=>setSelJob(null)} className="flex-1 border border-neutral-200 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.msg}</span>Send invoice</button>}
@@ -860,7 +890,7 @@ const Jobs=()=>{
                       <div className="flex items-center gap-1 fi">
                         <a href={"tel:"+(j.ph||"")} onClick={e=>e.stopPropagation()} title="Call" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.phone}</span></a>
                         <a href={j.addr?"https://maps.google.com/?q="+encodeURIComponent(j.addr):"#"} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} title="Directions" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.map}</span></a>
-                        <button onClick={e=>{e.stopPropagation();setJobs(p=>p.map(x=>x.id===j.id?{...x,st:"Completed",pct:100}:x));}} title="Mark complete" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.check}</span></button>
+                        <button onClick={e=>{e.stopPropagation();setJobs(p=>p.map(x=>x.id===j.id?{...x,st:"Completed",pct:100}:x));persistJob(j.id,{status:"completed",progress_pct:100});}} title="Mark complete" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.check}</span></button>
                       </div>
                     ):!done&&j.pct>0?(
                       <div className="flex items-center gap-2 w-24">
@@ -2266,6 +2296,26 @@ const Calendar=()=>{
     {id:5,name:"David Park",phone:"(555) 567-8901",address:"1456 Birch Ln, Denver CO",issue:"No heat — furnace won't ignite, gas smell near unit",time:"8:00 AM",timeEnd:"9:00 AM",date:day(1),status:"pending",urgency:"emergency",source:"AI Call"},
     {id:6,name:"Lisa Martinez",phone:"(555) 678-9012",address:"905 Cedar St, Arvada CO",issue:"AC maintenance plan — annual tune-up, last service 14 months ago",time:"3:00 PM",timeEnd:"4:00 PM",date:day(3),status:"confirmed",urgency:"standard",source:"Phone"},
   ]);
+  /* Load real appointments — same source of truth as the Jobs page */
+  React.useEffect(()=>{
+    let stop=false;
+    (async()=>{
+      try{
+        const sess=await window.supabase.auth.getSession();
+        const uid=sess?.data?.session?.user?.id;
+        if(!uid)return;
+        const{data,error}=await window.supabase
+          .from("appointments")
+          .select("id,starts_at,ends_at,title,location,notes,status,leads(customer_name,customer_phone,customer_address,issue,urgency,source)")
+          .eq("user_id",uid)
+          .order("starts_at",{ascending:true})
+          .limit(200);
+        if(stop||error||!data||data.length===0)return;
+        setBookings(data.map(apptToBooking));
+      }catch(e){console.warn("calendar load:",e.message);}
+    })();
+    return()=>{stop=true;};
+  },[]);
 
   const[addPanel,setAddPanel]=useState(false);
   const[newAppt,setNewAppt]=useState({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});
@@ -2407,6 +2457,63 @@ const Calendar=()=>{
       </div>}
     </div>
   );
+};
+
+/* ── Appointment helpers — appointments rows are the source of truth for both
+   Jobs and Calendar. These mappers convert an appointments-joined-leads row
+   into the shapes those two pages render. ── */
+const fmtTime12=(d)=>d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+const humanDay=(d)=>{
+  const today=new Date();today.setHours(0,0,0,0);
+  const target=new Date(d);target.setHours(0,0,0,0);
+  const diff=Math.round((target-today)/86400000);
+  if(diff===0)return "Today";
+  if(diff===1)return "Tomorrow";
+  if(diff===-1)return "Yesterday";
+  if(diff>1&&diff<7)return target.toLocaleDateString("en-US",{weekday:"long"});
+  if(diff<-1&&diff>-7)return Math.abs(diff)+" days ago";
+  return target.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+};
+const apptToJob=(row)=>{
+  const lead=row.leads||{};
+  const start=row.starts_at?new Date(row.starts_at):null;
+  const completed=row.status==="completed";
+  return {
+    id:row.id,
+    day:start?humanDay(start):"TBD",
+    time:start?fmtTime12(start):"TBD",
+    cust:lead.customer_name||row.title||"Customer",
+    ph:lead.customer_phone||"",
+    addr:row.location||lead.customer_address||"",
+    issue:row.notes||lead.issue||"",
+    tech:row.tech||"Unassigned",
+    rev:Number(row.revenue_estimate)||0,
+    st:completed?"Completed":(row.quote_id?"Quote":"Confirmed"),
+    pct:row.progress_pct||(completed?100:0),
+    checklist:Array.isArray(row.checklist)?row.checklist:[],
+    checked:Array.isArray(row.checklist_done)?row.checklist_done:[],
+    parts:Array.isArray(row.parts)?row.parts:[],
+    notes:row.tech_notes||""
+  };
+};
+const apptToBooking=(row)=>{
+  const lead=row.leads||{};
+  const start=row.starts_at?new Date(row.starts_at):new Date();
+  const end=row.ends_at?new Date(row.ends_at):new Date(start.getTime()+3600000);
+  const statusMap={scheduled:"confirmed",completed:"confirmed",canceled:"pending",no_show:"pending"};
+  return {
+    id:row.id,
+    name:lead.customer_name||row.title||"Customer",
+    phone:lead.customer_phone||"",
+    address:row.location||lead.customer_address||"",
+    issue:row.notes||lead.issue||"",
+    time:fmtTime12(start),
+    timeEnd:fmtTime12(end),
+    date:start,
+    status:statusMap[row.status]||"confirmed",
+    urgency:lead.urgency||"standard",
+    source:lead.source==="phone"?"AI Call":(lead.source||"Phone")
+  };
 };
 
 /* ══════════════════ LAYOUT ══════════════════ */
