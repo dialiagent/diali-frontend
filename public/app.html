@@ -310,8 +310,39 @@ const HomeCallDetail=({c,actions,onClose,checkedActions,toggleAction})=>{
       <IG items={[["Revenue",c.rev?"$"+c.rev.toLocaleString():"—"],["Source",c.src],["Duration",c.dur],["Confidence",c.conf+"%"]]} cols={2}/>
       {actions[c.id]&&<div><ST icon={I.check} title="Action items"/>{actions[c.id].map((a,i)=><CK key={c.id+"-"+i} text={a} done={!!checkedActions[c.id+"_"+i]} onChange={v=>toggleAction(c.id,i,v)}/>)}</div>}
       {c.notes&&c.notes!=="—"&&<div><ST icon={I.msg} title="Notes"/><p className="text-sm text-neutral-600 leading-relaxed">{c.notes}</p></div>}
-      <Sec open={showRec} onToggle={()=>setShowRec(!showRec)} title="Call recording"><div className="p-5"><div className="flex items-center gap-4"><button className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-4 h-4 ml-0.5">{I.play}</span></button><Wave pct={45}/><span className="text-xs text-neutral-400 tabular-nums shrink-0">{c.dur}</span></div></div></Sec>
-      <Sec open={showTr} onToggle={()=>setShowTr(!showTr)} title="Transcript" count={c.tr?.length||0}><div className="p-5 space-y-2">{c.tr?.map((m,i)=>(<div key={i} className={"flex gap-2.5 "+(m.r==="ai"?"":"justify-end")}>{m.r==="ai"&&<div className="w-6 h-6 bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5"><span className="w-3 h-3 text-neutral-400">{I.bot}</span></div>}<div className={"max-w-[80%] px-3.5 py-2.5 text-sm leading-relaxed "+(m.r==="ai"?"bg-neutral-100 text-neutral-700":"bg-neutral-900 text-white")}>{m.t}</div></div>))}</div></Sec>
+      <Sec open={showRec} onToggle={()=>setShowRec(!showRec)} title="Call recording">
+        <div className="p-5">
+          {c.rec?(
+            <audio controls preload="none" src={c.rec} className="w-full" style={{colorScheme:"light"}}/>
+          ):(
+            <div className="flex items-center gap-4 py-1">
+              <div className="w-10 h-10 bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0"><span className="w-4 h-4">{I.mic}</span></div>
+              <div className="flex-1">
+                <p className="text-sm text-neutral-700">No recording available</p>
+                <p className="text-xs text-neutral-400 mt-0.5">Recordings appear here once Vapi posts them via webhook.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Sec>
+      <Sec open={showTr} onToggle={()=>setShowTr(!showTr)} title="Transcript" count={c.tr?.length||0}>
+        <div className="p-5 space-y-2">
+          {c.tr?.length?c.tr.map((m,i)=>(
+            <div key={i} className={"flex gap-2.5 "+(m.r==="ai"?"":"justify-end")}>
+              {m.r==="ai"&&<div className="w-6 h-6 bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5"><span className="w-3 h-3 text-neutral-400">{I.bot}</span></div>}
+              <div className={"max-w-[80%] px-3.5 py-2.5 text-sm leading-relaxed "+(m.r==="ai"?"bg-neutral-100 text-neutral-700":"bg-neutral-900 text-white")}>{m.t}</div>
+            </div>
+          )):(
+            <div className="bg-neutral-50 p-5 flex items-start gap-3">
+              <span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.msg}</span>
+              <div>
+                <p className="text-sm text-neutral-700">No transcript available</p>
+                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">Transcripts appear here once Vapi posts the call details via webhook.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Sec>
     </div>
     <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
       <button onClick={onClose} className="flex-1 bg-neutral-900 text-white py-3 text-sm flex items-center justify-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.phone}</span>Call back</button>
