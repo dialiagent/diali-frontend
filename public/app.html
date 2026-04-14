@@ -508,9 +508,54 @@ const Calls=()=>{
   const[reschedDate,setReschedDate]=useState("");
   const[reschedTime,setReschedTime]=useState("");
   const[newCall,setNewCall]=useState({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});
+  /* Metrics — same day bucket from Leads so numbers align across pages */
+  const freshness=(t="")=>{
+    const s=(t||"").toLowerCase();
+    if(s.includes("min ago")||s.includes("just now"))return "now";
+    if(s.includes("hr ago")||s.includes("hour"))return "today";
+    if(s.includes("am")||s.includes("pm"))return "today";
+    if(s==="yesterday")return "week";
+    return "older";
+  };
+  const todayCalls=calls.filter(c=>{const f=freshness(c.time);return f==="now"||f==="today";});
+  const bookedToday=todayCalls.filter(c=>c.status==="booked").length;
+  const callsTotal=calls.length;
+  const activeCalls=calls.filter(c=>c.status!=="declined").length;
+  const bookRate=activeCalls?Math.round(calls.filter(c=>c.status==="booked").length/activeCalls*100):0;
+  const avgDur=(()=>{
+    const parts=calls.filter(c=>c.dur&&c.dur!=="0:00").map(c=>{const[m,s]=c.dur.split(":").map(Number);return m*60+s;});
+    if(parts.length===0)return "—";
+    const avg=Math.round(parts.reduce((a,n)=>a+n,0)/parts.length);
+    return Math.floor(avg/60)+":"+String(avg%60).padStart(2,"0");
+  })();
 
   return(
-    <div className="flex flex-col md:flex-row gap-0 md:gap-6 h-full fu">
+    <div className="flex flex-col h-full fu">
+      {/* Hero metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-5">
+        <div className="bg-white border border-neutral-100 p-4">
+          <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5">Calls today</p>
+          <p className="text-xl text-neutral-900 tabular-nums tracking-tight">{todayCalls.length}</p>
+          <p className="text-[10px] text-neutral-400 mt-0.5">{callsTotal} total in view</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-4">
+          <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5">Booked today</p>
+          <p className="text-xl text-neutral-900 tabular-nums tracking-tight">{bookedToday}</p>
+          <p className="text-[10px] text-neutral-400 mt-0.5">appointments confirmed</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-4">
+          <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5">Avg duration</p>
+          <p className="text-xl text-neutral-900 tabular-nums tracking-tight">{avgDur}</p>
+          <p className="text-[10px] text-neutral-400 mt-0.5">Diali handles the full call</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-4">
+          <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5">Book rate</p>
+          <p className="text-xl text-neutral-900 tabular-nums tracking-tight">{bookRate}<span className="text-xs text-neutral-400 ml-1">%</span></p>
+          <p className="text-[10px] text-neutral-400 mt-0.5">of non-declined calls</p>
+        </div>
+      </div>
+
+    <div className="flex flex-col md:flex-row gap-0 md:gap-6 flex-1 min-h-0">
       {/* Reschedule panel */}
       <Panel open={panel==="reschedule"} onClose={()=>setPanel(null)}>
         <PanelHeader onClose={()=>setPanel(null)} title="Reschedule" sub={"Moving appointment for "+(sel?.name||"")}/>
@@ -566,11 +611,32 @@ const Calls=()=>{
       <div className={"w-full md:w-[380px] shrink-0 flex flex-col "+(sel?"hidden md:flex":"flex")}>
         <div className="flex items-center justify-between mb-4"><div className="flex bg-neutral-200 p-1 overflow-x-auto">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} onClick={()=>setFilter(k)} className={"px-5 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(filter===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div><button onClick={()=>setPanel("newcall")} className="bg-neutral-900 text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black transition-colors shrink-0 ml-3"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">Log call</span></button></div>
         <div className="flex-1 overflow-y-auto space-y-2 md:pr-1">
-          {filtered.map(c=>(
-            <div key={c.id} onClick={()=>pick(c)} className={"p-4 cursor-pointer transition-all duration-200 "+(sel?.id===c.id?"bg-neutral-900":"bg-white hover:bg-neutral-50")}>
-              <div className="flex items-start gap-3.5"><Av n={c.name} s={40}/><div className="flex-1 min-w-0"><div className="flex items-center justify-between mb-1"><span className={"text-sm "+(sel?.id===c.id?"text-white":"text-neutral-900")}>{c.name}</span><span className={"text-xs "+(sel?.id===c.id?"text-neutral-400":"text-neutral-300")}>{c.time}</span></div><p className={"text-xs truncate mb-2.5 "+(sel?.id===c.id?"text-neutral-400":"text-neutral-400")}>{c.issue}</p><div className="flex items-center gap-2.5"><Bg s={c.status}/><span className={"text-xs "+(sel?.id===c.id?"text-neutral-500":"text-neutral-300")}>{c.dur}</span><Dot s={c.score}/>{c.rev>0&&<span className={"text-xs ml-auto tabular-nums "+(sel?.id===c.id?"text-white":"text-neutral-900")}>${c.rev.toLocaleString()}</span>}</div></div></div>
+          {filtered.length===0?(
+            <div className="border border-dashed border-neutral-200 p-6 text-center mt-4">
+              <p className="text-xs text-neutral-400">No calls match this filter.</p>
             </div>
-          ))}
+          ):filtered.map(c=>{
+            const active=sel?.id===c.id;
+            return(
+              <div key={c.id} onClick={()=>pick(c)} className={"p-4 cursor-pointer transition-all duration-200 border-l-2 "+(active?"bg-neutral-900 border-neutral-900":"bg-white border-transparent hover:bg-neutral-50 hover:border-neutral-200")}>
+                <div className="flex items-start gap-3">
+                  <Av n={c.name} s={36}/>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className={"text-sm truncate "+(active?"text-white":"text-neutral-900")}>{c.name}</span>
+                      <span className={"text-[10px] tabular-nums shrink-0 "+(active?"text-neutral-400":"text-neutral-400")}>{c.time}</span>
+                    </div>
+                    <p className={"text-xs truncate mb-2.5 "+(active?"text-neutral-400":"text-neutral-500")}>{c.issue}</p>
+                    <div className="flex items-center gap-2">
+                      <Bg s={c.status}/>
+                      <span className={"text-[10px] tabular-nums "+(active?"text-neutral-500":"text-neutral-400")}>{c.dur}</span>
+                      {c.rev>0&&<span className={"text-xs ml-auto tabular-nums "+(active?"text-white":"text-neutral-900")}>${c.rev.toLocaleString()}</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -585,11 +651,25 @@ const Calls=()=>{
             <div><p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Issue</p><p className="text-neutral-700 leading-relaxed">{sel.issue}</p></div>
             {sel.addr&&<div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{sel.addr}</p></div>}
             {sel.booked&&<div className="bg-neutral-900 px-4 md:px-7 py-4 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-3"><div className="flex items-center gap-4 md:gap-5"><div className="w-10 md:w-11 h-10 md:h-11 bg-white/10 flex items-center justify-center shrink-0"><span className="w-5 h-5 text-white">{I.cal}</span></div><div><p className="text-white text-sm md:text-base">{sel.booked}</p><p className="text-xs text-neutral-400 mt-0.5">Scheduled appointment</p></div></div><div className="flex gap-2"><button onClick={()=>setPanel("reschedule")} className="text-xs px-4 py-2.5 bg-white/10 text-white hover:bg-white/20 transition-colors">Reschedule</button><button onClick={()=>setPanel("cancel")} className="text-xs px-4 py-2.5 bg-white/5 text-neutral-400 hover:bg-white/10 transition-colors">Cancel</button></div></div>}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="bg-neutral-50 p-6"><p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Revenue</p><p className="text-4xl text-neutral-900 tracking-tight leading-none">{sel.rev?"$"+sel.rev.toLocaleString():"—"}</p><p className="text-xs text-neutral-400 mt-4">Estimated value</p></div>
-              <div className="bg-neutral-50 p-6 flex items-center gap-6"><div className="relative flex items-center justify-center shrink-0"><Ring pct={sel.conf} size={80} sw={5}/><span className="absolute text-lg text-neutral-900">{sel.conf}%</span></div><div><p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">AI Confidence</p><p className="text-sm text-neutral-700">{sel.conf>=80?"High accuracy":"Needs review"}</p></div></div>
+            {/* Summary strip — revenue, confidence, recording in one clean row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-neutral-100 border border-neutral-100">
+              <div className="bg-white p-5">
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-2">Estimated value</p>
+                <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{sel.rev?"$"+sel.rev.toLocaleString():"—"}</p>
+              </div>
+              <div className="bg-white p-5 flex items-center gap-4">
+                <div className="relative flex items-center justify-center shrink-0"><Ring pct={sel.conf} size={52} sw={3}/><span className="absolute text-xs text-neutral-900 tabular-nums">{sel.conf}%</span></div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-1">AI Confidence</p>
+                  <p className="text-sm text-neutral-700 truncate">{sel.conf>=80?"High accuracy":"Needs review"}</p>
+                </div>
+              </div>
+              <div className="bg-white p-5 flex items-center gap-3">
+                <button className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-4 h-4 ml-0.5">{I.play}</span></button>
+                <div className="flex-1 min-w-0"><Wave pct={45}/></div>
+                <span className="text-xs text-neutral-400 tabular-nums shrink-0">{sel.dur}</span>
+              </div>
             </div>
-            <div className="bg-neutral-50 p-6"><p className="text-xs text-neutral-400 uppercase tracking-widest mb-5">Call Recording</p><div className="flex items-center gap-6"><button className="w-14 h-14 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-5 h-5 ml-0.5">{I.play}</span></button><Wave pct={45}/><span className="text-sm text-neutral-400 tabular-nums shrink-0">{sel.dur}</span></div></div>
             <Sec open={showTr} onToggle={()=>setShowTr(!showTr)} title="Transcript" count={sel.tr?.length||0}><div className="p-5 space-y-3">{sel.tr?.map((m,i)=>(<div key={i} className={m.r==="ai"?"mr-16":"ml-16"}><p className="text-xs text-neutral-400 mb-1 px-1">{m.r==="ai"?"AI Agent":"Customer"}</p><div className={"p-4 text-sm leading-relaxed "+(m.r==="ai"?"bg-neutral-100 text-neutral-700":"bg-neutral-900 text-white")}>{m.t}</div></div>))}</div></Sec>
             <Sec open={showSms} onToggle={()=>setShowSms(!showSms)} title="SMS" count={sel.sms?.length||0}><div className="p-5 space-y-3">{sel.sms?.map((m,i)=>(<div key={i} className={m.f==="sys"?"mr-16":"ml-16"}><div className={"p-4 text-sm "+(m.f==="sys"?"bg-neutral-100 text-neutral-700":"bg-neutral-50 text-neutral-700 border border-neutral-200")}>{m.t}</div><p className="text-xs text-neutral-300 mt-1.5 px-1">{m.at}</p></div>))}{(sel.sms?.length||0)===0&&<p className="text-sm text-neutral-300 text-center py-6">No messages yet</p>}<div className="flex gap-2 mt-2"><input value={smsText} onChange={e=>setSmsText(e.target.value)} placeholder="Type a message..." className="flex-1 px-4 py-2.5 border border-neutral-200 text-sm"/><button onClick={()=>{if(smsText.trim()&&sel){const newSms={f:"user",t:smsText.trim(),at:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})};setCalls(p=>p.map(c=>c.id===sel.id?{...c,sms:[...c.sms,newSms]}:c));setSel(prev=>({...prev,sms:[...prev.sms,newSms]}));setSmsText('');}}} className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-4 h-4">{I.send}</span></button></div></div></Sec>
             <Sec open={showNotes} onToggle={()=>setShowNotes(!showNotes)} title="Notes"><div className="p-5"><p className="text-sm text-neutral-600 bg-neutral-50 p-4 mb-4 leading-relaxed">{sel.notes}</p><textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Add a note..." rows={2} className="w-full border border-neutral-200 p-4 text-sm mb-3"/><button onClick={()=>{if(noteText.trim()&&sel){const updated=sel.notes&&sel.notes!=="—"?sel.notes+"\n"+noteText.trim():noteText.trim();setCalls(p=>p.map(c=>c.id===sel.id?{...c,notes:updated}:c));setSel(prev=>({...prev,notes:updated}));setNoteText("");}}} className="text-sm px-5 py-2.5 bg-neutral-900 text-white hover:bg-black transition-colors">Save note</button></div></Sec>
@@ -597,6 +677,7 @@ const Calls=()=>{
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };
@@ -618,7 +699,35 @@ const Jobs=()=>{
   ]);
   const totalRev=jobs.reduce((a,j)=>a+j.rev,0);
   const[newJob,setNewJob]=useState({cust:"",date:"",time:"",addr:"",issue:"",tech:"John S.",rev:""});
-  const cols={Confirmed:jobs.filter(j=>j.st==="Confirmed"),Quote:jobs.filter(j=>j.st==="Quote"),Completed:jobs.filter(j=>j.st==="Completed")};
+  const[filter,setFilter]=useState("all");
+  const[hovered,setHovered]=useState(null);
+  /* Same freshness bucket as Leads — parse human time strings */
+  const dayBucket=(d="")=>{
+    const s=(d||"").toLowerCase();
+    if(s==="today")return "today";
+    if(s==="tomorrow")return "week";
+    if(s==="yesterday")return "past";
+    if(["monday","tuesday","wednesday","thursday","friday","saturday","sunday"].includes(s))return "week";
+    if(s.includes("day ago")||s.includes("days ago"))return "past";
+    return "week";
+  };
+  const passes=(j)=>{
+    if(filter==="all")return true;
+    if(filter==="today")return dayBucket(j.day)==="today";
+    if(filter==="week"){const b=dayBucket(j.day);return b==="today"||b==="week";}
+    if(filter==="unassigned")return !j.tech||j.tech==="—";
+    if(filter==="progress")return j.pct>0&&j.pct<100;
+    return true;
+  };
+  const live=jobs.filter(passes);
+  const cols={Scheduled:live.filter(j=>j.st==="Confirmed"),Quote:live.filter(j=>j.st==="Quote"),Completed:live.filter(j=>j.st==="Completed")};
+  /* Metrics */
+  const todayJobs=jobs.filter(j=>dayBucket(j.day)==="today");
+  const todayRev=todayJobs.reduce((a,j)=>a+j.rev,0);
+  const scheduledRev=jobs.filter(j=>j.st==="Confirmed").reduce((a,j)=>a+j.rev,0);
+  const activeJobs=jobs.filter(j=>j.st!=="Completed").length;
+  const completedCount=jobs.filter(j=>j.st==="Completed").length;
+  const completion=jobs.length?Math.round(completedCount/jobs.length*100):0;
   return(
     <div className="fu">
       {/* New job panel */}
@@ -664,39 +773,149 @@ const Jobs=()=>{
         </>}
       </Panel>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Jobs</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">${totalRev.toLocaleString()} total scheduled revenue</p></div>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-3">
+        <div>
+          <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Jobs</p>
+          <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">${totalRev.toLocaleString()} total scheduled · {activeJobs} active</p>
+        </div>
         <div className="flex items-center gap-3 md:gap-4">
           <div className="flex bg-neutral-200 p-1">{[["board","Board"],["list","List"]].map(([k,l])=><button key={k} onClick={()=>setView(k)} className={"px-4 md:px-5 py-2 text-sm transition-all duration-200 "+(view===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div>
           <button onClick={()=>setPanel("newjob")} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span className="hidden md:inline">New job</span><span className="md:hidden">New</span></button>
         </div>
       </div>
 
-      {view==="board"&&<div className="grid grid-cols-1 md:grid-cols-3 gap-5">{Object.entries(cols).map(([name,jbs])=>{const cv=jbs.reduce((a,j)=>a+j.rev,0);return(
+      {/* Hero metrics — what matters on the job board */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Today</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${todayRev.toLocaleString()}</p>
+          <p className="text-xs text-neutral-400 mt-1">{todayJobs.length} job{todayJobs.length===1?"":"s"} scheduled</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Scheduled</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${scheduledRev.toLocaleString()}</p>
+          <p className="text-xs text-neutral-400 mt-1">{cols.Scheduled.length} confirmed</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Completion</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{completion}<span className="text-sm text-neutral-400 ml-1">%</span></p>
+          <p className="text-xs text-neutral-400 mt-1">{completedCount} of {jobs.length} done</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Active</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{activeJobs}</p>
+          <p className="text-xs text-neutral-400 mt-1">open jobs right now</p>
+        </div>
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto">
+        {[["all","All",jobs.length],["today","Today",jobs.filter(j=>dayBucket(j.day)==="today").length],["week","This week",jobs.filter(j=>{const b=dayBucket(j.day);return b==="today"||b==="week";}).length],["progress","In progress",jobs.filter(j=>j.pct>0&&j.pct<100).length]].map(([k,label,n])=>(
+          <button key={k} onClick={()=>setFilter(k)} className={"flex items-center gap-2 px-3.5 py-1.5 text-xs transition-all duration-200 shrink-0 "+(filter===k?"bg-neutral-900 text-white":"bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400")}>
+            <span>{label}</span>
+            <span className={"tabular-nums "+(filter===k?"text-neutral-400":"text-neutral-300")}>{n}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Board view */}
+      {view==="board"&&<div className="grid grid-cols-1 md:grid-cols-3 gap-5">{Object.entries(cols).map(([name,jbs])=>{
+        const cv=jbs.reduce((a,j)=>a+j.rev,0);
+        const emptyCopy={"Scheduled":"No jobs scheduled in this window.","Quote":"No quotes in progress.","Completed":"No completed jobs yet — keep going."};
+        return(
         <div key={name}>
-          <div className="flex items-center justify-between mb-4"><div className="flex items-center gap-2.5"><span className="text-sm text-neutral-900">{name}</span><span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center">{jbs.length}</span></div>{cv>0&&<span className="text-xs text-neutral-400 tabular-nums">${cv.toLocaleString()}</span>}</div>
-          <div className="space-y-3">{jbs.map(j=>(
-            <div key={j.id} onClick={()=>setSelJob(j)} className="bg-white border border-neutral-100 p-5 cursor-pointer hover:border-neutral-300 transition-all duration-200">
-              <div className="flex items-center gap-3 mb-3"><Av n={j.cust} s={32}/><div className="flex-1 min-w-0"><p className="text-sm text-neutral-900">{j.cust}</p><p className="text-xs text-neutral-400">{j.day} · {j.time}</p></div></div>
-              <p className="text-xs text-neutral-400 mb-3 leading-relaxed">{j.issue}</p>
-              <div className="flex items-center gap-2 mb-4"><span className="text-xs text-neutral-400 bg-neutral-100 px-2 py-0.5">{j.tech}</span><span className="w-3 h-3 text-neutral-300 shrink-0">{I.map}</span><p className="text-xs text-neutral-300 truncate flex-1">{j.addr?.split(",")[0]}</p></div>
-              <div className="flex items-center justify-between mb-3"><span className="text-sm text-neutral-900 tabular-nums">${j.rev.toLocaleString()}</span><span className="text-xs text-neutral-400">{j.pct}%</span></div>
-              <div className="h-1 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:j.pct+"%"}}/></div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm text-neutral-900">{name}</span>
+              <span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center tabular-nums">{jbs.length}</span>
             </div>
-          ))}</div>
+            {cv>0&&<span className="text-xs text-neutral-400 tabular-nums">${cv.toLocaleString()}</span>}
+          </div>
+          <div className="space-y-3">
+            {jbs.length===0?(
+              <div className="border border-dashed border-neutral-200 p-5 text-center">
+                <p className="text-xs text-neutral-400 leading-relaxed">{emptyCopy[name]}</p>
+              </div>
+            ):jbs.map(j=>{
+              const isToday=dayBucket(j.day)==="today";
+              const done=j.st==="Completed";
+              return(
+                <div
+                  key={j.id}
+                  onClick={()=>setSelJob(j)}
+                  onMouseEnter={()=>setHovered(j.id)}
+                  onMouseLeave={()=>setHovered(null)}
+                  className={"bg-white border p-5 cursor-pointer transition-all duration-200 relative "+(isToday&&!done?"border-neutral-900":"border-neutral-100 hover:border-neutral-300")}
+                >
+                  {/* Status ribbon — today or completed */}
+                  {isToday&&!done&&<div className="absolute -top-px -left-px -right-px bg-neutral-900 text-white px-4 py-1 flex items-center justify-between"><span className="text-[10px] uppercase tracking-widest flex items-center gap-1.5"><span className="w-3 h-3">{I.clock}</span>Today · {j.time}</span>{j.pct>0&&j.pct<100&&<span className="text-[10px] text-neutral-400 tabular-nums">{j.pct}%</span>}</div>}
+                  {done&&<div className="absolute -top-px -left-px -right-px bg-neutral-100 px-4 py-1"><span className="text-[10px] uppercase tracking-widest text-neutral-600 flex items-center gap-1.5"><span className="w-3 h-3">{I.check}</span>Completed</span></div>}
+                  {(isToday||done)&&<div className="h-5"/>}
+
+                  {/* Customer row */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <Av n={j.cust} s={32}/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-neutral-900 truncate">{j.cust}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {!isToday&&<><span className="text-xs text-neutral-400">{j.day}</span><span className="text-neutral-200">·</span></>}
+                        <span className="text-xs text-neutral-400">{j.time}</span>
+                      </div>
+                    </div>
+                    {/* Tech badge */}
+                    <span className="text-[10px] text-neutral-500 bg-neutral-100 px-2 py-1 uppercase tracking-widest shrink-0">{j.tech}</span>
+                  </div>
+
+                  {/* Issue */}
+                  <p className="text-xs text-neutral-500 mb-3 leading-relaxed line-clamp-2">{j.issue}</p>
+
+                  {/* Address */}
+                  {j.addr&&<div className="flex items-center gap-1.5 mb-4"><span className="w-3 h-3 text-neutral-300 shrink-0">{I.map}</span><p className="text-xs text-neutral-400 truncate flex-1">{j.addr.split(",")[0]}</p></div>}
+
+                  {/* Revenue hero + progress or hover actions */}
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-xl text-neutral-900 tabular-nums tracking-tight">${j.rev.toLocaleString()}</p>
+                      <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-0.5">{done?"Final":j.st==="Quote"?"Quote value":"Job value"}</p>
+                    </div>
+                    {hovered===j.id&&!done?(
+                      <div className="flex items-center gap-1 fi">
+                        <a href={"tel:"+(j.ph||"")} onClick={e=>e.stopPropagation()} title="Call" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.phone}</span></a>
+                        <a href={j.addr?"https://maps.google.com/?q="+encodeURIComponent(j.addr):"#"} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} title="Directions" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.map}</span></a>
+                        <button onClick={e=>{e.stopPropagation();setJobs(p=>p.map(x=>x.id===j.id?{...x,st:"Completed",pct:100}:x));}} title="Mark complete" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.check}</span></button>
+                      </div>
+                    ):!done&&j.pct>0?(
+                      <div className="flex items-center gap-2 w-24">
+                        <div className="flex-1 h-1 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:j.pct+"%"}}/></div>
+                        <span className="text-[10px] text-neutral-400 tabular-nums">{j.pct}%</span>
+                      </div>
+                    ):null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )})}</div>}
 
+      {/* List view */}
       {view==="list"&&<div className="bg-white border border-neutral-100">
         <div className="hidden md:grid px-7 py-3.5 border-b border-neutral-100 grid-cols-7 gap-4">{["Customer","Issue","Schedule","Tech","Revenue","Progress","Status"].map(h=><span key={h} className="text-xs text-neutral-400 uppercase tracking-widest">{h}</span>)}</div>
-        {jobs.map(j=>(
+        {live.length===0?(
+          <div className="px-7 py-12 text-center">
+            <p className="text-sm text-neutral-500 mb-1">No jobs match this filter</p>
+            <p className="text-xs text-neutral-400">Try "All" to see every job on the schedule.</p>
+          </div>
+        ):live.map(j=>(
           <div key={j.id} onClick={()=>setSelJob(j)} className="px-4 md:px-7 py-4 border-b border-neutral-100 last:border-0 flex md:grid md:grid-cols-7 gap-3 md:gap-4 items-center hover:bg-neutral-50 cursor-pointer transition-colors">
-            <div className="flex items-center gap-3"><Av n={j.cust} s={32}/><div className="min-w-0"><p className="text-sm text-neutral-900">{j.cust}</p><p className="text-xs text-neutral-400 truncate">{j.ph}</p><p className="md:hidden text-xs text-neutral-400">{j.day} · {j.time} · ${j.rev.toLocaleString()}</p></div></div>
+            <div className="flex items-center gap-3"><Av n={j.cust} s={32}/><div className="min-w-0"><p className="text-sm text-neutral-900 flex items-center gap-2">{j.cust}{dayBucket(j.day)==="today"&&j.st!=="Completed"&&<span className="text-[9px] uppercase tracking-widest bg-neutral-900 text-white px-1.5 py-0.5">Today</span>}</p><p className="text-xs text-neutral-400 truncate">{j.ph}</p><p className="md:hidden text-xs text-neutral-400">{j.day} · {j.time} · ${j.rev.toLocaleString()}</p></div></div>
             <p className="hidden md:block text-xs text-neutral-500 truncate">{j.issue}</p>
             <div className="hidden md:block"><p className="text-sm text-neutral-900">{j.day}</p><p className="text-xs text-neutral-400">{j.time}</p></div>
             <span className="hidden md:block text-xs text-neutral-400 bg-neutral-100 px-2.5 py-1 w-fit">{j.tech}</span>
             <span className="hidden md:block text-sm text-neutral-900 tabular-nums">${j.rev.toLocaleString()}</span>
             <div className="hidden md:block"><div className="h-1 bg-neutral-100 w-20 mb-1"><div className="h-full bg-neutral-900" style={{width:j.pct+"%"}}/></div><span className="text-xs text-neutral-400">{j.pct}%</span></div>
-            <span className={"text-xs px-3 py-1 w-fit ml-auto md:ml-0 "+(j.st==="Confirmed"?"bg-neutral-900 text-white":j.st==="Completed"?"bg-neutral-200 text-neutral-500":"bg-neutral-200 text-neutral-600")}>{j.st}</span>
+            <span className={"text-xs px-3 py-1 w-fit ml-auto md:ml-0 "+(j.st==="Confirmed"?"bg-neutral-900 text-white":j.st==="Completed"?"bg-neutral-200 text-neutral-500":"bg-neutral-200 text-neutral-600")}>{j.st==="Confirmed"?"Scheduled":j.st}</span>
           </div>
         ))}
       </div>}
@@ -819,45 +1038,43 @@ const Leads=({profile,setQuoteView})=>{
       <Panel open={!!quoteOpen} onClose={()=>setQuoteOpen(null)}>
         {quoteOpen&&<>
             <PanelHeader onClose={()=>setQuoteOpen(null)} title={leadDraftMeta[quoteOpen.id]?"Review draft quote":"Send quote"} sub={leadDraftMeta[quoteOpen.id]?"Drafted by Diali from call · "+quoteOpen.name:"For "+quoteOpen.name}/>
-            <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-              {/* AI Draft banner */}
-              {leadDraftMeta[quoteOpen.id]&&<div className="bg-neutral-900 p-5">
-                <div className="flex items-center gap-2 mb-3"><span className="w-3.5 h-3.5 text-neutral-400">{I.zap}</span><p className="text-xs text-neutral-400 uppercase tracking-widest flex-1">Draft from call</p><span className="text-[10px] text-neutral-500">{leadDraftMeta[quoteOpen.id].draftedAt}</span></div>
-                <p className="text-sm text-white leading-relaxed mb-4">Diali matched <span className="text-white">{lines.filter(l=>l.pbId).length} line items</span> from your pricebook based on the call transcript. Review everything below, edit as needed, then send.</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-white/5 p-3"><p className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Auto-matched</p><p className="text-lg text-white tabular-nums">{lines.filter(l=>l.pbId).length}</p></div>
-                  <div className="bg-white/5 p-3"><p className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Manual</p><p className="text-lg text-white tabular-nums">{lines.filter(l=>!l.pbId).length}</p></div>
-                  <div className="bg-white/5 p-3"><p className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Confidence</p><p className="text-lg text-white tabular-nums">{leadDraftMeta[quoteOpen.id].conf}%</p></div>
+            <div className="flex-1 overflow-y-auto px-7 py-6 space-y-7">
+              {/* Customer header with embedded AI-drafted callout */}
+              <div className="border border-neutral-100">
+                <div className="flex items-start gap-4 p-5">
+                  <Av n={quoteOpen.name} s={44}/>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base text-neutral-900">{quoteOpen.name}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">{quoteOpen.ph} · {quoteOpen.src}</p>
+                    {quoteOpen.addr&&<p className="text-xs text-neutral-400 mt-1 flex items-center gap-1"><span className="w-3 h-3">{I.map}</span>{quoteOpen.addr}</p>}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-widest">Quote total</p>
+                    <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${total.toLocaleString()}</p>
+                  </div>
                 </div>
-              </div>}
-
-              {/* Customer */}
-              <div className="flex items-center gap-4 pb-4 border-b border-neutral-100">
-                <Av n={quoteOpen.name} s={40}/>
-                <div className="flex-1"><p className="text-sm text-neutral-900">{quoteOpen.name}</p><p className="text-xs text-neutral-400">{quoteOpen.ph} · {quoteOpen.src}</p>{quoteOpen.addr&&<p className="text-xs text-neutral-400 mt-0.5 flex items-center gap-1"><span className="w-3 h-3">{I.map}</span>{quoteOpen.addr}</p>}</div>
+                {leadDraftMeta[quoteOpen.id]&&<div className="bg-neutral-900 px-5 py-3 flex items-center gap-3">
+                  <span className="w-3.5 h-3.5 text-neutral-400 shrink-0">{I.zap}</span>
+                  <p className="text-xs text-neutral-300 leading-relaxed flex-1">Diali auto-matched <span className="text-white">{lines.filter(l=>l.pbId).length} of {lines.length}</span> line items from the call — review and edit below.</p>
+                  <span className="text-[10px] text-neutral-500 tabular-nums shrink-0">{leadDraftMeta[quoteOpen.id].conf}% conf.</span>
+                </div>}
               </div>
 
-              {/* Message */}
+              {/* Line items */}
               <div>
-                <SL>Message</SL>
-                <textarea value={quoteMsg.replace("{name}",quoteOpen.name.split(" ")[0])} onChange={e=>setQuoteMsg(e.target.value)} rows={3} className="w-full border border-neutral-200 px-4 py-3 text-sm"/>
-              </div>
-
-              {/* Line items — editable */}
-              <div>
-                <div className="flex items-center justify-between mb-3"><SL>Line items</SL>{leadDraftMeta[quoteOpen.id]&&<div className="flex items-center gap-1.5 text-xs text-neutral-400 -mt-2"><span className="w-2 h-2 bg-neutral-900"/>Auto-matched<span className="w-2 h-2 border border-neutral-300 ml-2"/>Manual</div>}</div>
+                <ST icon={I.dollar} title="Line items" count={lines.length} right={leadDraftMeta[quoteOpen.id]?<div className="flex items-center gap-2 text-[10px] text-neutral-400"><span className="w-2 h-2 bg-neutral-900"/>Auto-matched<span className="w-2 h-2 border border-neutral-300 ml-1"/>Manual</div>:null}/>
                 <div className="border border-neutral-200">
-                  <div className="grid gap-2 px-4 py-2 bg-neutral-50 border-b border-neutral-200" style={{gridTemplateColumns:"8px 1fr 56px 72px 72px 28px"}}>
+                  <div className="grid gap-2 px-4 py-2.5 bg-neutral-50 border-b border-neutral-200" style={{gridTemplateColumns:"8px 1fr 56px 72px 72px 28px"}}>
                     <span/>
-                    <span className="text-xs text-neutral-400">Description</span>
-                    <span className="text-xs text-neutral-400 text-right">Qty</span>
-                    <span className="text-xs text-neutral-400 text-right">Rate</span>
-                    <span className="text-xs text-neutral-400 text-right">Total</span>
+                    <span className="text-[10px] text-neutral-400 uppercase tracking-widest">Description</span>
+                    <span className="text-[10px] text-neutral-400 uppercase tracking-widest text-right">Qty</span>
+                    <span className="text-[10px] text-neutral-400 uppercase tracking-widest text-right">Rate</span>
+                    <span className="text-[10px] text-neutral-400 uppercase tracking-widest text-right">Total</span>
                     <span/>
                   </div>
                   {lines.map((it,i)=>(
                     <div key={it.key}>
-                      <div className="grid gap-2 px-4 py-2.5 border-b border-neutral-100 last:border-0 items-center group" style={{gridTemplateColumns:"8px 1fr 56px 72px 72px 28px"}}>
+                      <div className="grid gap-2 px-4 py-3 border-b border-neutral-100 last:border-0 items-center group" style={{gridTemplateColumns:"8px 1fr 56px 72px 72px 28px"}}>
                         <span className={"w-1 h-6 "+(it.pbId?"bg-neutral-900":"bg-neutral-200")}/>
                         <input value={it.desc} onChange={e=>updLine(i,"desc",e.target.value)} className="text-sm text-neutral-700 border-0 bg-transparent p-0 w-full focus:outline-none" placeholder="Description..."/>
                         <input value={it.qty} onChange={e=>updLine(i,"qty",e.target.value)} className="text-sm text-neutral-500 text-right tabular-nums border-0 bg-transparent p-0 w-full focus:outline-none" type="number" min="0" step="0.5"/>
@@ -878,44 +1095,48 @@ const Leads=({profile,setQuoteView})=>{
                 <button onClick={addLine} className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-900 transition-colors mt-3"><span className="w-3.5 h-3.5">{I.plus}</span>Add line item</button>
               </div>
 
-              {/* Discount + tax */}
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-xs text-neutral-400 mb-1.5 block">Discount %</label><input value={disc} onChange={e=>setDisc(parseFloat(e.target.value)||0)} type="number" min="0" max="100" className="w-full border border-neutral-200 px-4 py-2.5 text-sm tabular-nums"/></div>
-                <div><label className="text-xs text-neutral-400 mb-1.5 block">Tax rate %</label><input value={taxRate} onChange={e=>setTaxRate(parseFloat(e.target.value)||0)} type="number" min="0" step="0.1" className="w-full border border-neutral-200 px-4 py-2.5 text-sm tabular-nums"/></div>
-              </div>
-
-              {/* Totals */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between"><span className="text-sm text-neutral-400">Subtotal</span><span className="text-sm text-neutral-900 tabular-nums">${subtotal.toLocaleString()}</span></div>
-                {disc>0&&<div className="flex items-center justify-between"><span className="text-sm text-neutral-400">Discount ({disc}%)</span><span className="text-sm text-neutral-900 tabular-nums">-${discAmt.toLocaleString()}</span></div>}
-                <div className="flex items-center justify-between"><span className="text-sm text-neutral-400">Tax ({taxRate}%)</span><span className="text-sm text-neutral-900 tabular-nums">${tax.toLocaleString()}</span></div>
-                <div className="h-px bg-neutral-200 my-2"/>
-                <div className="flex items-center justify-between"><span className="text-lg text-neutral-900">Total</span><span className="text-xl text-neutral-900 tabular-nums tracking-tight">${total.toLocaleString()}</span></div>
-              </div>
-
-              {/* Notes */}
+              {/* Pricing — discount + tax + totals, all in one block */}
               <div>
-                <SL>Notes / terms</SL>
-                <textarea value={qNotes} onChange={e=>setQNotes(e.target.value)} rows={2} placeholder="Payment due within 30 days. Parts warranty included..." className="w-full border border-neutral-200 px-4 py-3 text-sm"/>
-              </div>
-
-              {/* Delivery */}
-              <div>
-                <SL>Send via</SL>
-                <div className="space-y-2">
-                  {[["SMS to "+quoteOpen.ph,true],["Email",false]].map(([label,on],i)=>(
-                    <label key={i} className="flex items-center gap-3 p-3 border border-neutral-200 cursor-pointer hover:bg-neutral-50 transition-colors">
-                      <input type="radio" name="send_via" defaultChecked={on} className="w-4 h-4 accent-black"/>
-                      <span className="text-sm text-neutral-700">{label}</span>
-                    </label>
-                  ))}
+                <ST icon={I.chart} title="Pricing"/>
+                <div className="border border-neutral-200">
+                  <div className="grid grid-cols-2 gap-px bg-neutral-200">
+                    <div className="bg-white p-4"><p className="text-xs text-neutral-400 mb-1.5">Discount %</p><input value={disc} onChange={e=>setDisc(parseFloat(e.target.value)||0)} type="number" min="0" max="100" className="w-full border-0 p-0 text-sm tabular-nums focus:outline-none"/></div>
+                    <div className="bg-white p-4"><p className="text-xs text-neutral-400 mb-1.5">Tax rate %</p><input value={taxRate} onChange={e=>setTaxRate(parseFloat(e.target.value)||0)} type="number" min="0" step="0.1" className="w-full border-0 p-0 text-sm tabular-nums focus:outline-none"/></div>
+                  </div>
+                  <div className="border-t border-neutral-200 p-5 space-y-2 bg-neutral-50">
+                    <div className="flex items-center justify-between"><span className="text-sm text-neutral-500">Subtotal</span><span className="text-sm text-neutral-900 tabular-nums">${subtotal.toLocaleString()}</span></div>
+                    {disc>0&&<div className="flex items-center justify-between"><span className="text-sm text-neutral-500">Discount ({disc}%)</span><span className="text-sm text-neutral-900 tabular-nums">-${discAmt.toLocaleString()}</span></div>}
+                    <div className="flex items-center justify-between"><span className="text-sm text-neutral-500">Tax ({taxRate}%)</span><span className="text-sm text-neutral-900 tabular-nums">${tax.toLocaleString()}</span></div>
+                    <div className="h-px bg-neutral-200 my-3"/>
+                    <div className="flex items-center justify-between"><span className="text-sm text-neutral-900 uppercase tracking-widest">Total</span><span className="text-2xl text-neutral-900 tabular-nums tracking-tight">${total.toLocaleString()}</span></div>
+                  </div>
                 </div>
               </div>
 
-              {/* Valid for */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-neutral-400">Quote valid for</span>
-                <select value={validDays} onChange={e=>setValidDays(e.target.value)} className="border border-neutral-200 px-3 py-2 text-sm bg-white"><option value={15}>15 days</option><option value={30}>30 days</option><option value={45}>45 days</option><option value={60}>60 days</option><option value={90}>90 days</option></select>
+              {/* Delivery — message + channel + validity, all grouped */}
+              <div>
+                <ST icon={I.send} title="Delivery"/>
+                <div className="space-y-4">
+                  <FF label="Message to customer" hint="Use {name} — it's replaced automatically"><TA value={quoteMsg.replace("{name}",quoteOpen.name.split(" ")[0])} onChange={e=>setQuoteMsg(e.target.value)} rows={3}/></FF>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FF label="Send via">
+                      <SE defaultValue="sms">
+                        <option value="sms">SMS to {quoteOpen.ph}</option>
+                        <option value="email">Email</option>
+                      </SE>
+                    </FF>
+                    <FF label="Valid for">
+                      <SE value={validDays} onChange={e=>setValidDays(e.target.value)}>
+                        <option value={15}>15 days</option>
+                        <option value={30}>30 days</option>
+                        <option value={45}>45 days</option>
+                        <option value={60}>60 days</option>
+                        <option value={90}>90 days</option>
+                      </SE>
+                    </FF>
+                  </div>
+                  <FF label="Notes / terms" hint="Optional — shown on the quote PDF"><TA value={qNotes} onChange={e=>setQNotes(e.target.value)} rows={2} placeholder="Payment due within 30 days. Parts warranty included..."/></FF>
+                </div>
               </div>
             </div>
 
