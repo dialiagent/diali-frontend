@@ -707,11 +707,44 @@ const Jobs=()=>{
 /* ══════════════════ LEADS ══════════════════ */
 const Leads=({profile,setQuoteView})=>{
   const[view,setView]=useState("board");
+  const[filter,setFilter]=useState("all");
+  const[hovered,setHovered]=useState(null);
   const[selLead,setSelLead]=useState(null);
   const[quoteOpen,setQuoteOpen]=useState(null);
   const[quoteSent,setQuoteSent]=useState({});
   const[quoteMsg,setQuoteMsg]=useState("Hi {name}, thank you for contacting Martinez HVAC. Please find your service quote below. This estimate is valid for 30 days. Feel free to call us with any questions.");
-  const cols={New:C.filter(c=>c.score==="cold"),Contacted:C.filter(c=>c.status==="follow-up"),Qualified:C.filter(c=>c.score==="warm"&&c.status!=="follow-up"),Won:C.filter(c=>c.status==="booked")};
+  /* Freshness bucket from the string "time" field on each lead */
+  const freshness=(t="")=>{
+    const s=t.toLowerCase();
+    if(s.includes("min ago")||s.includes("just now"))return "now";
+    if(s.includes("hr ago")||s.includes("hour"))return "today";
+    if(s.includes("am")||s.includes("pm"))return "today";
+    if(s==="yesterday")return "week";
+    if(s.includes("day"))return "week";
+    return "older";
+  };
+  const isHot=(l)=>l.score==="hot"&&l.status!=="declined"&&l.status!=="booked"&&l.rev>=300&&(freshness(l.time)==="now"||freshness(l.time)==="today");
+  const passes=(l)=>{
+    if(filter==="all")return true;
+    if(filter==="hot")return isHot(l);
+    if(filter==="urgent")return l.urg==="urgent"||l.urg==="emergency";
+    if(filter==="today"){const f=freshness(l.time);return f==="now"||f==="today";}
+    if(filter==="week"){const f=freshness(l.time);return f!=="older";}
+    return true;
+  };
+  const live=C.filter(l=>l.status!=="declined").filter(passes);
+  const cols={
+    New:live.filter(l=>l.status!=="booked"&&l.status!=="follow-up"&&!quoteSent[l.id]&&!leadDraftMeta[l.id]),
+    "Followed up":live.filter(l=>l.status==="follow-up"&&!quoteSent[l.id]&&!leadDraftMeta[l.id]),
+    "Quote sent":live.filter(l=>(leadDraftMeta[l.id]||quoteSent[l.id])&&l.status!=="booked"),
+    Booked:live.filter(l=>l.status==="booked")
+  };
+  /* Metrics — pipeline excludes booked + declined (that's closed business, not pipeline) */
+  const pipeline=C.filter(l=>l.status!=="declined"&&l.status!=="booked").reduce((a,l)=>a+l.rev,0);
+  const hotCount=C.filter(isHot).length;
+  const bookedThisWeek=C.filter(l=>l.status==="booked").length;
+  const activePool=C.filter(l=>l.status!=="declined").length;
+  const bookRate=activePool?Math.round(bookedThisWeek/activePool*100):0;
   const pv=C.reduce((a,c)=>a+c.rev,0);
   const timeline={1:[{t:"2:45 PM",a:"Inbound call — 4:32 duration"},{t:"2:47 PM",a:"AI booked appointment for tomorrow 2 PM"},{t:"2:48 PM",a:"SMS confirmation sent and acknowledged"}],2:[{t:"1:20 PM",a:"Inbound call — urgent furnace noise"},{t:"1:22 PM",a:"Emergency dispatch scheduled for 5 PM today"}],3:[{t:"12:15 PM",a:"Inbound call — seasonal maintenance inquiry"},{t:"12:17 PM",a:"AI sent available time slots via SMS"},{t:"—",a:"Awaiting customer response"}],4:[{t:"11:45 AM",a:"Inbound call — emergency water leak"},{t:"11:47 AM",a:"Emergency dispatch confirmed for 2:30 PM"}],6:[{t:"9:15 AM",a:"Inbound call — new build HVAC quote"},{t:"9:17 AM",a:"Quote appointment scheduled for Friday 10 AM"},{t:"—",a:"Blueprints requested from customer"}],7:[{t:"8:45 AM",a:"Inbound call — ductwork cleaning pricing"},{t:"—",a:"Quote pending — follow up today"}],9:[{t:"Yesterday",a:"Inbound call — refrigerant refill needed"},{t:"—",a:"Follow up overdue — customer waiting"}],11:[{t:"2 days ago",a:"Inbound call — 50 unit commercial bid"},{t:"2 days ago",a:"Meeting scheduled for Monday 9 AM"},{t:"—",a:"Prepare volume pricing before meeting"}],12:[{t:"3 days ago",a:"Inbound call — warranty question"},{t:"—",a:"Needs warranty lookup — follow up pending"}]};
   const nextSteps={1:"Confirm tech John S. has parts ready for tomorrow.",2:"Verify Mike T. is en route for 5 PM emergency.",3:"Send follow-up SMS with 3 available time slots this week.",4:"Check on emergency dispatch — confirm water damage assessment.",6:"Review blueprints and prepare detailed quote before Friday.",7:"Call back with ductwork cleaning estimate ($325 quoted).",9:"Call back today — customer has been waiting since yesterday.",11:"Finalize 50-unit volume pricing and prepare bid document.",12:"Look up warranty records and call Chris back with details."};
@@ -893,29 +926,138 @@ const Leads=({profile,setQuoteView})=>{
           </>}
       </Panel>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Leads</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">${pv.toLocaleString()} total pipeline value</p></div>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-3">
+        <div>
+          <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Leads</p>
+          <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">${pipeline.toLocaleString()} active pipeline · {live.length} working leads</p>
+        </div>
         <div className="flex bg-neutral-200 p-1">{[["board","Board"],["list","List"]].map(([k,l])=><button key={k} onClick={()=>setView(k)} className={"px-4 md:px-5 py-2 text-sm transition-all duration-200 "+(view===k?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div>
       </div>
-      {view==="board"&&<div className="grid grid-cols-1 md:grid-cols-4 gap-5">{Object.entries(cols).map(([name,leads])=>{const cv=leads.reduce((a,l)=>a+l.rev,0);return(
+
+      {/* Hero metrics — pipeline health at a glance */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Pipeline</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${pipeline.toLocaleString()}</p>
+          <p className="text-xs text-neutral-400 mt-1">active · ex. booked</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5 relative">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Hot leads</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{hotCount}</p>
+          <p className="text-xs text-neutral-400 mt-1">need attention now</p>
+          {hotCount>0&&<span className="absolute top-5 right-5 w-2 h-2 bg-neutral-900 animate-pulse"/>}
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Response time</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">~2<span className="text-sm text-neutral-400 ml-1">sec</span></p>
+          <p className="text-xs text-neutral-400 mt-1">Diali picks up instantly</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Book rate</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{bookRate}<span className="text-sm text-neutral-400 ml-1">%</span></p>
+          <p className="text-xs text-neutral-400 mt-1">{bookedThisWeek} of {activePool} booked</p>
+        </div>
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto">
+        {[["all","All",C.filter(l=>l.status!=="declined").length],["hot","Hot",C.filter(isHot).length],["urgent","Urgent",C.filter(l=>l.urg==="urgent"||l.urg==="emergency").length],["today","Today",C.filter(l=>{const f=freshness(l.time);return f==="now"||f==="today";}).length],["week","This week",C.filter(l=>freshness(l.time)!=="older").length]].map(([k,label,n])=>(
+          <button key={k} onClick={()=>setFilter(k)} className={"flex items-center gap-2 px-3.5 py-1.5 text-xs transition-all duration-200 shrink-0 "+(filter===k?"bg-neutral-900 text-white":"bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400")}>
+            <span>{label}</span>
+            <span className={"tabular-nums "+(filter===k?"text-neutral-400":"text-neutral-300")}>{n}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Board view */}
+      {view==="board"&&<div className="grid grid-cols-1 md:grid-cols-4 gap-5">{Object.entries(cols).map(([name,leads])=>{
+        const cv=leads.reduce((a,l)=>a+l.rev,0);
+        const emptyCopy={"New":"No new leads in this window. Diali is listening 24/7.","Followed up":"No follow-ups pending. Nice work.","Quote sent":"No quotes awaiting a response.","Booked":"No bookings yet in this window."};
+        return(
         <div key={name}>
-          <div className="flex items-center justify-between mb-4"><div className="flex items-center gap-2.5"><span className="text-sm text-neutral-900">{name}</span><span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center">{leads.length}</span></div>{cv>0&&<span className="text-xs text-neutral-400 tabular-nums">${cv.toLocaleString()}</span>}</div>
-          <div className="space-y-3">{leads.map(l=>{const draft=leadDraftMeta[l.id];return(
-            <div key={l.id} onClick={()=>setSelLead(l)} className="bg-white border border-neutral-100 p-5 cursor-pointer hover:border-neutral-300 transition-all duration-200 relative">
-              {draft&&!quoteSent[l.id]&&<div className="absolute top-0 left-0 right-0 bg-neutral-900 text-white px-4 py-1.5 flex items-center gap-1.5"><span className="w-3 h-3 text-white">{I.zap}</span><span className="text-[10px] uppercase tracking-widest">Draft ready · {draft.matchCount} of {draft.totalLines} matched</span></div>}
-              {draft&&!quoteSent[l.id]&&<div className="h-5"/>}
-              <div className="flex items-center gap-3 mb-3"><Av n={l.name} s={32}/><div className="flex-1 min-w-0"><p className="text-sm text-neutral-900">{l.name}</p><p className="text-xs text-neutral-400">{l.src}</p></div><Dot s={l.score}/></div>
-              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">{l.issue}</p>
-              <div className="flex items-center justify-between mb-3"><span className="text-sm text-neutral-900 tabular-nums">{l.rev?"$"+l.rev.toLocaleString():"—"}</span><span className="text-xs text-neutral-400">{l.conf}%</span></div>
-              <div className="h-1 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:l.conf+"%"}}/></div>
+          {/* Column header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm text-neutral-900">{name}</span>
+              <span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center tabular-nums">{leads.length}</span>
             </div>
-          )})}</div>
+            {cv>0&&<span className="text-xs text-neutral-400 tabular-nums">${cv.toLocaleString()}</span>}
+          </div>
+          {/* Cards — or empty state */}
+          <div className="space-y-3">
+            {leads.length===0?(
+              <div className="border border-dashed border-neutral-200 p-5 text-center">
+                <p className="text-xs text-neutral-400 leading-relaxed">{emptyCopy[name]}</p>
+              </div>
+            ):leads.map(l=>{
+              const draft=leadDraftMeta[l.id];
+              const sent=quoteSent[l.id];
+              const hot=isHot(l);
+              const urg=l.urg==="emergency"||l.urg==="urgent";
+              return(
+                <div
+                  key={l.id}
+                  onClick={()=>setSelLead(l)}
+                  onMouseEnter={()=>setHovered(l.id)}
+                  onMouseLeave={()=>setHovered(null)}
+                  className={"bg-white border p-5 cursor-pointer transition-all duration-200 relative "+(hot?"border-neutral-900":"border-neutral-100 hover:border-neutral-300")}
+                >
+                  {/* Status ribbon — hot, urgent, draft quote, or nothing */}
+                  {hot&&<div className="absolute -top-px -left-px -right-px bg-neutral-900 text-white px-4 py-1 flex items-center justify-between"><span className="text-[10px] uppercase tracking-widest flex items-center gap-1.5"><span className="w-3 h-3">{I.trend}</span>Hot</span><span className="text-[10px] text-neutral-400 tabular-nums">{l.conf}% match</span></div>}
+                  {!hot&&urg&&<div className="absolute -top-px -left-px -right-px bg-neutral-100 px-4 py-1"><span className="text-[10px] uppercase tracking-widest text-neutral-600 flex items-center gap-1.5"><span className="w-3 h-3">{I.zap}</span>{l.urg==="emergency"?"Emergency":"Urgent"}</span></div>}
+                  {!hot&&!urg&&draft&&!sent&&<div className="absolute -top-px -left-px -right-px bg-neutral-100 px-4 py-1"><span className="text-[10px] uppercase tracking-widest text-neutral-600 flex items-center gap-1.5"><span className="w-3 h-3">{I.zap}</span>Draft ready · {draft.matchCount}/{draft.totalLines}</span></div>}
+                  {(hot||urg||(draft&&!sent))&&<div className="h-5"/>}
+                  {/* Customer row */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <Av n={l.name} s={32}/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-neutral-900 truncate">{l.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-neutral-400">{l.src}</span>
+                        <span className="text-neutral-200">·</span>
+                        <span className="text-xs text-neutral-400">{l.time}</span>
+                      </div>
+                    </div>
+                    <Dot s={l.score}/>
+                  </div>
+                  {/* Issue */}
+                  <p className="text-xs text-neutral-500 mb-4 leading-relaxed line-clamp-2">{l.issue}</p>
+                  {/* Revenue — the hero number */}
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-xl text-neutral-900 tabular-nums tracking-tight">{l.rev?"$"+l.rev.toLocaleString():"—"}</p>
+                      <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-0.5">{sent?"Quote sent":draft?"Draft ready":l.rev?"Est. value":"No value"}</p>
+                    </div>
+                    {/* Hover quick actions */}
+                    {hovered===l.id?(
+                      <div className="flex items-center gap-1 fi">
+                        <a href={"tel:"+l.ph} onClick={e=>e.stopPropagation()} title="Call" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.phone}</span></a>
+                        <a href={"sms:"+l.ph} onClick={e=>e.stopPropagation()} title="SMS" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.msg}</span></a>
+                        <button onClick={e=>{e.stopPropagation();setQuoteOpen(l);}} title="Quote" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.dollar}</span></button>
+                      </div>
+                    ):(
+                      <span className="text-xs text-neutral-400 tabular-nums">{l.conf}%</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )})}</div>}
+
+      {/* List view */}
       {view==="list"&&<div className="bg-white border border-neutral-100">
         <div className="hidden md:grid px-7 py-3.5 border-b border-neutral-100 grid-cols-6 gap-4">{["Customer","Issue","Value","Confidence","Score","Status"].map(h=><span key={h} className="text-xs text-neutral-400 uppercase tracking-widest">{h}</span>)}</div>
-        {C.map(l=>(
+        {live.length===0?(
+          <div className="px-7 py-12 text-center">
+            <p className="text-sm text-neutral-500 mb-1">No leads match this filter</p>
+            <p className="text-xs text-neutral-400">Try "All" to see everything in your pipeline.</p>
+          </div>
+        ):live.map(l=>(
           <div key={l.id} onClick={()=>setSelLead(l)} className="px-4 md:px-7 py-4 border-b border-neutral-100 last:border-0 flex md:grid md:grid-cols-6 gap-3 md:gap-4 items-center hover:bg-neutral-50 cursor-pointer transition-colors">
-            <div className="flex items-center gap-3"><Av n={l.name} s={32}/><div className="min-w-0 flex-1"><p className="text-sm text-neutral-900">{l.name}</p><p className="text-xs text-neutral-400 truncate">{l.ph}</p><p className="md:hidden text-xs text-neutral-400 truncate">{l.issue}</p></div></div>
+            <div className="flex items-center gap-3"><Av n={l.name} s={32}/><div className="min-w-0 flex-1"><p className="text-sm text-neutral-900 flex items-center gap-2">{l.name}{isHot(l)&&<span className="text-[9px] uppercase tracking-widest bg-neutral-900 text-white px-1.5 py-0.5">Hot</span>}</p><p className="text-xs text-neutral-400 truncate">{l.ph} · {l.time}</p><p className="md:hidden text-xs text-neutral-400 truncate">{l.issue}</p></div></div>
             <p className="hidden md:block text-xs text-neutral-500 truncate">{l.issue}</p>
             <span className="hidden md:block text-sm text-neutral-900 tabular-nums">{l.rev?"$"+l.rev.toLocaleString():"—"}</span>
             <div className="hidden md:block"><div className="h-1 bg-neutral-100 w-20 mb-1"><div className="h-full bg-neutral-900" style={{width:l.conf+"%"}}/></div><span className="text-xs text-neutral-400">{l.conf}%</span></div>
