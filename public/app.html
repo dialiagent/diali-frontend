@@ -1968,7 +1968,7 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
 };
 
 /* ══════════════════ SETTINGS ══════════════════ */
-const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave,isDemo,curPlan,setCurPlan,curPlanData,requirePlan})=>{
+const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave,isDemo,curPlan,setCurPlan,curPlanData,requirePlan,sub})=>{
   const[tab,setTab]=useState("profile");
   const[notifs,setNotifs]=useState({calls:true,sms:true,email:false,weekly:true});
   const toggleN=k=>setNotifs(p=>({...p,[k]:!p[k]}));
@@ -1983,17 +1983,37 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
 
   /* ── Billing / Plan state ── */
   const plans=PLANS;
-  const[checkoutPlan,setCheckoutPlan]=useState(null);
-  const[cancelModal,setCancelModal]=useState(false);
-  const[cardNum,setCardNum]=useState("");
-  const[cardExp,setCardExp]=useState("");
-  const[cardCvc,setCardCvc]=useState("");
-  const[cardName,setCardName]=useState("");
-  const[checkoutLoading,setCheckoutLoading]=useState(false);
-  const[checkoutDone,setCheckoutDone]=useState(false);
-  const formatCard=v=>{const d=v.replace(/\D/g,"").slice(0,16);return d.replace(/(.{4})/g,"$1 ").trim();};
-  const formatExp=v=>{const d=v.replace(/\D/g,"").slice(0,4);if(d.length>=3)return d.slice(0,2)+"/"+d.slice(2);return d;};
-  const handleCheckout=()=>{if(!cardNum||!cardExp||!cardCvc||!cardName)return;setCheckoutLoading(true);setTimeout(()=>{setCurPlan(checkoutPlan.id);setCheckoutLoading(false);setCheckoutDone(true);setTimeout(()=>{setCheckoutDone(false);setCheckoutPlan(null);setCardNum("");setCardExp("");setCardCvc("");setCardName("");},1500);},2000);};
+  const[checkoutBusy,setCheckoutBusy]=useState(null); /* which tier is in flight */
+  const[portalBusy,setPortalBusy]=useState(false);
+  const[billingError,setBillingError]=useState("");
+  /* Kick off Stripe Checkout for a given plan tier. Redirects to Stripe on success. */
+  const startCheckout=async(tier)=>{
+    if(isDemo){setBillingError("Demo mode — sign up with a real account to subscribe.");return;}
+    setBillingError("");setCheckoutBusy(tier);
+    try{
+      const sess=await window.supabase.auth.getSession();
+      const token=sess?.data?.session?.access_token;
+      if(!token)throw new Error("Not signed in");
+      const res=await fetch(BACKEND_URL+"/api/billing/checkout",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({tier})});
+      const data=await res.json();
+      if(!res.ok||!data.url)throw new Error(data.error||"Checkout failed");
+      window.location.href=data.url;
+    }catch(e){setBillingError(e.message||"Something went wrong");setCheckoutBusy(null);}
+  };
+  /* Open Stripe Customer Portal — lets the user manage, upgrade, cancel, update payment method. */
+  const openPortal=async()=>{
+    if(isDemo){setBillingError("Demo mode — real subscriptions only.");return;}
+    setBillingError("");setPortalBusy(true);
+    try{
+      const sess=await window.supabase.auth.getSession();
+      const token=sess?.data?.session?.access_token;
+      if(!token)throw new Error("Not signed in");
+      const res=await fetch(BACKEND_URL+"/api/billing/portal",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"}});
+      const data=await res.json();
+      if(!res.ok||!data.url)throw new Error(data.error||"Could not open billing portal");
+      window.location.href=data.url;
+    }catch(e){setBillingError(e.message||"Something went wrong");setPortalBusy(false);}
+  };
 
   /* ── Team state ── */
   const demoTeam=[
@@ -2135,70 +2155,14 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
           </div>
         </div>}
         {tab==="billing"&&<div>
-          {/* ── Stripe Checkout Modal ── */}
-          {checkoutPlan&&(()=>{const isUpgrade=curPlan&&planTier(checkoutPlan.id)>planTier(curPlan);const isDowngrade=curPlan&&planTier(checkoutPlan.id)<planTier(curPlan);const curP=getPlan(curPlan);
-          return ReactDOM.createPortal(<div className="fixed inset-0 z-50 flex items-center justify-center" style={{zIndex:9999}}>
-            <div className="absolute inset-0 bg-black/50" onClick={()=>{if(!checkoutLoading&&!checkoutDone){setCheckoutPlan(null);setCardNum("");setCardExp("");setCardCvc("");setCardName("");}}}/>
-            <div className="relative bg-white w-full max-w-md mx-4" style={{zIndex:10000}}>
-              {checkoutDone?<div className="p-10 text-center">
-                <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center mx-auto mb-5"><span className="w-6 h-6 text-white">{I.check}</span></div>
-                <p className="text-lg text-neutral-900 mb-1">{isDowngrade?"Downgraded to":"You\u2019re on"} {checkoutPlan.name}</p>
-                <p className="text-sm text-neutral-400">{isDowngrade?"Changes take effect at the end of your billing period.":"Your subscription is now active."}</p>
-              </div>:<>
-              <div className="flex items-center justify-between px-7 py-5 border-b border-neutral-100">
-                <div><p className="text-sm text-neutral-900">{isUpgrade?"Upgrade to":isDowngrade?"Downgrade to":"Subscribe to"} {checkoutPlan.name}</p><p className="text-xs text-neutral-400 mt-0.5">${checkoutPlan.price}/month</p></div>
-                <button onClick={()=>{setCheckoutPlan(null);setCardNum("");setCardExp("");setCardCvc("");setCardName("");}} className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-neutral-600"><span className="w-4 h-4">{I.x}</span></button>
-              </div>
-              {/* Upgrade/downgrade context */}
-              {(isUpgrade||isDowngrade)&&<div className={"mx-7 mt-5 p-4 "+(isUpgrade?"bg-neutral-50":"bg-neutral-50")}>
-                <p className="text-xs text-neutral-400 mb-2">{isUpgrade?"What you\u2019ll gain:":"What changes:"}</p>
-                {isUpgrade&&<div className="space-y-1">
-                  <p className="text-xs text-neutral-600">\u2713 {checkoutPlan.minutes.toLocaleString()} call minutes (up from {curP?.minutes.toLocaleString()})</p>
-                  <p className="text-xs text-neutral-600">\u2713 {checkoutPlan.seats===999?"Unlimited":checkoutPlan.seats} team seats (up from {curP?.seats})</p>
-                  {planTier(checkoutPlan.id)>=1&&planTier(curPlan)<1&&<p className="text-xs text-neutral-600">\u2713 Custom AI voice clone</p>}
-                  {planTier(checkoutPlan.id)>=1&&planTier(curPlan)<1&&<p className="text-xs text-neutral-600">\u2713 CRM, Slack, QuickBooks integrations</p>}
-                  {planTier(checkoutPlan.id)>=2&&planTier(curPlan)<2&&<p className="text-xs text-neutral-600">\u2713 API access, webhooks, advanced analytics</p>}
-                </div>}
-                {isDowngrade&&<div className="space-y-1">
-                  <p className="text-xs text-neutral-600">Minutes: {curP?.minutes.toLocaleString()} \u2192 {checkoutPlan.minutes.toLocaleString()}</p>
-                  <p className="text-xs text-neutral-600">Seats: {curP?.seats===999?"Unlimited":curP?.seats} \u2192 {checkoutPlan.seats}</p>
-                  <p className="text-xs text-neutral-400 mt-2">Downgrade takes effect at end of billing period.</p>
-                </div>}
-              </div>}
-              <div className="px-7 py-6 space-y-4">
-                {!curPlan&&<><div><label className="text-xs text-neutral-400 mb-1.5 block">Cardholder name</label><input value={cardName} onChange={e=>setCardName(e.target.value)} placeholder="Full name on card" className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>
-                <div><label className="text-xs text-neutral-400 mb-1.5 block">Card number</label><input value={cardNum} onChange={e=>setCardNum(formatCard(e.target.value))} placeholder="1234 5678 9012 3456" className="w-full border border-neutral-200 px-4 py-3 text-sm font-mono" maxLength={19}/></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-xs text-neutral-400 mb-1.5 block">Expiration</label><input value={cardExp} onChange={e=>setCardExp(formatExp(e.target.value))} placeholder="MM/YY" className="w-full border border-neutral-200 px-4 py-3 text-sm font-mono" maxLength={5}/></div>
-                  <div><label className="text-xs text-neutral-400 mb-1.5 block">CVC</label><input value={cardCvc} onChange={e=>setCardCvc(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="123" className="w-full border border-neutral-200 px-4 py-3 text-sm font-mono" maxLength={4}/></div>
-                </div></>}
-                {curPlan&&<div className="flex items-center gap-3 py-2"><div className="w-10 h-7 bg-neutral-100 flex items-center justify-center"><svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#1A1F71" rx="2"/><circle cx="7.5" cy="7" r="3.5" fill="#F7B600"/><circle cx="12.5" cy="7" r="3.5" fill="#EB001B" fillOpacity=".7"/></svg></div><div><p className="text-sm text-neutral-900">\u2022\u2022\u2022\u2022 4242</p><p className="text-xs text-neutral-400">Card on file</p></div></div>}
-                <div className="pt-2 border-t border-neutral-100 mt-2">
-                  {isUpgrade&&curP&&<><div className="flex justify-between text-sm mb-1"><span className="text-neutral-400">Prorated credit ({curP.name})</span><span className="text-neutral-400">-${Math.round(curP.price*0.5)}.00</span></div>
-                  <div className="flex justify-between text-sm mb-1"><span className="text-neutral-400">{checkoutPlan.name} plan</span><span className="text-neutral-900">${checkoutPlan.price}.00</span></div>
-                  <div className="flex justify-between text-sm pt-3 border-t border-neutral-100"><span className="text-neutral-900">Due today</span><span className="text-neutral-900">${checkoutPlan.price-Math.round(curP.price*0.5)}.00</span></div></>}
-                  {isDowngrade&&<><div className="flex justify-between text-sm mb-1"><span className="text-neutral-400">{checkoutPlan.name} plan (next cycle)</span><span className="text-neutral-900">${checkoutPlan.price}.00</span></div>
-                  <div className="flex justify-between text-sm pt-3 border-t border-neutral-100"><span className="text-neutral-900">Due today</span><span className="text-neutral-900">$0.00</span></div></>}
-                  {!isUpgrade&&!isDowngrade&&<><div className="flex justify-between text-sm mb-1"><span className="text-neutral-400">{checkoutPlan.name} plan</span><span className="text-neutral-900">${checkoutPlan.price}.00</span></div>
-                  <div className="flex justify-between text-sm mb-3"><span className="text-neutral-400">Tax</span><span className="text-neutral-900">$0.00</span></div>
-                  <div className="flex justify-between text-sm pt-3 border-t border-neutral-100"><span className="text-neutral-900">Total due today</span><span className="text-neutral-900">${checkoutPlan.price}.00</span></div></>}
-                </div>
-              </div>
-              <div className="px-7 pb-7"><button onClick={curPlan?()=>{setCheckoutLoading(true);setTimeout(()=>{setCurPlan(checkoutPlan.id);setCheckoutLoading(false);setCheckoutDone(true);setTimeout(()=>{setCheckoutDone(false);setCheckoutPlan(null);},1500);},1500);}:handleCheckout} disabled={checkoutLoading||(!curPlan&&(!cardNum||!cardExp||!cardCvc||!cardName))} className={"w-full py-3.5 text-sm transition-colors "+(checkoutLoading?"bg-neutral-400 text-white cursor-wait":(!curPlan&&(!cardNum||!cardExp||!cardCvc||!cardName))?"bg-neutral-200 text-neutral-400 cursor-not-allowed":"bg-neutral-900 text-white hover:bg-black")}>{checkoutLoading?"Processing...":(isUpgrade?"Upgrade":isDowngrade?"Downgrade":"Subscribe")+" \u2014 $"+(isDowngrade?"0":isUpgrade?(checkoutPlan.price-Math.round((getPlan(curPlan)?.price||0)*0.5)):checkoutPlan.price)+"/today"}</button>
-                <div className="flex items-center justify-center gap-2 mt-4"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-300"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><p className="text-xs text-neutral-300">Secured by Stripe</p></div>
-              </div></>}
-            </div>
-          </div>,document.body);})()}
-
-          {/* ── Cancel modal ── */}
-          {cancelModal&&<CancelModal planName={getPlan(curPlan)?.name} onConfirm={()=>setCurPlan(null)} onClose={()=>setCancelModal(false)}/>}
-
           <p className="text-2xl text-neutral-900 tracking-tight mb-2">{curPlan?"Manage your plan":"Choose your plan"}</p>
-          <p className="text-sm text-neutral-400 mb-8">{curPlan?"Upgrade, downgrade, or cancel anytime.":"All plans include a 14-day free trial. Cancel anytime."}</p>
+          <p className="text-sm text-neutral-400 mb-6">{curPlan?"Upgrade, downgrade, cancel, or update your card anytime through the Stripe billing portal.":"Start your 14-day free trial. Cancel anytime from the billing portal."}</p>
+
+          {billingError&&<div className="bg-neutral-50 border border-neutral-200 px-4 py-3 mb-5 flex items-center gap-3"><span className="w-4 h-4 text-neutral-500">{I.zap}</span><p className="text-sm text-neutral-700">{billingError}</p><button onClick={()=>setBillingError("")} className="ml-auto w-5 h-5 text-neutral-400 hover:text-neutral-900 flex items-center justify-center">{I.x}</button></div>}
 
           {/* ── Plan cards ── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-            {plans.map(p=>{const active=curPlan===p.id;const isUp=curPlan&&planTier(p.id)>planTier(curPlan);const isDown=curPlan&&planTier(p.id)<planTier(curPlan);return(
+            {plans.map(p=>{const active=curPlan===p.id;const isUp=curPlan&&planTier(p.id)>planTier(curPlan);const isDown=curPlan&&planTier(p.id)<planTier(curPlan);const busy=checkoutBusy===p.id;return(
               <div key={p.id} className={"border p-6 flex flex-col transition-colors "+(active?"border-neutral-900 bg-neutral-50":"border-neutral-200 hover:border-neutral-300")}>
                 <div className="flex items-center gap-2 mb-3">{p.badge&&<span className="text-xs bg-neutral-900 text-white px-3 py-1">{p.badge}</span>}{active&&<span className="text-xs border border-neutral-900 text-neutral-900 px-3 py-1">Current</span>}</div>
                 <p className="text-lg text-neutral-900">{p.name}</p>
@@ -2206,36 +2170,44 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
                 <div className="flex items-baseline gap-1 mb-1"><span className="text-3xl text-neutral-900">${p.price}</span><span className="text-sm text-neutral-400">{p.period}</span></div>
                 <p className="text-xs text-neutral-300 mb-5">{p.minutes.toLocaleString()} minutes included \u00B7 {p.overage} overage</p>
                 <div className="space-y-2.5 mb-6 flex-1">{p.features.map((f,i)=><div key={i} className="flex items-start gap-2.5"><span className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5">{I.check}</span><span className="text-sm text-neutral-600">{f}</span></div>)}</div>
-                {active?<div className="space-y-2"><button className="w-full py-3 text-sm border-2 border-neutral-900 text-neutral-900 cursor-default">Current plan</button><button onClick={()=>setCancelModal(true)} className="w-full py-2.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Cancel subscription</button></div>
-                :isDown?<button onClick={()=>setCheckoutPlan(p)} className="w-full py-3 text-sm border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors">Downgrade</button>
-                :<button onClick={()=>setCheckoutPlan(p)} className="w-full py-3 text-sm bg-neutral-900 text-white hover:bg-black transition-colors">{isUp?"Upgrade":"Get started"}</button>}
+                {active?<button onClick={openPortal} disabled={portalBusy} className={"w-full py-3 text-sm border-2 border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors "+(portalBusy?"opacity-60 cursor-wait":"")}>{portalBusy?"Opening portal\u2026":"Manage plan"}</button>
+                :curPlan?<button onClick={openPortal} disabled={portalBusy} className="w-full py-3 text-sm border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">{isDown?"Downgrade":"Switch plan"}</button>
+                :<button onClick={()=>startCheckout(p.id)} disabled={busy} className={"w-full py-3 text-sm bg-neutral-900 text-white hover:bg-black transition-colors "+(busy?"opacity-60 cursor-wait":"")}>{busy?"Redirecting\u2026":"Get started"}</button>}
               </div>
             );})}
           </div>
 
-          {/* ── Current plan summary ── */}
+          {/* ── Current subscription summary ── */}
           {curPlan&&<div className="border border-neutral-200 p-7 mb-6">
-            <div className="flex items-center justify-between mb-4"><p className="text-xs text-neutral-400 uppercase tracking-widest">Current subscription</p><span className="text-xs bg-neutral-900 text-white px-3 py-1">{getPlan(curPlan)?.name} \u00B7 ${getPlan(curPlan)?.price}/mo</span></div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-neutral-400 uppercase tracking-widest">Current subscription</p>
+              <span className="text-xs bg-neutral-900 text-white px-3 py-1">{getPlan(curPlan)?.name} \u00B7 ${getPlan(curPlan)?.price}/mo</span>
+            </div>
             <div className="grid grid-cols-2 gap-6 mb-4">
               <div><p className="text-xs text-neutral-400 mb-2">Call minutes</p><div className="h-2 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all" style={{width:isDemo?"34%":"0%"}}/></div><p className="text-xs text-neutral-300 mt-1.5">{isDemo?"68":"0"} / {getPlan(curPlan)?.minutes.toLocaleString()} used</p></div>
               <div><p className="text-xs text-neutral-400 mb-2">Team seats</p><div className="h-2 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all" style={{width:isDemo?Math.min(100,Math.round((team.filter(m=>m.status==="Active").length/getPlan(curPlan)?.seats)*100))+"%":"0%"}}/></div><p className="text-xs text-neutral-300 mt-1.5">{isDemo?team.filter(m=>m.status==="Active").length:"0"} / {getPlan(curPlan)?.seats===999?"\u221E":getPlan(curPlan)?.seats} used</p></div>
             </div>
-            <p className="text-xs text-neutral-300">Next billing date: May 1, 2026 \u00B7 Overage rate: {getPlan(curPlan)?.overage}</p>
+            <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
+              <p className="text-xs text-neutral-400">
+                {sub?.cancel_at_period_end?"Cancels on ":sub?.status==="trialing"?"Trial ends ":"Renews "}
+                {sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}):"\u2014"}
+                {" \u00B7 Overage rate: "+getPlan(curPlan)?.overage}
+              </p>
+              <button onClick={openPortal} disabled={portalBusy} className="text-xs text-neutral-600 hover:text-neutral-900 transition-colors">{portalBusy?"Opening\u2026":"Manage in Stripe \u2192"}</button>
+            </div>
           </div>}
 
-          {/* ── Payment method ── */}
-          <div className="border border-neutral-200 p-7 mb-6">
-            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Payment method</p>
-            {curPlan?<div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-7 bg-neutral-100 flex items-center justify-center"><svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#1A1F71" rx="2"/><circle cx="7.5" cy="7" r="3.5" fill="#F7B600"/><circle cx="12.5" cy="7" r="3.5" fill="#EB001B" fillOpacity=".7"/></svg></div><div><p className="text-sm text-neutral-900">\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 4242</p><p className="text-xs text-neutral-400 mt-0.5">Expires 12/27</p></div></div><button className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Update</button></div>
-            :<><p className="text-sm text-neutral-400">No payment method on file</p><p className="text-xs text-neutral-300 mt-1">Choose a plan above to add a payment method</p></>}
-          </div>
-
-          {/* ── Invoices ── */}
-          <div>
-            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Recent invoices</p>
-            {curPlan?<div className="space-y-2">{[["Mar 1, 2026","$"+getPlan(curPlan)?.price+".00","Paid"],["Feb 1, 2026","$"+getPlan(curPlan)?.price+".00","Paid"],["Jan 1, 2026","$"+getPlan(curPlan)?.price+".00","Paid"]].map(([d,a,s],i)=><div key={i} className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0"><div><p className="text-sm text-neutral-900">{d}</p></div><div className="flex items-center gap-4"><span className="text-sm text-neutral-900">{a}</span><span className="text-xs text-neutral-400 bg-neutral-50 px-2.5 py-1">{s}</span></div></div>)}</div>
-            :<p className="text-sm text-neutral-400">No invoices yet</p>}
-          </div>
+          {/* ── Billing portal CTA (single source of truth for card / invoices / cancellation) ── */}
+          {curPlan&&<div className="border border-neutral-200 p-7">
+            <div className="flex items-start gap-5">
+              <div className="w-10 h-10 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-neutral-500">{I.dollar}</span></div>
+              <div className="flex-1">
+                <p className="text-sm text-neutral-900 mb-1">Billing portal</p>
+                <p className="text-xs text-neutral-400 leading-relaxed">Update your payment method, download invoices, change plan, or cancel your subscription \u2014 all managed securely through Stripe.</p>
+              </div>
+              <button onClick={openPortal} disabled={portalBusy} className={"text-sm px-5 py-2.5 bg-neutral-900 text-white hover:bg-black transition-colors shrink-0 "+(portalBusy?"opacity-60 cursor-wait":"")}>{portalBusy?"Opening\u2026":"Open portal"}</button>
+            </div>
+          </div>}
         </div>}
         {tab==="notifications"&&<div className="max-w-xl"><p className="text-2xl text-neutral-900 tracking-tight mb-8">Notifications</p><div className="space-y-1">{[["calls","New call alerts","Get notified when a new call comes in"],["sms","SMS notifications","Receive text alerts for urgent calls"],["email","Email digests","Daily summary of all calls and bookings"],["weekly","Weekly reports","Performance report every Monday"]].map(([k,title,desc])=>(<div key={k} className="flex items-center justify-between py-5 border-b border-neutral-100 last:border-0"><div><p className="text-sm text-neutral-900">{title}</p><p className="text-xs text-neutral-400 mt-0.5">{desc}</p></div><Toggle on={notifs[k]} onChange={()=>toggleN(k)}/></div>))}</div></div>}
       </div>
@@ -2650,7 +2622,39 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
   const[quoteView,setQuoteView]=useState(null);
   /* ── Plan state (lives at Layout level so all pages can access) ── */
   const[curPlan,setCurPlan]=useState(isDemo?"growth":null);
+  const[sub,setSub]=useState(null); /* full subscription row: status, period end, cancel_at_period_end */
   const curPlanData=getPlan(curPlan);
+  /* Load subscription from Supabase on mount. Demo users keep the fake "growth" plan. */
+  React.useEffect(()=>{
+    if(isDemo)return;
+    let stop=false;
+    const load=async(retries=0)=>{
+      try{
+        const sess=await window.supabase.auth.getSession();
+        const uid=sess?.data?.session?.user?.id;
+        if(!uid)return;
+        const{data}=await window.supabase.from("subscriptions").select("plan,status,current_period_end,cancel_at_period_end").eq("user_id",uid).maybeSingle();
+        if(stop)return;
+        setSub(data||null);
+        const active=data&&(data.status==="active"||data.status==="trialing");
+        setCurPlan(active?data.plan:null);
+      }catch(e){console.warn("sub load:",e.message);}
+    };
+    load();
+    /* If we just came back from Stripe Checkout, the webhook may still be in flight.
+       Poll a few times to pick up the new subscription row. */
+    const url=new URL(window.location.href);
+    if(url.searchParams.get("checkout")==="success"){
+      let tries=0;
+      const iv=setInterval(()=>{tries++;load();if(tries>=6)clearInterval(iv);},2000);
+      /* Clean the URL so a refresh doesn't re-poll */
+      url.searchParams.delete("checkout");
+      url.searchParams.delete("session_id");
+      window.history.replaceState({},"",url.toString());
+      return()=>{stop=true;clearInterval(iv);};
+    }
+    return()=>{stop=true;};
+  },[isDemo]);
   const[upgradePrompt,setUpgradePrompt]=useState(null);
   const requirePlan=(feature,requiredPlanId)=>{
     if(!curPlan||planTier(curPlan)<planTier(requiredPlanId)){
@@ -2720,7 +2724,7 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
           <div style={{display:pg==="quotes"?"block":"none"}}>{C.length>0?<Quotes/>:<QuotesEmpty/>}</div>
           <div style={{display:pg==="leads"?"block":"none"}}>{C.length>0?<Leads profile={profile} setQuoteView={setQuoteView}/>:<LeadsEmpty/>}</div>
           <div className="h-full" style={{display:pg==="agent"?"block":"none"}}><Agent vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} agentCfg={agentCfg}/></div>
-          <div className="h-full" style={{display:pg==="settings"?"block":"none"}}><Settings vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={onLogout} profile={profile} onProfileSave={onProfileSave} isDemo={isDemo} curPlan={curPlan} setCurPlan={setCurPlan} curPlanData={curPlanData} requirePlan={requirePlan}/></div>
+          <div className="h-full" style={{display:pg==="settings"?"block":"none"}}><Settings vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={onLogout} profile={profile} onProfileSave={onProfileSave} isDemo={isDemo} curPlan={curPlan} setCurPlan={setCurPlan} curPlanData={curPlanData} requirePlan={requirePlan} sub={sub}/></div>
         </div>
       </div>
       {upgradePrompt&&<UpgradePrompt feature={upgradePrompt.feature} requiredPlan={upgradePrompt.requiredPlan} curPlan={curPlan} onUpgrade={()=>{go("settings");}} onClose={()=>setUpgradePrompt(null)}/>}
