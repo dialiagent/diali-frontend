@@ -1472,28 +1472,37 @@ const Quotes=()=>{
       </Panel>
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-3">
         <div>
           <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Quotes</p>
           <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{totalItems} items in your pricebook · Used on {totalUses.toLocaleString()} quotes</p>
         </div>
-        <button onClick={()=>setAdding(true)} className="bg-neutral-900 text-white px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors self-start md:self-auto"><span className="w-4 h-4">{I.plus}</span>Add item</button>
+        <button onClick={()=>setAdding(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors self-start md:self-auto"><span className="w-4 h-4">{I.plus}</span>Add item</button>
       </div>
 
-      {/* Stats tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-4 bg-white border border-neutral-100 mb-8">
-        {[
-          ["Total items",totalItems+"","services priced"],
-          ["Categories",totalCats+"","groups"],
-          ["Avg. rate","$"+avgRate,"across pricebook"],
-          ["Top seller",(mostUsed?.name||"—"),mostUsed?mostUsed.uses+" uses":""]
-        ].map(([label,value,sub],i)=>(
-          <div key={i} className={"p-5 md:p-6 "+(i<2?"border-b md:border-b-0 border-neutral-100 ":"")+(i%2===0?"border-r border-neutral-100 ":"")+(i===1?"md:border-r md:border-neutral-100 ":"")+(i===2?"md:border-r md:border-neutral-100 ":"")}>
-            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">{label}</p>
-            <p className="text-xl md:text-2xl text-neutral-900 tabular-nums tracking-tight truncate">{value}</p>
-            <p className="text-xs text-neutral-400 mt-1">{sub}</p>
-          </div>
-        ))}
+      {/* Hero metrics — pricebook health */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Total items</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{totalItems}</p>
+          <p className="text-xs text-neutral-400 mt-1">services priced</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Categories</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{totalCats}</p>
+          <p className="text-xs text-neutral-400 mt-1">groups in pricebook</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Avg. rate</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${avgRate}</p>
+          <p className="text-xs text-neutral-400 mt-1">across pricebook</p>
+        </div>
+        <div className="bg-white border border-neutral-100 p-5">
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Top seller</p>
+          <p className="text-base text-neutral-900 tracking-tight truncate">{mostUsed?.name||"—"}</p>
+          <p className="text-xs text-neutral-400 mt-1">{mostUsed?mostUsed.uses+" uses":"no usage yet"}</p>
+        </div>
       </div>
 
       {/* Filters */}
