@@ -2125,7 +2125,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
 
           {/* Header */}
           {(()=>{const activeCount=team.filter(m=>m.status==="Active"||m.status==="Pending").length;const seatLimit=curPlanData?.seats||1;const atLimit=seatLimit!==999&&activeCount>=seatLimit;
-          return <div className="flex items-center justify-between mb-6"><div><p className="text-2xl text-neutral-900 tracking-tight">Team</p><p className="text-xs text-neutral-400 mt-1">{team.filter(m=>m.status==="Active").length} active \u00B7 {team.filter(m=>m.status==="Pending").length} pending{seatLimit!==999&&<span> \u00B7 {activeCount}/{seatLimit} seats used</span>}</p></div>
+          return <div className="flex items-center justify-between mb-6"><div><p className="text-2xl text-neutral-900 tracking-tight">Team</p><p className="text-xs text-neutral-400 mt-1">{team.filter(m=>m.status==="Active").length} active · {team.filter(m=>m.status==="Pending").length} pending{seatLimit!==999&&<span> · {activeCount}/{seatLimit} seats used</span>}</p></div>
           {atLimit?<button onClick={()=>{const next=planTier(curPlan)<1?"growth":"scale";requirePlan("More team seats",next);}} className="border border-neutral-200 text-neutral-500 px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-neutral-50 transition-colors"><span className="w-4 h-4">{I.plus}</span>Upgrade for more seats</button>
           :<button onClick={()=>setTeamPanel("invite")} className="bg-neutral-900 text-white px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span>Invite</button>}
           </div>;})()}
@@ -2168,7 +2168,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
                 <p className="text-lg text-neutral-900">{p.name}</p>
                 <p className="text-xs text-neutral-400 mt-1 mb-4">{p.desc}</p>
                 <div className="flex items-baseline gap-1 mb-1"><span className="text-3xl text-neutral-900">${p.price}</span><span className="text-sm text-neutral-400">{p.period}</span></div>
-                <p className="text-xs text-neutral-300 mb-5">{p.minutes.toLocaleString()} minutes included \u00B7 {p.overage} overage</p>
+                <p className="text-xs text-neutral-300 mb-5">{p.minutes.toLocaleString()} minutes included · {p.overage} overage</p>
                 <div className="space-y-2.5 mb-6 flex-1">{p.features.map((f,i)=><div key={i} className="flex items-start gap-2.5"><span className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5">{I.check}</span><span className="text-sm text-neutral-600">{f}</span></div>)}</div>
                 {active?<button onClick={openPortal} disabled={portalBusy} className={"w-full py-3 text-sm border-2 border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white transition-colors "+(portalBusy?"opacity-60 cursor-wait":"")}>{portalBusy?"Opening portal\u2026":"Manage plan"}</button>
                 :curPlan?<button onClick={openPortal} disabled={portalBusy} className="w-full py-3 text-sm border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">{isDown?"Downgrade":"Switch plan"}</button>
@@ -2181,7 +2181,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
           {curPlan&&<div className="border border-neutral-200 p-7 mb-6">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs text-neutral-400 uppercase tracking-widest">Current subscription</p>
-              <span className="text-xs bg-neutral-900 text-white px-3 py-1">{getPlan(curPlan)?.name} \u00B7 ${getPlan(curPlan)?.price}/mo</span>
+              <span className="text-xs bg-neutral-900 text-white px-3 py-1">{getPlan(curPlan)?.name} · ${getPlan(curPlan)?.price}/mo</span>
             </div>
             <div className="grid grid-cols-2 gap-6 mb-4">
               <div><p className="text-xs text-neutral-400 mb-2">Call minutes</p><div className="h-2 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all" style={{width:isDemo?"34%":"0%"}}/></div><p className="text-xs text-neutral-300 mt-1.5">{isDemo?"68":"0"} / {getPlan(curPlan)?.minutes.toLocaleString()} used</p></div>
@@ -2191,7 +2191,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
               <p className="text-xs text-neutral-400">
                 {sub?.cancel_at_period_end?"Cancels on ":sub?.status==="trialing"?"Trial ends ":"Renews "}
                 {sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}):"\u2014"}
-                {" \u00B7 Overage rate: "+getPlan(curPlan)?.overage}
+                {" · Overage rate: "+getPlan(curPlan)?.overage}
               </p>
               <button onClick={openPortal} disabled={portalBusy} className="text-xs text-neutral-600 hover:text-neutral-900 transition-colors">{portalBusy?"Opening\u2026":"Manage in Stripe \u2192"}</button>
             </div>
@@ -2203,7 +2203,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
               <div className="w-10 h-10 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-neutral-500">{I.dollar}</span></div>
               <div className="flex-1">
                 <p className="text-sm text-neutral-900 mb-1">Billing portal</p>
-                <p className="text-xs text-neutral-400 leading-relaxed">Update your payment method, download invoices, change plan, or cancel your subscription \u2014 all managed securely through Stripe.</p>
+                <p className="text-xs text-neutral-400 leading-relaxed">Update your payment method, download invoices, change plan, or cancel your subscription — all managed securely through Stripe.</p>
               </div>
               <button onClick={openPortal} disabled={portalBusy} className={"text-sm px-5 py-2.5 bg-neutral-900 text-white hover:bg-black transition-colors shrink-0 "+(portalBusy?"opacity-60 cursor-wait":"")}>{portalBusy?"Opening\u2026":"Open portal"}</button>
             </div>
@@ -2442,15 +2442,15 @@ const CancelModal=({planName,onConfirm,onClose})=>{
   return ReactDOM.createPortal(<div className="fixed inset-0 z-50 flex items-center justify-center" style={{zIndex:9999}}>
     <div className="absolute inset-0 bg-black/50" onClick={()=>{if(!confirming&&!done)onClose();}}/>
     <div className="relative bg-white w-full max-w-sm mx-4 p-8" style={{zIndex:10000}}>
-      {done?<div className="text-center"><div className="w-14 h-14 bg-neutral-100 flex items-center justify-center mx-auto mb-5"><span className="w-6 h-6 text-neutral-400">{I.check}</span></div><p className="text-lg text-neutral-900 mb-1">Subscription cancelled</p><p className="text-sm text-neutral-400">You\u2019ll retain access until the end of your billing period.</p></div>
+      {done?<div className="text-center"><div className="w-14 h-14 bg-neutral-100 flex items-center justify-center mx-auto mb-5"><span className="w-6 h-6 text-neutral-400">{I.check}</span></div><p className="text-lg text-neutral-900 mb-1">Subscription cancelled</p><p className="text-sm text-neutral-400">You'll retain access until the end of your billing period.</p></div>
       :<><p className="text-lg text-neutral-900 mb-2">Cancel your subscription?</p>
-        <p className="text-sm text-neutral-400 mb-2">You\u2019re currently on the <span className="text-neutral-900">{planName}</span> plan.</p>
+        <p className="text-sm text-neutral-400 mb-2">You're currently on the <span className="text-neutral-900">{planName}</span> plan.</p>
         <div className="bg-neutral-50 p-4 mb-6 space-y-1.5">
           <p className="text-xs text-neutral-400">If you cancel:</p>
-          <p className="text-xs text-neutral-600">\u2022 Your AI agent will stop answering calls</p>
-          <p className="text-xs text-neutral-600">\u2022 Team members will lose access</p>
-          <p className="text-xs text-neutral-600">\u2022 Call history and recordings are preserved for 90 days</p>
-          <p className="text-xs text-neutral-600">\u2022 You can resubscribe anytime</p>
+          <p className="text-xs text-neutral-600">• Your AI agent will stop answering calls</p>
+          <p className="text-xs text-neutral-600">• Team members will lose access</p>
+          <p className="text-xs text-neutral-600">• Call history and recordings are preserved for 90 days</p>
+          <p className="text-xs text-neutral-600">• You can resubscribe anytime</p>
         </div>
         <button onClick={handle} disabled={confirming} className={"w-full py-3 text-sm mb-3 transition-colors "+(confirming?"bg-neutral-300 text-white cursor-wait":"bg-neutral-900 text-white hover:bg-black")}>{confirming?"Cancelling...":"Cancel subscription"}</button>
         <button onClick={onClose} className="w-full border border-neutral-200 py-3 text-sm text-neutral-400 hover:bg-neutral-50 transition-colors">Keep my plan</button>
