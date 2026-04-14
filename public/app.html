@@ -790,9 +790,9 @@ const Jobs=()=>{
       </div>
 
       {/* Filter chips */}
-      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 mb-4">
+      <div className="inline-flex bg-neutral-200 p-1 mb-4 overflow-x-auto max-w-full">
         {[["all","All",jobs.length],["today","Today",jobs.filter(j=>dayBucket(j.day)==="today").length],["week","This week",jobs.filter(j=>{const b=dayBucket(j.day);return b==="today"||b==="week";}).length],["progress","In progress",jobs.filter(j=>j.pct>0&&j.pct<100).length]].map(([k,label,n])=>(
-          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(filter===k?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{label}{k!=="all"&&<span className={"ml-1.5 tabular-nums "+(filter===k?"text-neutral-500":"text-neutral-300")}>{n}</span>}</button>
+          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(filter===k?"bg-white text-neutral-900":"text-neutral-500 hover:text-neutral-700")}>{label}{k!=="all"&&<span className={"ml-1.5 tabular-nums "+(filter===k?"text-neutral-400":"text-neutral-400")}>{n}</span>}</button>
         ))}
       </div>
 
@@ -1159,9 +1159,9 @@ const Leads=({profile,setQuoteView})=>{
       </div>
 
       {/* Filter chips */}
-      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 mb-4">
+      <div className="inline-flex bg-neutral-200 p-1 mb-4 overflow-x-auto max-w-full">
         {[["all","All",C.filter(l=>l.status!=="declined").length],["hot","Hot",C.filter(isHot).length],["urgent","Urgent",C.filter(l=>l.urg==="urgent"||l.urg==="emergency").length],["today","Today",C.filter(l=>{const f=freshness(l.time);return f==="now"||f==="today";}).length],["week","This week",C.filter(l=>freshness(l.time)!=="older").length]].map(([k,label,n])=>(
-          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(filter===k?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{label}{k!=="all"&&<span className={"ml-1.5 tabular-nums "+(filter===k?"text-neutral-500":"text-neutral-300")}>{n}</span>}</button>
+          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(filter===k?"bg-white text-neutral-900":"text-neutral-500 hover:text-neutral-700")}>{label}{k!=="all"&&<span className="ml-1.5 tabular-nums text-neutral-400">{n}</span>}</button>
         ))}
       </div>
 
@@ -1500,9 +1500,9 @@ const Quotes=()=>{
       </div>
 
       {/* Filter chips */}
-      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 mb-4">
+      <div className="inline-flex bg-neutral-200 p-1 mb-4 overflow-x-auto max-w-full">
         {cats.map(c=>(
-          <button key={c} onClick={()=>setCat(c)} className={"px-3 md:px-4 py-2 text-sm transition-all whitespace-nowrap "+(cat===c?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700")}>{c}{c!=="All"&&<span className={"ml-1.5 tabular-nums "+(cat===c?"text-neutral-500":"text-neutral-300")}>{items.filter(i=>i.cat===c).length}</span>}</button>
+          <button key={c} onClick={()=>setCat(c)} className={"px-3 md:px-4 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(cat===c?"bg-white text-neutral-900":"text-neutral-500 hover:text-neutral-700")}>{c}{c!=="All"&&<span className="ml-1.5 tabular-nums text-neutral-400">{items.filter(i=>i.cat===c).length}</span>}</button>
         ))}
       </div>
 
