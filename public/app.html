@@ -1660,7 +1660,7 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
           setTranscript(p=>[...p,{role:msg.role,text:msg.transcript}]);
         }
       });
-      v.on('error',e=>{console.error('Vapi error:',e);setCallState('idle');});
+      v.on('error',e=>{console.error('Vapi error:',e);setCallError(humanizeVapiError(e));setCallState('idle');});
       vapiRef.current=v;
     }catch(e){console.error('Vapi init:',e);}
   },[sdkReady,vapiKeys.publicKey]);
@@ -1685,6 +1685,17 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   },[voiceId,voiceName,greeting,sysPrompt,qs,assistantId]);
 
   const fmtTime=s=>{const m=Math.floor(s/60);const sc=s%60;return m+':'+(sc<10?'0':'')+sc;};
+  /* Translate Vapi's nested error payloads into a single user-readable string. */
+  const humanizeVapiError=(e)=>{
+    if(!e)return "Call failed.";
+    /* Microphone permission denied — most common cause of "AI talks but doesn't hear me" */
+    if(e?.error?.type==="permissions"||(e?.error?.blockedMedia||[]).includes("audio")||/permission|notallowed|denied/i.test(e?.error?.msg||"")){
+      return "Microphone access is blocked. Click the lock icon next to the URL → Site settings → set Microphone to Allow, then refresh and try again.";
+    }
+    if(e?.action==="camera-error")return "Audio device error. Make sure no other app is using your microphone, then try again.";
+    /* Standard error shapes */
+    return e?.message||e?.error?.msg||e?.error?.message||e?.errorMsg?.errorMsg||"Call failed — check the browser console for details.";
+  };
 
   const buildAssistantConfig=()=>({
     model:{provider:"openai",model:"gpt-4o",messages:[{role:"system",content:sysPrompt+"\n\nQualification questions to ask:\n"+qs.map((q,i)=>(i+1)+". "+q).join("\n")}]},
@@ -1715,7 +1726,7 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
         v.on('call-end',()=>setCallState('ended'));
         v.on('volume-level',lv=>setVolume(Math.min(1,lv)));
         v.on('message',msg=>{if(msg.type==='transcript'&&msg.transcriptType==='final')setTranscript(p=>[...p,{role:msg.role,text:msg.transcript}]);});
-        v.on('error',e=>{console.error('Vapi error:',e);setCallError(e?.message||e?.error?.message||"Call failed — check Vapi dashboard for details");setCallState('idle');});
+        v.on('error',e=>{console.error('Vapi error:',e);setCallError(humanizeVapiError(e));setCallState('idle');});
         vapiRef.current=v;
       }
       const cfg=assistantId||buildAssistantConfig();
