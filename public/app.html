@@ -700,6 +700,74 @@ const Jobs=()=>{
     })();
     return()=>{stop=true;};
   },[]);
+  /* Lazy-load the call linked to the selected appointment (transcript,
+     recording, summary, urgency, source) — only fetched when a panel opens. */
+  const[callCtx,setCallCtx]=useState(null);
+  const[ctxLoading,setCtxLoading]=useState(false);
+  React.useEffect(()=>{
+    if(!selJob){setCallCtx(null);return;}
+    setCtxLoading(true);
+    (async()=>{
+      try{
+        const sess=await window.supabase.auth.getSession();
+        const uid=sess?.data?.session?.user?.id;
+        if(!uid){setCtxLoading(false);return;}
+        const{data:appt}=await window.supabase
+          .from("appointments")
+          .select("lead_id,leads(urgency,source,issue,customer_email)")
+          .eq("id",selJob.id)
+          .maybeSingle();
+        let call=null;
+        if(appt?.lead_id){
+          const{data}=await window.supabase
+            .from("calls")
+            .select("id,summary,recording_url,transcript,duration_sec,started_at")
+            .eq("user_id",uid)
+            .eq("lead_id",appt.lead_id)
+            .order("started_at",{ascending:false})
+            .limit(1)
+            .maybeSingle();
+          call=data;
+        }
+        setCallCtx({
+          call,
+          urgency:appt?.leads?.urgency||"normal",
+          source:appt?.leads?.source||"phone",
+          email:appt?.leads?.customer_email||"",
+          summary:call?.summary||appt?.leads?.issue||""
+        });
+      }catch(e){console.warn("call ctx:",e.message);}
+      setCtxLoading(false);
+    })();
+  },[selJob?.id]);
+  /* Reschedule + decline state for the detail panel */
+  const[reschedDate,setReschedDate]=useState("");
+  const[reschedTime,setReschedTime]=useState("");
+  const[reschedOpen,setReschedOpen]=useState(false);
+  const[declineConfirm,setDeclineConfirm]=useState(false);
+  React.useEffect(()=>{setReschedOpen(false);setDeclineConfirm(false);},[selJob?.id]);
+  const reschedule=async()=>{
+    if(!reschedDate||!reschedTime||!selJob)return;
+    const newStart=new Date(reschedDate+"T"+reschedTime).toISOString();
+    const dur=2*3600*1000; /* 2hr default */
+    const newEnd=new Date(new Date(newStart).getTime()+dur).toISOString();
+    persistJob(selJob.id,{starts_at:newStart,ends_at:newEnd,confirmed_at:new Date().toISOString()});
+    setJobs(p=>p.map(j=>j.id===selJob.id?{...j,starts_at:newStart,confirmed_at:new Date().toISOString(),day:humanDay(new Date(newStart)),time:fmtTime12(new Date(newStart))}:j));
+    setReschedOpen(false);
+    setSelJob(null);
+  };
+  const decline=async()=>{
+    if(!selJob)return;
+    persistJob(selJob.id,{status:"canceled"});
+    setJobs(p=>p.filter(j=>j.id!==selJob.id));
+    setSelJob(null);
+  };
+  const updateTech=(t)=>{
+    if(!selJob)return;
+    setJobs(p=>p.map(j=>j.id===selJob.id?{...j,tech:t}:j));
+    setSelJob(prev=>({...prev,tech:t}));
+    persistJob(selJob.id,{tech:t});
+  };
   /* Persist a single field change back to the appointments table — only for
      real (loaded) jobs; demo seed edits stay local. */
   const persistJob=async(id,patch)=>{
@@ -773,30 +841,182 @@ const Jobs=()=>{
         </div>
       </Panel>
 
-      {/* Job detail panel */}
+      {/* Job detail panel — stage-aware decision view.
+          For unconfirmed jobs (New stage), this shows everything the operator
+          needs to confirm or reschedule the AI's request: customer info, when
+          they want to come, what they need, what the AI heard, and what it
+          quoted. For later stages, the panel tightens to the relevant info. */}
       <Panel open={!!selJob} onClose={()=>setSelJob(null)}>
-        {selJob&&<>
-          <PanelHeader onClose={()=>setSelJob(null)} title={selJob.cust} sub={selJob.ph} right={<span className={"text-xs px-3 py-1 "+(selJob.st==="Confirmed"?"bg-neutral-900 text-white":selJob.st==="Completed"?"bg-neutral-200 text-neutral-500":"bg-neutral-200 text-neutral-600")}>{selJob.st}</span>}/>
-          <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-            <IG items={[["Date",selJob.day],["Time",selJob.time],["Tech",selJob.tech],["Revenue","$"+selJob.rev.toLocaleString()]]} cols={4}/>
-            <div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.map}</span><p className="text-sm text-neutral-700">{selJob.addr}</p></div>
-            <div className="flex items-start gap-3"><span className="w-4 h-4 text-neutral-300 mt-0.5 shrink-0">{I.zap}</span><p className="text-sm text-neutral-700">{selJob.issue}</p></div>
-            <div className="h-px bg-neutral-100"/>
-            <div><ST icon={I.chart} title="Progress"/><div className="flex items-center gap-4"><div className="flex-1 h-1.5 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:selJob.pct+"%"}}/></div><span className="text-xs text-neutral-400 tabular-nums w-10 text-right">{selJob.pct}%</span></div></div>
-            <div className="h-px bg-neutral-100"/>
-            <div><SL>Checklist — {selJob.checklist?.length||0} items</SL>{selJob.checklist?.map((t,i)=><CK key={selJob.id+"-"+i} text={t} done={!!(selJob.checked&&selJob.checked[i])} onChange={v=>{const nc=[...(selJob.checked||selJob.checklist.map(()=>false))];nc[i]=v;setJobs(p=>p.map(j=>j.id===selJob.id?{...j,checked:nc}:j));setSelJob(prev=>({...prev,checked:nc}));persistJob(selJob.id,{checklist_done:nc});}}/>)}</div>
-            <div className="h-px bg-neutral-100"/>
-            <div><SL>Parts and materials</SL><div className="flex flex-wrap gap-2">{selJob.parts?.map((p,i)=>(<span key={i} className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1.5">{p}</span>))}</div></div>
-            <div className="h-px bg-neutral-100"/>
-            <div><ST icon={I.msg} title="Tech notes"/><p className="text-sm text-neutral-700 leading-relaxed">{selJob.notes}</p></div>
-          </div>
-          <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
-            {selJob.st!=="Completed"&&<button onClick={()=>{setJobs(p=>p.map(j=>j.id===selJob.id?{...j,st:"Completed",pct:100}:j));persistJob(selJob.id,{status:"completed",progress_pct:100});setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark complete</button>}
-            {selJob.st!=="Completed"&&<button onClick={()=>setSelJob(null)} className="flex-1 border border-neutral-200 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">Reschedule</button>}
-            {selJob.st==="Completed"&&<button onClick={()=>setSelJob(null)} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.phone}</span>Call customer</button>}
-            {selJob.st==="Completed"&&<button onClick={()=>setSelJob(null)} className="flex-1 border border-neutral-200 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.msg}</span>Send invoice</button>}
-          </div>
-        </>}
+        {selJob&&(()=>{
+          const stage=jobStage(selJob);
+          const isNew=stage==="New";
+          const inField=stage==="In Progress"||stage==="Today";
+          const done=stage==="Completed"||stage==="Invoiced"||stage==="Paid";
+          const urgency=callCtx?.urgency||"normal";
+          const urgencyLabel=urgency==="emergency"?"Emergency":urgency==="urgent"?"Urgent":"Standard";
+          return(
+          <>
+            <PanelHeader
+              onClose={()=>setSelJob(null)}
+              title={selJob.cust}
+              sub={selJob.ph||"No phone"}
+              right={<span className={"text-xs px-3 py-1 uppercase tracking-widest "+(isNew?"bg-neutral-900 text-white":done?"bg-neutral-100 text-neutral-500":"bg-neutral-200 text-neutral-700")}>{stage}</span>}
+            />
+            <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
+
+              {/* For NEW jobs — top callout that this is an AI request awaiting decision */}
+              {isNew&&<div className="bg-neutral-900 px-5 py-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-3.5 h-3.5 text-neutral-400">{I.zap}</span>
+                  <p className="text-xs text-neutral-400 uppercase tracking-widest">Diali wants to book</p>
+                </div>
+                <p className="text-sm text-white leading-relaxed">Diali took the call and proposed this appointment. Confirm to lock it in, reschedule to pick a different time, or decline if it's not a fit.</p>
+              </div>}
+
+              {/* Quick contact actions */}
+              <div className="grid grid-cols-3 gap-px bg-neutral-100 border border-neutral-100">
+                <a href={selJob.ph?"tel:"+selJob.ph:"#"} className="bg-white px-4 py-3 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors text-sm text-neutral-700"><span className="w-4 h-4 text-neutral-500">{I.phone}</span>Call</a>
+                <a href={selJob.ph?"sms:"+selJob.ph:"#"} className="bg-white px-4 py-3 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors text-sm text-neutral-700"><span className="w-4 h-4 text-neutral-500">{I.msg}</span>Text</a>
+                <a href={selJob.addr?"https://maps.google.com/?q="+encodeURIComponent(selJob.addr):"#"} target="_blank" rel="noreferrer" className="bg-white px-4 py-3 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors text-sm text-neutral-700"><span className="w-4 h-4 text-neutral-500">{I.map}</span>Directions</a>
+              </div>
+
+              {/* When */}
+              <div>
+                <ST icon={I.cal} title="When"/>
+                {!reschedOpen?(
+                  <div className="bg-neutral-50 p-5 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-base text-neutral-900">{selJob.day} · {selJob.time}</p>
+                      <p className="text-xs text-neutral-400 mt-1">{selJob.starts_at?new Date(selJob.starts_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"Date not set"}</p>
+                    </div>
+                    {!done&&<button onClick={()=>{
+                      const d=selJob.starts_at?new Date(selJob.starts_at):new Date();
+                      setReschedDate(d.toISOString().slice(0,10));
+                      setReschedTime(d.toTimeString().slice(0,5));
+                      setReschedOpen(true);
+                    }} className="text-xs text-neutral-600 hover:text-neutral-900 underline">Reschedule</button>}
+                  </div>
+                ):(
+                  <div className="bg-neutral-50 p-5 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <FF label="New date"><TI type="date" value={reschedDate} onChange={e=>setReschedDate(e.target.value)}/></FF>
+                      <FF label="New time"><TI type="time" value={reschedTime} onChange={e=>setReschedTime(e.target.value)}/></FF>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={reschedule} className="flex-1 bg-neutral-900 text-white py-2.5 text-sm hover:bg-black transition-colors">Save & confirm</button>
+                      <button onClick={()=>setReschedOpen(false)} className="px-4 border border-neutral-200 py-2.5 text-sm text-neutral-500 hover:bg-neutral-50">Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Where */}
+              <div>
+                <ST icon={I.map} title="Where"/>
+                <p className="text-sm text-neutral-700 leading-relaxed">{selJob.addr||<span className="text-neutral-400">No address on file</span>}</p>
+              </div>
+
+              {/* What they need */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <ST icon={I.zap} title="What they need" className="mb-0"/>
+                  {urgency!=="normal"&&<span className={"text-[10px] uppercase tracking-widest px-2 py-1 "+(urgency==="emergency"?"bg-neutral-900 text-white":"bg-neutral-200 text-neutral-700")}>{urgencyLabel}</span>}
+                </div>
+                <p className="text-sm text-neutral-700 leading-relaxed">{selJob.issue||callCtx?.summary||"No description"}</p>
+              </div>
+
+              {/* Money + tech */}
+              <div className="grid grid-cols-2 gap-px bg-neutral-100 border border-neutral-100">
+                <div className="bg-white p-5">
+                  <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-2">Estimated value</p>
+                  <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{selJob.rev?"$"+selJob.rev.toLocaleString():"—"}</p>
+                </div>
+                <div className="bg-white p-5">
+                  <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-2">Assigned tech</p>
+                  {done?<p className="text-sm text-neutral-700">{selJob.tech||"Unassigned"}</p>:(
+                    <SE value={selJob.tech||"Unassigned"} onChange={e=>updateTech(e.target.value)} className="!px-2 !py-1.5 !text-sm">
+                      <option>Unassigned</option><option>You</option><option>John S.</option><option>Mike T.</option>
+                    </SE>
+                  )}
+                </div>
+              </div>
+
+              {/* What Diali heard — call recording + transcript + summary */}
+              {(callCtx?.call||ctxLoading)&&<div>
+                <ST icon={I.bot} title="What Diali heard"/>
+                {ctxLoading?(
+                  <p className="text-xs text-neutral-400">Loading call…</p>
+                ):callCtx?.call?(
+                  <div className="space-y-4">
+                    {callCtx.summary&&<div className="bg-neutral-50 p-4">
+                      <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Summary</p>
+                      <p className="text-sm text-neutral-700 leading-relaxed">{callCtx.summary}</p>
+                    </div>}
+                    {callCtx.call.recording_url&&<div>
+                      <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Recording ({callCtx.call.duration_sec?Math.floor(callCtx.call.duration_sec/60)+":"+String(callCtx.call.duration_sec%60).padStart(2,"0"):"—"})</p>
+                      <audio controls preload="none" src={callCtx.call.recording_url} className="w-full" style={{colorScheme:"light"}}/>
+                    </div>}
+                    {Array.isArray(callCtx.call.transcript)&&callCtx.call.transcript.length>0&&<details className="border border-neutral-100">
+                      <summary className="px-4 py-3 text-xs text-neutral-600 cursor-pointer hover:bg-neutral-50 uppercase tracking-widest">Transcript ({callCtx.call.transcript.length} messages)</summary>
+                      <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+                        {callCtx.call.transcript.map((m,i)=>{
+                          const isAi=m.role==="assistant"||m.role==="bot"||m.role==="ai";
+                          return <div key={i} className={"text-sm p-3 leading-relaxed "+(isAi?"bg-neutral-100 text-neutral-700 mr-12":"bg-neutral-900 text-white ml-12")}>{m.message||m.content||m.text||""}</div>;
+                        })}
+                      </div>
+                    </details>}
+                  </div>
+                ):null}
+              </div>}
+
+              {/* Operational details — only relevant once work is happening */}
+              {(inField||done)&&selJob.checklist?.length>0&&<>
+                <div className="h-px bg-neutral-100"/>
+                <div>
+                  <ST icon={I.check} title={`Checklist (${selJob.checklist.length})`}/>
+                  {selJob.checklist.map((t,i)=><CK key={selJob.id+"-"+i} text={t} done={!!(selJob.checked&&selJob.checked[i])} onChange={v=>{const nc=[...(selJob.checked||selJob.checklist.map(()=>false))];nc[i]=v;setJobs(p=>p.map(j=>j.id===selJob.id?{...j,checked:nc}:j));setSelJob(prev=>({...prev,checked:nc}));persistJob(selJob.id,{checklist_done:nc});}}/>)}
+                </div>
+              </>}
+              {(inField||done)&&selJob.parts?.length>0&&<>
+                <div className="h-px bg-neutral-100"/>
+                <div><ST icon={I.wrench} title="Parts and materials"/><div className="flex flex-wrap gap-2">{selJob.parts.map((p,i)=>(<span key={i} className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1.5">{p}</span>))}</div></div>
+              </>}
+              {selJob.notes&&<>
+                <div className="h-px bg-neutral-100"/>
+                <div><ST icon={I.msg} title="Tech notes"/><p className="text-sm text-neutral-700 leading-relaxed">{selJob.notes}</p></div>
+              </>}
+
+              {/* Decline confirmation inline */}
+              {declineConfirm&&isNew&&<div className="bg-neutral-50 p-5 border-l-2 border-neutral-900">
+                <p className="text-sm text-neutral-900 mb-1">Decline this booking?</p>
+                <p className="text-xs text-neutral-500 mb-4">The customer won't be auto-notified. You'll want to call them back.</p>
+                <div className="flex gap-2">
+                  <button onClick={decline} className="flex-1 bg-neutral-900 text-white py-2.5 text-sm hover:bg-black transition-colors">Yes, decline</button>
+                  <button onClick={()=>setDeclineConfirm(false)} className="px-4 border border-neutral-200 py-2.5 text-sm text-neutral-500 hover:bg-white">Keep it</button>
+                </div>
+              </div>}
+            </div>
+
+            {/* Footer — stage-aware action bar */}
+            <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
+              {isNew&&<>
+                <button onClick={()=>{advanceStage(selJob,"Confirmed");setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.check}</span>Confirm appointment</button>
+                <button onClick={()=>setDeclineConfirm(true)} className="px-5 border border-neutral-200 py-3 text-sm text-neutral-500 hover:bg-neutral-50 transition-colors">Decline</button>
+              </>}
+              {(stage==="Confirmed"||stage==="Today")&&<>
+                <button onClick={()=>{advanceStage(selJob,"In Progress");setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark started</button>
+                <button onClick={decline} className="px-5 border border-neutral-200 py-3 text-sm text-neutral-500 hover:bg-neutral-50 transition-colors">Cancel</button>
+              </>}
+              {stage==="In Progress"&&<button onClick={()=>{advanceStage(selJob,"Completed");setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark complete</button>}
+              {stage==="Completed"&&<button onClick={()=>{advanceStage(selJob,"Invoiced");setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.send}</span>Send invoice</button>}
+              {stage==="Invoiced"&&<>
+                <button onClick={()=>{advanceStage(selJob,"Paid");setSelJob(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Mark paid</button>
+                <button className="px-5 border border-neutral-200 py-3 text-sm text-neutral-500 hover:bg-neutral-50 transition-colors">Resend</button>
+              </>}
+              {stage==="Paid"&&<button onClick={()=>setSelJob(null)} className="flex-1 border border-neutral-200 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">Close</button>}
+            </div>
+          </>);
+        })()}
       </Panel>
 
       {/* Header */}
