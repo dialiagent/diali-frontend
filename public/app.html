@@ -863,7 +863,10 @@ const Jobs=()=>{
     persistJob(j.id,dbPatch);
   };
   const totalRev=jobs.reduce((a,j)=>a+j.rev,0);
-  const[newJob,setNewJob]=useState({cust:"",date:"",time:"",addr:"",issue:"",tech:"John S.",rev:""});
+  /* Manual job entry — mirrors what the AI captures on a real call so Diali's
+     pipeline stays consistent regardless of how the job was created. */
+  const newJobBlank={cust:"",ph:"",email:"",addr:"",category:"hvac",urgency:"normal",issue:"",date:"",time:"",duration:"2",tech:"Unassigned",rev:"",source:"phone",notes:""};
+  const[newJob,setNewJob]=useState(newJobBlank);
   const[filter,setFilter]=useState("all");
   const[hovered,setHovered]=useState(null);
   /* Same freshness bucket as Leads — parse human time strings */
@@ -898,20 +901,148 @@ const Jobs=()=>{
   const activeJobs=stagedLive.filter(j=>j.stage!=="Paid"&&j.stage!=="Completed").length;
   return(
     <div className="fu">
-      {/* New job panel */}
+      {/* New job panel — captures everything Diali captures on a real call,
+          so manually-created jobs sit in the same pipeline with no missing data. */}
       <Panel open={panel==="newjob"} onClose={()=>setPanel(null)}>
-        <PanelHeader onClose={()=>setPanel(null)} title="Create new job"/>
+        <PanelHeader onClose={()=>setPanel(null)} title="Create new job" sub="Manual entry — same fields Diali captures on a call"/>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <FF label="Customer" required><TI type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} placeholder="Customer name"/></FF>
+
+          {/* Customer */}
+          <FD label="Customer"/>
+          <FF label="Full name" required><TI type="text" value={newJob.cust} onChange={e=>setNewJob({...newJob,cust:e.target.value})} placeholder="e.g. Sarah Mitchell"/></FF>
+          <div className="grid grid-cols-2 gap-3">
+            <FF label="Phone" required><TI type="tel" value={newJob.ph} onChange={e=>setNewJob({...newJob,ph:e.target.value})} placeholder="(555) 000-0000"/></FF>
+            <FF label="Email" hint="For invoice delivery"><TI type="email" value={newJob.email} onChange={e=>setNewJob({...newJob,email:e.target.value})} placeholder="customer@email.com"/></FF>
+          </div>
+          <FF label="Service address"><TI type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} placeholder="Street, city, state"/></FF>
+
+          {/* The job */}
+          <FD label="The job"/>
+          <div className="grid grid-cols-2 gap-3">
+            <FF label="Service type">
+              <SE value={newJob.category} onChange={e=>setNewJob({...newJob,category:e.target.value})}>
+                <option value="hvac">HVAC</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="electrical">Electrical</option>
+                <option value="roofing">Roofing</option>
+                <option value="general">General</option>
+              </SE>
+            </FF>
+            <FF label="Urgency">
+              <SE value={newJob.urgency} onChange={e=>setNewJob({...newJob,urgency:e.target.value})}>
+                <option value="normal">Standard</option>
+                <option value="urgent">Urgent</option>
+                <option value="emergency">Emergency</option>
+              </SE>
+            </FF>
+          </div>
+          <FF label="What's the issue?" hint="Specifics save the tech a trip — equipment type, symptoms, when it started"><TA rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} placeholder="e.g. AC unit not cooling — started yesterday morning, blowing warm air, unit is 8 years old"/></FF>
+
+          {/* Schedule */}
           <FD label="Schedule"/>
-          <div className="grid grid-cols-2 gap-3"><FF label="Date"><TI type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})}/></FF><FF label="Time"><TI type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})}/></FF></div>
-          <FF label="Address"><TI type="text" value={newJob.addr} onChange={e=>setNewJob({...newJob,addr:e.target.value})} placeholder="Street address"/></FF>
-          <FF label="Description"><TA rows={3} value={newJob.issue} onChange={e=>setNewJob({...newJob,issue:e.target.value})} placeholder="Job details..."/></FF>
-          <FD label="Staffing & Budget"/>
-          <div className="grid grid-cols-2 gap-3"><FF label="Assign to"><SE value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})}><option>John S.</option><option>Mike T.</option><option>You</option></SE></FF><FF label="Revenue estimate"><TI type="text" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} placeholder="$0"/></FF></div>
+          <div className="grid grid-cols-3 gap-3">
+            <FF label="Date" required><TI type="date" value={newJob.date} onChange={e=>setNewJob({...newJob,date:e.target.value})}/></FF>
+            <FF label="Start time" required><TI type="time" value={newJob.time} onChange={e=>setNewJob({...newJob,time:e.target.value})}/></FF>
+            <FF label="Duration">
+              <SE value={newJob.duration} onChange={e=>setNewJob({...newJob,duration:e.target.value})}>
+                <option value="0.5">30 min</option>
+                <option value="1">1 hour</option>
+                <option value="2">2 hours</option>
+                <option value="3">3 hours</option>
+                <option value="4">4 hours</option>
+                <option value="8">Full day</option>
+              </SE>
+            </FF>
+          </div>
+
+          {/* Assignment */}
+          <FD label="Assignment & value"/>
+          <div className="grid grid-cols-2 gap-3">
+            <FF label="Assign to">
+              <SE value={newJob.tech} onChange={e=>setNewJob({...newJob,tech:e.target.value})}>
+                <option>Unassigned</option>
+                <option>You</option>
+                <option>John S.</option>
+                <option>Mike T.</option>
+              </SE>
+            </FF>
+            <FF label="Revenue estimate" hint="What you expect to bill"><TI type="number" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} placeholder="0"/></FF>
+          </div>
+          <FF label="Source" hint="How did this customer find you?">
+            <SE value={newJob.source} onChange={e=>setNewJob({...newJob,source:e.target.value})}>
+              <option value="phone">Phone (manual)</option>
+              <option value="walk-in">Walk-in</option>
+              <option value="referral">Referral</option>
+              <option value="repeat">Repeat customer</option>
+              <option value="web">Website / form</option>
+              <option value="other">Other</option>
+            </SE>
+          </FF>
+
+          {/* Internal notes */}
+          <FD label="Internal notes"/>
+          <FF label="Notes for the tech" hint="Anything they should know — gate code, dog, parking, customer preferences"><TA rows={2} value={newJob.notes} onChange={e=>setNewJob({...newJob,notes:e.target.value})} placeholder="Customer asked for tech to call 15 min before arrival..."/></FF>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
-          <button onClick={()=>{if(!newJob.cust)return;const nj={id:Date.now(),day:newJob.date||"TBD",time:newJob.time||"TBD",cust:newJob.cust,ph:"",addr:newJob.addr,issue:newJob.issue,tech:newJob.tech,rev:parseInt(newJob.rev)||0,st:"Confirmed",pct:0,checklist:[],parts:[],notes:""};setJobs(p=>[nj,...p]);setNewJob({cust:"",date:"",time:"",addr:"",issue:"",tech:"John S.",rev:""});setPanel(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Create job</button>
+          <button
+            onClick={async()=>{
+              if(!newJob.cust||!newJob.ph||!newJob.date||!newJob.time)return;
+              const startsAt=new Date(newJob.date+"T"+newJob.time).toISOString();
+              const dur=parseFloat(newJob.duration||"2")*3600*1000;
+              const endsAt=new Date(new Date(startsAt).getTime()+dur).toISOString();
+              /* Persist to Supabase if we're a real (loaded) tenant; otherwise local-only demo */
+              try{
+                const sess=await window.supabase.auth.getSession();
+                const uid=sess?.data?.session?.user?.id;
+                if(uid&&loadedReal!==false){
+                  /* Create the lead first */
+                  const{data:lead,error:le}=await window.supabase.from("leads").insert({
+                    user_id:uid,
+                    customer_name:newJob.cust,
+                    customer_phone:newJob.ph,
+                    customer_email:newJob.email||null,
+                    customer_address:newJob.addr||null,
+                    issue:newJob.issue||null,
+                    category:newJob.category,
+                    urgency:newJob.urgency,
+                    source:newJob.source,
+                    status:"scheduled",
+                    notes:newJob.notes||null
+                  }).select().single();
+                  if(le)throw le;
+                  /* Then the appointment, pre-confirmed (manual entries skip the New stage) */
+                  const{data:appt,error:ae}=await window.supabase.from("appointments").insert({
+                    user_id:uid,
+                    lead_id:lead.id,
+                    starts_at:startsAt,
+                    ends_at:endsAt,
+                    title:`${newJob.cust} — ${newJob.issue||"Service call"}`.slice(0,120),
+                    location:newJob.addr||"",
+                    notes:newJob.issue||"",
+                    status:"scheduled",
+                    confirmed_at:new Date().toISOString(),
+                    tech:newJob.tech,
+                    revenue_estimate:parseFloat(newJob.rev)||0,
+                    tech_notes:newJob.notes||null
+                  }).select().single();
+                  if(ae)throw ae;
+                  /* Add to local state with the real DB ID */
+                  setJobs(p=>[apptToJob({...appt,leads:lead}),...p]);
+                  setLoadedReal(true);
+                }else{
+                  /* Demo / unauth fallback */
+                  const nj={id:Date.now(),starts_at:startsAt,day:humanDay(new Date(startsAt)),time:fmtTime12(new Date(startsAt)),cust:newJob.cust,ph:newJob.ph,addr:newJob.addr,issue:newJob.issue,tech:newJob.tech,rev:parseFloat(newJob.rev)||0,st:"Confirmed",pct:0,checklist:[],parts:[],notes:newJob.notes||"",confirmed_at:new Date().toISOString()};
+                  setJobs(p=>[nj,...p]);
+                }
+              }catch(e){
+                console.error("create job:",e);
+                alert("Couldn't save: "+(e.message||e));
+                return;
+              }
+              setNewJob(newJobBlank);
+              setPanel(null);
+            }}
+            className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Create job</button>
         </div>
       </Panel>
 
