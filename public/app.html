@@ -689,7 +689,7 @@ const Jobs=()=>{
         if(!uid)return;
         const{data,error}=await window.supabase
           .from("appointments")
-          .select("id,starts_at,ends_at,title,location,notes,status,quote_id,tech,revenue_estimate,progress_pct,checklist,checklist_done,parts,tech_notes,leads(customer_name,customer_phone,customer_address,issue,urgency,source,status)")
+          .select("id,starts_at,ends_at,title,location,notes,status,quote_id,tech,revenue_estimate,progress_pct,checklist,checklist_done,parts,tech_notes,confirmed_at,invoice_sent_at,invoice_paid_at,invoice_amount,leads(customer_name,customer_phone,customer_address,issue,urgency,source,status)")
           .eq("user_id",uid)
           .order("starts_at",{ascending:false})
           .limit(200);
@@ -706,6 +706,19 @@ const Jobs=()=>{
     if(!loadedReal)return;
     try{await window.supabase.from("appointments").update(patch).eq("id",id);}
     catch(e){console.warn("job persist:",e.message);}
+  };
+  /* Transition a job to the next pipeline stage.
+     Updates both local state and the appointments row. */
+  const advanceStage=(j,nextStage)=>{
+    const now=new Date().toISOString();
+    let dbPatch={},localPatch={};
+    if(nextStage==="Confirmed"){dbPatch={confirmed_at:now};localPatch={confirmed_at:now};}
+    else if(nextStage==="In Progress"){dbPatch={progress_pct:50};localPatch={pct:50};}
+    else if(nextStage==="Completed"){dbPatch={status:"completed",progress_pct:100};localPatch={st:"Completed",pct:100};}
+    else if(nextStage==="Invoiced"){const amt=j.rev||0;dbPatch={invoice_sent_at:now,invoice_amount:amt};localPatch={invoiced_at:now,invoice_amount:amt};}
+    else if(nextStage==="Paid"){dbPatch={invoice_paid_at:now};localPatch={paid_at:now};}
+    setJobs(p=>p.map(x=>x.id===j.id?{...x,...localPatch}:x));
+    persistJob(j.id,dbPatch);
   };
   const totalRev=jobs.reduce((a,j)=>a+j.rev,0);
   const[newJob,setNewJob]=useState({cust:"",date:"",time:"",addr:"",issue:"",tech:"John S.",rev:""});
@@ -730,14 +743,17 @@ const Jobs=()=>{
     return true;
   };
   const live=jobs.filter(passes);
-  const cols={Scheduled:live.filter(j=>j.st==="Confirmed"),Quote:live.filter(j=>j.st==="Quote"),Completed:live.filter(j=>j.st==="Completed")};
-  /* Metrics */
-  const todayJobs=jobs.filter(j=>dayBucket(j.day)==="today");
+  /* 7-stage pipeline: every job's current stage derived from its timestamps.
+     This replaces the old 3-column Confirmed/Quote/Completed layout. */
+  const stagedLive=live.map(j=>({...j,stage:jobStage(j)}));
+  const cols=Object.fromEntries(STAGES.map(s=>[s,stagedLive.filter(j=>j.stage===s)]));
+  /* Metrics — headline numbers the contractor cares about */
+  const todayJobs=stagedLive.filter(j=>j.stage==="Today"||(j.stage==="In Progress"&&dayBucket(j.day)==="today"));
   const todayRev=todayJobs.reduce((a,j)=>a+j.rev,0);
-  const scheduledRev=jobs.filter(j=>j.st==="Confirmed").reduce((a,j)=>a+j.rev,0);
-  const activeJobs=jobs.filter(j=>j.st!=="Completed").length;
-  const completedCount=jobs.filter(j=>j.st==="Completed").length;
-  const completion=jobs.length?Math.round(completedCount/jobs.length*100):0;
+  const pipelineRev=stagedLive.filter(j=>j.stage!=="Paid"&&j.stage!=="Completed").reduce((a,j)=>a+j.rev,0);
+  const awaitingPayment=stagedLive.filter(j=>j.stage==="Invoiced").reduce((a,j)=>a+(j.invoice_amount||j.rev||0),0);
+  const paidRev=stagedLive.filter(j=>j.stage==="Paid").reduce((a,j)=>a+(j.invoice_amount||j.rev||0),0);
+  const activeJobs=stagedLive.filter(j=>j.stage!=="Paid"&&j.stage!=="Completed").length;
   return(
     <div className="fu">
       {/* New job panel */}
@@ -795,116 +811,113 @@ const Jobs=()=>{
         </div>
       </div>
 
-      {/* Hero metrics — what matters on the job board */}
+      {/* Hero metrics — pipeline value + cash position */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <div className="bg-white border border-neutral-100 p-5">
           <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Today</p>
           <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${todayRev.toLocaleString()}</p>
-          <p className="text-xs text-neutral-400 mt-1">{todayJobs.length} job{todayJobs.length===1?"":"s"} scheduled</p>
+          <p className="text-xs text-neutral-400 mt-1">{todayJobs.length} job{todayJobs.length===1?"":"s"} on the truck</p>
         </div>
         <div className="bg-white border border-neutral-100 p-5">
-          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Scheduled</p>
-          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${scheduledRev.toLocaleString()}</p>
-          <p className="text-xs text-neutral-400 mt-1">{cols.Scheduled.length} confirmed</p>
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Pipeline</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${pipelineRev.toLocaleString()}</p>
+          <p className="text-xs text-neutral-400 mt-1">{activeJobs} active — pre-completion</p>
         </div>
         <div className="bg-white border border-neutral-100 p-5">
-          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Completion</p>
-          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{completion}<span className="text-sm text-neutral-400 ml-1">%</span></p>
-          <p className="text-xs text-neutral-400 mt-1">{completedCount} of {jobs.length} done</p>
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Awaiting payment</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${awaitingPayment.toLocaleString()}</p>
+          <p className="text-xs text-neutral-400 mt-1">{cols.Invoiced.length} invoice{cols.Invoiced.length===1?"":"s"} out</p>
         </div>
         <div className="bg-white border border-neutral-100 p-5">
-          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Active</p>
-          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{activeJobs}</p>
-          <p className="text-xs text-neutral-400 mt-1">open jobs right now</p>
+          <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Paid</p>
+          <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">${paidRev.toLocaleString()}</p>
+          <p className="text-xs text-neutral-400 mt-1">{cols.Paid.length} closed</p>
         </div>
       </div>
 
-      {/* Filter chips */}
-      <div className="inline-flex bg-neutral-200 p-1 mb-4 overflow-x-auto max-w-full">
-        {[["all","All",jobs.length],["today","Today",jobs.filter(j=>dayBucket(j.day)==="today").length],["week","This week",jobs.filter(j=>{const b=dayBucket(j.day);return b==="today"||b==="week";}).length],["progress","In progress",jobs.filter(j=>j.pct>0&&j.pct<100).length]].map(([k,label,n])=>(
-          <button key={k} onClick={()=>setFilter(k)} className={"px-3 md:px-4 py-2 text-sm transition-all duration-200 whitespace-nowrap "+(filter===k?"bg-white text-neutral-900":"text-neutral-500 hover:text-neutral-700")}>{label}{k!=="all"&&<span className={"ml-1.5 tabular-nums "+(filter===k?"text-neutral-400":"text-neutral-400")}>{n}</span>}</button>
-        ))}
-      </div>
-
-      {/* Board view */}
-      {view==="board"&&<div className="grid grid-cols-1 md:grid-cols-3 gap-5">{Object.entries(cols).map(([name,jbs])=>{
-        const cv=jbs.reduce((a,j)=>a+j.rev,0);
-        const emptyCopy={"Scheduled":"No jobs scheduled in this window.","Quote":"No quotes in progress.","Completed":"No completed jobs yet — keep going."};
+      {/* Board view — 7-stage pipeline. Horizontal scroll on narrower screens. */}
+      {view==="board"&&(()=>{
+        /* Per-stage config: action button label + next-stage target + empty-state copy */
+        const stageMeta={
+          "New":{action:"Confirm",next:"Confirmed",empty:"No new bookings — Diali is listening 24/7.",hint:"Review, then hit Confirm to lock in the time.",accent:true},
+          "Confirmed":{action:"Start",next:"In Progress",empty:"Nothing confirmed yet.",hint:"Confirmed — tech will roll on the day of."},
+          "Today":{action:"Start",next:"In Progress",empty:"No jobs today.",hint:"On the truck today.",accent:true},
+          "In Progress":{action:"Complete",next:"Completed",empty:"Nothing in progress right now."},
+          "Completed":{action:"Send invoice",next:"Invoiced",empty:"No completed jobs waiting.",hint:"Send the invoice when the work's done.",accent:true},
+          "Invoiced":{action:"Mark paid",next:"Paid",empty:"No outstanding invoices — cash is clean.",hint:"Waiting on the customer to pay."},
+          "Paid":{action:null,next:null,empty:"No closed jobs yet — your first paid job will land here."},
+        };
         return(
-        <div key={name}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm text-neutral-900">{name}</span>
-              <span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center tabular-nums">{jbs.length}</span>
-            </div>
-            {cv>0&&<span className="text-xs text-neutral-400 tabular-nums">${cv.toLocaleString()}</span>}
-          </div>
-          <div className="space-y-3">
-            {jbs.length===0?(
-              <div className="border border-dashed border-neutral-200 p-5 text-center">
-                <p className="text-xs text-neutral-400 leading-relaxed">{emptyCopy[name]}</p>
-              </div>
-            ):jbs.map(j=>{
-              const isToday=dayBucket(j.day)==="today";
-              const done=j.st==="Completed";
+        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 pb-2">
+          <div className="flex md:grid md:grid-cols-7 gap-4" style={{minWidth:"min-content"}}>
+            {STAGES.map(name=>{
+              const jbs=cols[name];
+              const cv=jbs.reduce((a,j)=>a+(name==="Invoiced"||name==="Paid"?(j.invoice_amount||j.rev||0):j.rev),0);
+              const meta=stageMeta[name];
               return(
-                <div
-                  key={j.id}
-                  onClick={()=>setSelJob(j)}
-                  onMouseEnter={()=>setHovered(j.id)}
-                  onMouseLeave={()=>setHovered(null)}
-                  className={"bg-white border p-5 cursor-pointer transition-all duration-200 relative "+(isToday&&!done?"border-neutral-900":"border-neutral-100 hover:border-neutral-300")}
-                >
-                  {/* Status ribbon — today or completed */}
-                  {isToday&&!done&&<div className="absolute -top-px -left-px -right-px bg-neutral-900 text-white px-4 py-1 flex items-center justify-between"><span className="text-[10px] uppercase tracking-widest flex items-center gap-1.5"><span className="w-3 h-3">{I.clock}</span>Today · {j.time}</span>{j.pct>0&&j.pct<100&&<span className="text-[10px] text-neutral-400 tabular-nums">{j.pct}%</span>}</div>}
-                  {done&&<div className="absolute -top-px -left-px -right-px bg-neutral-100 px-4 py-1"><span className="text-[10px] uppercase tracking-widest text-neutral-600 flex items-center gap-1.5"><span className="w-3 h-3">{I.check}</span>Completed</span></div>}
-                  {(isToday||done)&&<div className="h-5"/>}
-
-                  {/* Customer row */}
-                  <div className="flex items-start gap-3 mb-3">
-                    <Av n={j.cust} s={32}/>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-neutral-900 truncate">{j.cust}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        {!isToday&&<><span className="text-xs text-neutral-400">{j.day}</span><span className="text-neutral-200">·</span></>}
-                        <span className="text-xs text-neutral-400">{j.time}</span>
-                      </div>
-                    </div>
-                    {/* Tech badge */}
-                    <span className="text-[10px] text-neutral-500 bg-neutral-100 px-2 py-1 uppercase tracking-widest shrink-0">{j.tech}</span>
+              <div key={name} className="shrink-0 w-72 md:w-auto">
+                {/* Column header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className={"text-sm "+(meta.accent?"text-neutral-900":"text-neutral-600")}>{name}</span>
+                    <span className="text-xs text-neutral-400 bg-neutral-200 w-5 h-5 flex items-center justify-center tabular-nums">{jbs.length}</span>
                   </div>
-
-                  {/* Issue */}
-                  <p className="text-xs text-neutral-500 mb-3 leading-relaxed line-clamp-2">{j.issue}</p>
-
-                  {/* Address */}
-                  {j.addr&&<div className="flex items-center gap-1.5 mb-4"><span className="w-3 h-3 text-neutral-300 shrink-0">{I.map}</span><p className="text-xs text-neutral-400 truncate flex-1">{j.addr.split(",")[0]}</p></div>}
-
-                  {/* Revenue hero + progress or hover actions */}
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-xl text-neutral-900 tabular-nums tracking-tight">${j.rev.toLocaleString()}</p>
-                      <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-0.5">{done?"Final":j.st==="Quote"?"Quote value":"Job value"}</p>
-                    </div>
-                    {hovered===j.id&&!done?(
-                      <div className="flex items-center gap-1 fi">
-                        <a href={"tel:"+(j.ph||"")} onClick={e=>e.stopPropagation()} title="Call" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.phone}</span></a>
-                        <a href={j.addr?"https://maps.google.com/?q="+encodeURIComponent(j.addr):"#"} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} title="Directions" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.map}</span></a>
-                        <button onClick={e=>{e.stopPropagation();setJobs(p=>p.map(x=>x.id===j.id?{...x,st:"Completed",pct:100}:x));persistJob(j.id,{status:"completed",progress_pct:100});}} title="Mark complete" className="w-8 h-8 border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white flex items-center justify-center transition-colors"><span className="w-3.5 h-3.5">{I.check}</span></button>
-                      </div>
-                    ):!done&&j.pct>0?(
-                      <div className="flex items-center gap-2 w-24">
-                        <div className="flex-1 h-1 bg-neutral-100 overflow-hidden"><div className="h-full bg-neutral-900 transition-all duration-500" style={{width:j.pct+"%"}}/></div>
-                        <span className="text-[10px] text-neutral-400 tabular-nums">{j.pct}%</span>
-                      </div>
-                    ):null}
-                  </div>
+                  {cv>0&&<span className="text-xs text-neutral-400 tabular-nums">${cv.toLocaleString()}</span>}
                 </div>
-              );
-            })}
+                {/* Cards or empty state */}
+                <div className="space-y-3">
+                  {jbs.length===0?(
+                    <div className="border border-dashed border-neutral-200 p-5 text-center">
+                      <p className="text-xs text-neutral-400 leading-relaxed">{meta.empty}</p>
+                    </div>
+                  ):jbs.map(j=>{
+                    const closed=name==="Paid";
+                    const hot=name==="New"||name==="Today";
+                    return(
+                      <div
+                        key={j.id}
+                        onClick={()=>setSelJob(j)}
+                        className={"bg-white border p-5 cursor-pointer transition-all duration-200 relative "+(hot?"border-neutral-900":"border-neutral-100 hover:border-neutral-300")+(closed?" opacity-60":"")}
+                      >
+                        {/* Stage ribbon */}
+                        {name==="New"&&<div className="absolute -top-px -left-px -right-px bg-neutral-900 text-white px-4 py-1"><span className="text-[10px] uppercase tracking-widest flex items-center gap-1.5"><span className="w-3 h-3">{I.zap}</span>Needs confirmation</span></div>}
+                        {name==="Today"&&<div className="absolute -top-px -left-px -right-px bg-neutral-900 text-white px-4 py-1"><span className="text-[10px] uppercase tracking-widest flex items-center gap-1.5"><span className="w-3 h-3">{I.clock}</span>{j.time}</span></div>}
+                        {name==="Invoiced"&&<div className="absolute -top-px -left-px -right-px bg-neutral-100 px-4 py-1"><span className="text-[10px] uppercase tracking-widest text-neutral-600 flex items-center gap-1.5"><span className="w-3 h-3">{I.dollar}</span>Invoice sent</span></div>}
+                        {name==="Paid"&&<div className="absolute -top-px -left-px -right-px bg-neutral-100 px-4 py-1"><span className="text-[10px] uppercase tracking-widest text-neutral-600 flex items-center gap-1.5"><span className="w-3 h-3">{I.check}</span>Paid</span></div>}
+                        {(name==="New"||name==="Today"||name==="Invoiced"||name==="Paid")&&<div className="h-5"/>}
+
+                        {/* Customer row */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <Av n={j.cust} s={32}/>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-neutral-900 truncate">{j.cust}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-xs text-neutral-400">{j.day}</span>
+                              {name!=="Today"&&<><span className="text-neutral-200">·</span><span className="text-xs text-neutral-400">{j.time}</span></>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Issue */}
+                        <p className="text-xs text-neutral-500 mb-3 leading-relaxed line-clamp-2">{j.issue}</p>
+
+                        {/* Revenue + stage action button */}
+                        <div className="flex items-end justify-between gap-3">
+                          <div>
+                            <p className="text-xl text-neutral-900 tabular-nums tracking-tight">${(name==="Invoiced"||name==="Paid"?(j.invoice_amount||j.rev):j.rev).toLocaleString()}</p>
+                            <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-0.5">{name==="Paid"?"Final":name==="Invoiced"?"Invoice":"Job value"}</p>
+                          </div>
+                          {meta.action&&<button onClick={e=>{e.stopPropagation();advanceStage(j,meta.next);}} className="text-[11px] px-3 py-1.5 bg-neutral-900 text-white hover:bg-black transition-colors whitespace-nowrap">{meta.action}</button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );})}
           </div>
         </div>
-      )})}</div>}
+      );})()}
 
       {/* List view */}
       {view==="list"&&<div className="bg-white border border-neutral-100">
@@ -2616,6 +2629,7 @@ const apptToJob=(row)=>{
   const completed=row.status==="completed";
   return {
     id:row.id,
+    starts_at:row.starts_at,
     day:start?humanDay(start):"TBD",
     time:start?fmtTime12(start):"TBD",
     cust:lead.customer_name||row.title||"Customer",
@@ -2624,14 +2638,31 @@ const apptToJob=(row)=>{
     issue:row.notes||lead.issue||"",
     tech:row.tech||"Unassigned",
     rev:Number(row.revenue_estimate)||0,
-    st:completed?"Completed":(row.quote_id?"Quote":"Confirmed"),
+    st:completed?"Completed":"Confirmed",
     pct:row.progress_pct||(completed?100:0),
     checklist:Array.isArray(row.checklist)?row.checklist:[],
     checked:Array.isArray(row.checklist_done)?row.checklist_done:[],
     parts:Array.isArray(row.parts)?row.parts:[],
-    notes:row.tech_notes||""
+    notes:row.tech_notes||"",
+    /* Pipeline-stage timestamps */
+    confirmed_at:row.confirmed_at||null,
+    invoiced_at:row.invoice_sent_at||null,
+    paid_at:row.invoice_paid_at||null,
+    invoice_amount:row.invoice_amount?Number(row.invoice_amount):null
   };
 };
+/* Derive the pipeline stage from the job's timestamps/fields. */
+const jobStage=(j)=>{
+  if(j.paid_at)return "Paid";
+  if(j.invoiced_at)return "Invoiced";
+  if(j.st==="Completed"||j.pct>=100)return "Completed";
+  if(j.pct>0&&j.pct<100)return "In Progress";
+  const isToday=j.starts_at&&new Date(j.starts_at).toDateString()===new Date().toDateString();
+  if(j.confirmed_at&&isToday)return "Today";
+  if(j.confirmed_at)return "Confirmed";
+  return "New";
+};
+const STAGES=["New","Confirmed","Today","In Progress","Completed","Invoiced","Paid"];
 const apptToBooking=(row)=>{
   const lead=row.leads||{};
   const start=row.starts_at?new Date(row.starts_at):new Date();
@@ -2906,7 +2937,10 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
     }
     return true;
   };
-  const nav=[{id:"home",ic:I.home,l:"Home"},{id:"calls",ic:I.phone,l:"Calls"},{id:"calendar",ic:I.cal,l:"Calendar"},{id:"jobs",ic:I.wrench,l:"Jobs"},{id:"quotes",ic:I.dollar,l:"Quotes"},{id:"leads",ic:I.users,l:"Leads"},{id:"agent",ic:I.bot,l:"Agent"},{id:"settings",ic:I.settings,l:"Settings"}];
+  /* Simplified nav: Jobs is the unified pipeline (replaces Leads). Calls is
+     an audit log, Calendar is the time view of the same jobs data. Pricebook
+     stays in its own spot for now. */
+  const nav=[{id:"home",ic:I.home,l:"Home"},{id:"jobs",ic:I.wrench,l:"Jobs"},{id:"calendar",ic:I.cal,l:"Calendar"},{id:"calls",ic:I.phone,l:"Calls"},{id:"quotes",ic:I.dollar,l:"Pricebook"},{id:"agent",ic:I.bot,l:"Agent"},{id:"settings",ic:I.settings,l:"Settings"}];
   const[mobileMenu,setMobileMenu]=useState(false);
   if(quoteView)return<QuoteView data={quoteView} onClose={()=>setQuoteView(null)}/>;
   return(
