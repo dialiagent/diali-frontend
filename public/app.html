@@ -3710,7 +3710,19 @@ async function dialiLoader(){
 
     const newC = [];
     calls.forEach((call,i) => {
-      const lead = leads.find(l=>l.id===call.lead_id)||{};
+      let lead = leads.find(l=>l.id===call.lead_id)||{};
+      /* Fallback: if the linked lead has no customer info (happens when the
+         webhook creates an empty lead before bookAppointment's lead was
+         linked), swap in the nearest-in-time lead that DOES have info. */
+      if (!lead.customer_name && !lead.customer_phone && call.started_at) {
+        const callTime = new Date(call.started_at).getTime();
+        const nearest = leads
+          .filter(l => (l.customer_name || l.customer_phone) && l.created_at)
+          .map(l => ({ l, dt: Math.abs(new Date(l.created_at).getTime() - callTime) }))
+          .sort((a, b) => a.dt - b.dt)[0];
+        /* Within 10 minutes = same call */
+        if (nearest && nearest.dt < 10 * 60 * 1000) lead = nearest.l;
+      }
       const ds = call.duration_sec||0;
       /* Build transcript — Vapi can return either `transcript` (array) or `messages`
          (array), and sometimes a plain string. Handle all three. */
