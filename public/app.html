@@ -1817,9 +1817,12 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
         v.on('call-start',()=>{setCallError("");setCallState('active');});
         v.on('call-end',()=>{
           setCallState('ended');
-          /* Give Vapi 4-6s to post the end-of-call webhook to our backend, then
-             re-pull from Supabase so the new call/lead/appointment show up. */
-          setTimeout(()=>{try{window.refreshDialiData?.();}catch(e){}},5000);
+          /* Vapi's end-of-call webhook posts async after the call ends. Timing
+             is unpredictable (can be 3-15s depending on transcript length).
+             Poll refresh at 3s / 7s / 12s / 20s to catch it whenever it lands. */
+          [3000, 7000, 12000, 20000].forEach(ms=>{
+            setTimeout(()=>{try{window.refreshDialiData?.();}catch(e){}},ms);
+          });
         });
         v.on('volume-level',lv=>setVolume(Math.min(1,lv)));
         v.on('message',msg=>{if(msg.type==='transcript'&&msg.transcriptType==='final')setTranscript(p=>[...p,{role:msg.role,text:msg.transcript}]);});
