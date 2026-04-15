@@ -1723,15 +1723,45 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
         }
         const v=new window.VapiSDK(vapiKeys.publicKey);
         v.on('call-start',()=>{setCallError("");setCallState('active');});
-        v.on('call-end',()=>setCallState('ended'));
+        v.on('call-end',()=>{
+          setCallState('ended');
+          /* Give Vapi 4-6s to post the end-of-call webhook to our backend, then
+             re-pull from Supabase so the new call/lead/appointment show up. */
+          setTimeout(()=>{try{window.refreshDialiData?.();}catch(e){}},5000);
+        });
         v.on('volume-level',lv=>setVolume(Math.min(1,lv)));
         v.on('message',msg=>{if(msg.type==='transcript'&&msg.transcriptType==='final')setTranscript(p=>[...p,{role:msg.role,text:msg.transcript}]);});
         v.on('error',e=>{console.error('Vapi error:',e);setCallError(humanizeVapiError(e));setCallState('idle');});
         vapiRef.current=v;
       }
-      const cfg=assistantId||buildAssistantConfig();
-      console.log('Starting Vapi call with:',JSON.stringify(cfg).slice(0,200));
-      await vapiRef.current.start(cfg);
+      /* Test calls only count as "real" if they go to a deployed assistant —
+         that's the only way the AI has tools to book with and Vapi knows where
+         to post end-of-call events. If we don't have one yet, deploy now. */
+      let aid = assistantId;
+      if(!aid){
+        setCallError("Setting up your AI agent (one-time)…");
+        try{
+          const sess=await window.supabase.auth.getSession();
+          const token=sess?.data?.session?.access_token;
+          if(!token)throw new Error("Not signed in");
+          const r=await fetch(BACKEND_URL+'/api/assistants/deploy',{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+            body:JSON.stringify({assistantConfig:buildAssistantConfig()})
+          });
+          const d=await r.json();
+          if(!r.ok||!d.assistantId)throw new Error(d.error||"Deploy failed");
+          aid=d.assistantId;
+          setAssistantId(aid);
+          setCallError("");
+        }catch(de){
+          setCallError("Couldn't set up your AI agent: "+de.message);
+          setCallState('idle');
+          return;
+        }
+      }
+      console.log('Starting Vapi call with assistant',aid);
+      await vapiRef.current.start(aid);
     }catch(e){
       console.error('Call error:',e);
       const msg=e?.message||String(e);
@@ -3509,8 +3539,11 @@ const App=()=>{
 ReactDOM.render(<App/>,document.getElementById("root"));
 </script>
 <script>
-/* ── Data loader: waits for Supabase session then populates C ── */
-(async function dialiLoader(){
+/* ── Data loader: waits for Supabase session then populates C.
+   Exposed on window.refreshDialiData so other components (like the test-call
+   handler) can re-run it after a call ends to pick up new rows. ── */
+window.refreshDialiData = dialiLoader;
+async function dialiLoader(){
   /* Wait for Supabase SDK (may still be loading via ESM import) */
   const waitForSb = () => new Promise(resolve => {
     if (window.supabase) return resolve(window.supabase);
@@ -3597,7 +3630,9 @@ ReactDOM.render(<App/>,document.getElementById("root"));
     ReactDOM.unmountComponentAtNode(root);
     ReactDOM.render(React.createElement(App), root);
   } catch(e) { console.error("Diali loader:", e); }
-})();
+}
+/* Initial call on page load */
+dialiLoader();
 </script>
 </body>
 </html>
