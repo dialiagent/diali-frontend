@@ -1295,13 +1295,56 @@ const Leads=({profile,setQuoteView})=>{
 };
 
 /* ══════════════════ QUOTES / PRICEBOOK ══════════════════ */
+/* Shape mappers between Supabase pricebook_items and the frontend item shape. */
+const dbToItem=(r)=>({
+  id:r.id, cat:r.category, name:r.name, desc:r.description||"",
+  unit:r.unit||"each", rate:Number(r.rate)||0,
+  rangeLow:Number(r.range_low)||0, rangeHigh:Number(r.range_high)||0,
+  tax:!!r.taxable, uses:r.uses_count||0,
+  updated:r.updated_at?new Date(r.updated_at).toLocaleDateString():"—",
+  rules:[]
+});
+const itemToDb=(it,uid)=>({
+  user_id:uid, category:it.cat, name:it.name, description:it.desc||"",
+  unit:it.unit||"each", rate:it.rate||0,
+  range_low:it.rangeLow||0, range_high:it.rangeHigh||0,
+  taxable:!!it.tax, uses_count:it.uses||0, active:true,
+  updated_at:new Date().toISOString()
+});
+
 const Quotes=()=>{
   const[items,setItems]=useState(PRICEBOOK_SEED);
+  const[loadedReal,setLoadedReal]=useState(false);
   const[editing,setEditing]=useState(null);
   const[adding,setAdding]=useState(false);
   const[q,setQ]=useState("");
   const[cat,setCat]=useState("All");
   const[draft,setDraft]=useState(null);
+
+  /* Load user's real pricebook from Supabase on mount. If they have items,
+     swap the demo seed for their real ones. */
+  React.useEffect(()=>{
+    let stop=false;
+    (async()=>{
+      try{
+        const sess=await window.supabase.auth.getSession();
+        const uid=sess?.data?.session?.user?.id;
+        if(!uid)return;
+        const{data,error}=await window.supabase
+          .from("pricebook_items")
+          .select("*")
+          .eq("user_id",uid)
+          .eq("active",true)
+          .order("created_at",{ascending:true});
+        if(stop||error)return;
+        if(data&&data.length>0){
+          setItems(data.map(dbToItem));
+          setLoadedReal(true);
+        }
+      }catch(e){console.warn("pricebook load:",e.message);}
+    })();
+    return()=>{stop=true;};
+  },[]);
 
   React.useEffect(()=>{
     if(editing)setDraft({...editing});
@@ -1321,19 +1364,49 @@ const Quotes=()=>{
   const mostUsed=[...items].sort((a,b)=>b.uses-a.uses)[0];
   const totalUses=items.reduce((a,i)=>a+i.uses,0);
 
-  const save=()=>{
+  const save=async()=>{
     if(!draft||!draft.name.trim())return;
-    if(editing){
-      setItems(p=>p.map(i=>i.id===editing.id?{...draft,updated:"just now"}:i));
-    }else{
-      setItems(p=>[...p,{...draft,id:"pb-"+Date.now(),updated:"just now"}]);
+    const sess=await window.supabase.auth.getSession();
+    const uid=sess?.data?.session?.user?.id;
+    if(!uid){
+      /* Fallback: local-only for unauthenticated — shouldn't happen in prod */
+      if(editing)setItems(p=>p.map(i=>i.id===editing.id?{...draft,updated:"just now"}:i));
+      else setItems(p=>[...p,{...draft,id:"pb-"+Date.now(),updated:"just now"}]);
+      setEditing(null);setAdding(false);return;
+    }
+    try{
+      if(editing&&loadedReal){
+        const{data}=await window.supabase.from("pricebook_items").update(itemToDb(draft,uid)).eq("id",editing.id).select().single();
+        if(data)setItems(p=>p.map(i=>i.id===editing.id?dbToItem(data):i));
+      }else{
+        /* First save for a demo user promotes their pricebook from seed → real */
+        const{data}=await window.supabase.from("pricebook_items").insert(itemToDb(draft,uid)).select().single();
+        if(data){
+          if(!loadedReal){setItems([dbToItem(data)]);setLoadedReal(true);}
+          else setItems(p=>[...p,dbToItem(data)]);
+        }
+      }
+    }catch(e){
+      console.error("pricebook save:",e.message);
+      alert("Couldn't save: "+e.message);
+      return;
     }
     setEditing(null);setAdding(false);
   };
 
-  const remove=()=>{
+  const remove=async()=>{
     if(!editing)return;
-    setItems(p=>p.filter(i=>i.id!==editing.id));
+    const id=editing.id;
+    try{
+      if(loadedReal){
+        await window.supabase.from("pricebook_items").update({active:false}).eq("id",id);
+      }
+      setItems(p=>p.filter(i=>i.id!==id));
+    }catch(e){
+      console.error("pricebook delete:",e.message);
+      alert("Couldn't delete: "+e.message);
+      return;
+    }
     setEditing(null);
   };
 
@@ -1675,18 +1748,33 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   /* Auto-scroll transcript */
   React.useEffect(()=>{transcriptEndRef.current?.scrollIntoView({behavior:'smooth'});},[transcript]);
 
-  /* Auto-save agent config to Supabase (debounced) */
+  /* Auto-save agent config to Supabase (debounced + flush on unmount).
+     Previously, navigating away within the 1.5s debounce window lost the
+     pending save because the cleanup just cancelled the timeout. Now we
+     stash the patch in a ref and fire it on unmount if still pending. */
+  const pendingPatchRef=React.useRef(null);
   React.useEffect(()=>{
     if(!saveSetting)return;
+    const patch={voice_id:voiceId,voice_name:voiceName,greeting,system_prompt:sysPrompt,questions:qs};
+    if(assistantId)patch.vapi_assistant_id=assistantId;
+    pendingPatchRef.current=patch;
     const t=setTimeout(()=>{
-      /* Only persist vapi_assistant_id if we actually have one — otherwise the
-         empty initial-mount value would clobber the existing ID in Supabase. */
-      const patch={voice_id:voiceId,voice_name:voiceName,greeting,system_prompt:sysPrompt,questions:qs};
-      if(assistantId)patch.vapi_assistant_id=assistantId;
+      pendingPatchRef.current=null;
       saveSetting(patch);
     },1500);
     return()=>clearTimeout(t);
   },[voiceId,voiceName,greeting,sysPrompt,qs,assistantId]);
+  /* Flush on unmount — if the user navigates away before the debounce fires,
+     persist whatever the latest state was so their changes don't disappear. */
+  React.useEffect(()=>{
+    return()=>{
+      if(pendingPatchRef.current&&saveSetting){
+        try{saveSetting(pendingPatchRef.current);}catch(e){}
+        pendingPatchRef.current=null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   const fmtTime=s=>{const m=Math.floor(s/60);const sc=s%60;return m+':'+(sc<10?'0':'')+sc;};
   /* Translate Vapi's nested error payloads into a single user-readable string. */
@@ -3374,7 +3462,42 @@ const QuotesEmpty=()=>{
   const[adding,setAdding]=useState(false);
   const[items,setItems]=useState([]);
   const[draft,setDraft]=useState({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});
-  const saveItem=()=>{if(!draft.name)return;setItems(p=>[...p,{id:Date.now(),...draft}]);setDraft({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});setAdding(false);};
+  /* Load real pricebook on mount — if user already has items they should see
+     them even in the "empty" layout. */
+  React.useEffect(()=>{
+    let stop=false;
+    (async()=>{
+      try{
+        const sess=await window.supabase.auth.getSession();
+        const uid=sess?.data?.session?.user?.id;
+        if(!uid)return;
+        const{data}=await window.supabase
+          .from("pricebook_items")
+          .select("*")
+          .eq("user_id",uid)
+          .eq("active",true)
+          .order("created_at",{ascending:true});
+        if(!stop&&data)setItems(data.map(dbToItem));
+      }catch(e){console.warn("pricebook load:",e.message);}
+    })();
+    return()=>{stop=true;};
+  },[]);
+  const saveItem=async()=>{
+    if(!draft.name)return;
+    const sess=await window.supabase.auth.getSession();
+    const uid=sess?.data?.session?.user?.id;
+    if(!uid){
+      setItems(p=>[...p,{id:Date.now(),...draft}]);
+      setDraft({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});
+      setAdding(false);return;
+    }
+    try{
+      const{data}=await window.supabase.from("pricebook_items").insert(itemToDb(draft,uid)).select().single();
+      if(data)setItems(p=>[...p,dbToItem(data)]);
+    }catch(e){alert("Couldn't save: "+e.message);return;}
+    setDraft({cat:"Service",name:"",desc:"",unit:"each",rate:0,tax:true});
+    setAdding(false);
+  };
   const cats=[...new Set(items.map(i=>i.cat))];
   const avgRate=items.length?Math.round(items.reduce((a,i)=>a+i.rate,0)/items.length):0;
   return(
