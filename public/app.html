@@ -1981,8 +1981,8 @@ const Quotes=()=>{
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-3">
         <div>
-          <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Quotes</p>
-          <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{totalItems} items in your pricebook · Used on {totalUses.toLocaleString()} quotes</p>
+          <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Pricebook</p>
+          <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{totalItems} items priced · used on {totalUses.toLocaleString()} quotes</p>
         </div>
         <button onClick={()=>setAdding(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors self-start md:self-auto"><span className="w-4 h-4">{I.plus}</span>Add item</button>
       </div>
@@ -3951,8 +3951,8 @@ const QuotesEmpty=()=>{
     </Panel>
     <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-3">
       <div>
-        <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Quotes</p>
-        <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">Your pricebook — the source of truth Diali uses to build instant quotes</p>
+        <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Pricebook</p>
+        <p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">The source of truth Diali uses to build instant quotes</p>
       </div>
       <button onClick={()=>setAdding(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors"><span className="w-4 h-4">{I.plus}</span><span>Add item</span></button>
     </div>
