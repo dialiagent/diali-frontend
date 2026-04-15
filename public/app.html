@@ -1603,7 +1603,7 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   const[callError,setCallError]=useState("");
   const[saving,setSaving]=useState(false);
   const[saved,setSaved]=useState(false);
-  const[assistantId,setAssistantId]=useState("");
+  const[assistantId,setAssistantId]=useState(agentCfg?.vapi_assistant_id||"");
   const[sdkReady,setSdkReady]=useState(!!window.VapiSDK);
   const vapiRef=React.useRef(null);
   const timerRef=React.useRef(null);
@@ -1679,7 +1679,11 @@ const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   React.useEffect(()=>{
     if(!saveSetting)return;
     const t=setTimeout(()=>{
-      saveSetting({voice_id:voiceId,voice_name:voiceName,greeting,system_prompt:sysPrompt,questions:qs,vapi_assistant_id:assistantId});
+      /* Only persist vapi_assistant_id if we actually have one — otherwise the
+         empty initial-mount value would clobber the existing ID in Supabase. */
+      const patch={voice_id:voiceId,voice_name:voiceName,greeting,system_prompt:sysPrompt,questions:qs};
+      if(assistantId)patch.vapi_assistant_id=assistantId;
+      saveSetting(patch);
     },1500);
     return()=>clearTimeout(t);
   },[voiceId,voiceName,greeting,sysPrompt,qs,assistantId]);
