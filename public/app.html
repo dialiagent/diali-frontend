@@ -478,7 +478,6 @@ const Calls=()=>{
   const pick=c=>{setSel(c);setShowTr(false);setShowSms(false);setShowNotes(false)};
   const[reschedDate,setReschedDate]=useState("");
   const[reschedTime,setReschedTime]=useState("");
-  const[newCall,setNewCall]=useState({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});
 
   return(
     <div className="flex flex-col md:flex-row gap-0 md:gap-6 h-full fu">
@@ -512,24 +511,6 @@ const Calls=()=>{
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0 flex gap-3">
           <button onClick={()=>{setCalls(p=>p.map(c=>c.id===sel.id?{...c,status:"declined",booked:null}:c));setSel(prev=>({...prev,status:"declined",booked:null}));setPanel(null);}} className="flex-1 bg-neutral-900 text-white py-3 text-sm">Yes, cancel it</button>
           <button onClick={()=>setPanel(null)} className="flex-1 border border-neutral-200 py-3 text-sm text-neutral-500 hover:bg-neutral-50 transition-colors">Go back</button>
-        </div>
-      </Panel>
-
-      {/* New call panel */}
-      <Panel open={panel==="newcall"} onClose={()=>setPanel(null)}>
-        <PanelHeader onClose={()=>setPanel(null)} title="Log a new call"/>
-        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          <FF label="Customer name" required><TI type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} placeholder="Full name"/></FF>
-          <FF label="Phone"><TI type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
-          <FF label="Issue"><TA rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
-          <FD label="classification"/>
-          <div className="grid grid-cols-2 gap-4">
-            <FF label="Urgency"><SE value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})}><option>Normal</option><option>Urgent</option><option>Emergency</option></SE></FF>
-            <FF label="Source"><SE value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})}><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></SE></FF>
-          </div>
-        </div>
-        <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
-          <button onClick={()=>{if(!newCall.name)return;const nc={id:Date.now(),name:newCall.name,ph:newCall.phone,addr:"",time:"Just now",dur:"0:00",issue:newCall.issue,urg:newCall.urg.toLowerCase(),status:"follow-up",booked:null,src:newCall.src,rev:0,conf:0,score:"warm",tr:[],notes:"",sms:[]};setCalls(p=>[nc,...p]);setNewCall({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});setPanel(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save call</button>
         </div>
       </Panel>
 
@@ -4295,34 +4276,17 @@ const HomeEmpty=()=>{
 };
 
 const CallsEmpty=()=>{
-  const[panel,setPanel]=useState(null);
   const[calls,setCalls]=useState([]);
   const[sel,setSel]=useState(null);
-  const[newCall,setNewCall]=useState({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});
-  const saveCall=()=>{if(!newCall.name)return;const nc={id:Date.now(),name:newCall.name,ph:newCall.phone,addr:"",time:"Just now",dur:"0:00",issue:newCall.issue,urg:newCall.urg.toLowerCase(),status:"follow-up",booked:null,src:newCall.src,rev:0,conf:0,score:"warm",tr:[],notes:"",sms:[]};setCalls(p=>[nc,...p]);C.push(nc);setNewCall({name:"",phone:"",issue:"",urg:"Normal",src:"Google"});setPanel(null);};
   return(
   <div className="flex flex-col md:flex-row gap-0 md:gap-6 h-full fu">
-    <Panel open={panel==="newcall"} onClose={()=>setPanel(null)}>
-      <PanelHeader onClose={()=>setPanel(null)} title="Log a new call"/>
-      <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-        <FF label="Customer name" required><TI type="text" value={newCall.name} onChange={e=>setNewCall({...newCall,name:e.target.value})} placeholder="Full name"/></FF>
-        <FF label="Phone"><TI type="tel" value={newCall.phone} onChange={e=>setNewCall({...newCall,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
-        <FF label="Issue"><TA rows={3} value={newCall.issue} onChange={e=>setNewCall({...newCall,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
-        <FD label="classification"/>
-        <div className="grid grid-cols-2 gap-4">
-          <FF label="Urgency"><SE value={newCall.urg} onChange={e=>setNewCall({...newCall,urg:e.target.value})}><option>Normal</option><option>Urgent</option><option>Emergency</option></SE></FF>
-          <FF label="Source"><SE value={newCall.src} onChange={e=>setNewCall({...newCall,src:e.target.value})}><option>Google</option><option>Yelp</option><option>Direct</option><option>Referral</option><option>Website</option></SE></FF>
-        </div>
-      </div>
-      <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={saveCall} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save call</button></div>
-    </Panel>
     <div className="hidden md:flex w-[380px] shrink-0 flex-col">
-      <div className="flex items-center justify-between mb-4"><div className="flex bg-neutral-200 p-1">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} className={"px-5 py-2 text-sm transition-all duration-200 "+(k==="all"?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div><button onClick={()=>setPanel("newcall")} className="bg-neutral-900 text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black transition-colors shrink-0 ml-3"><span className="w-4 h-4">{I.plus}</span></button></div>
+      <div className="flex items-center mb-4"><div className="flex bg-neutral-200 p-1">{[["all","All"],["booked","Booked"],["follow-up","Follow-up"],["declined","Declined"]].map(([k,l])=><button key={k} className={"px-5 py-2 text-sm transition-all duration-200 "+(k==="all"?"bg-white text-neutral-900":"text-neutral-500")}>{l}</button>)}</div></div>
       {calls.length?<div className="flex-1 overflow-y-auto space-y-2">{calls.map(c=><div key={c.id} onClick={()=>setSel(c)} className={"p-4 cursor-pointer transition-all duration-200 "+(sel?.id===c.id?"bg-neutral-900":"bg-white hover:bg-neutral-50")}><div className="flex items-start gap-3.5"><Av n={c.name} s={40}/><div className="flex-1 min-w-0"><div className="flex items-center justify-between mb-1"><span className={"text-sm "+(sel?.id===c.id?"text-white":"text-neutral-900")}>{c.name}</span><span className={"text-xs "+(sel?.id===c.id?"text-neutral-400":"text-neutral-300")}>{c.time}</span></div><p className={"text-xs truncate mb-2.5 "+(sel?.id===c.id?"text-neutral-400":"text-neutral-400")}>{c.issue}</p><div className="flex items-center gap-2.5"><Bg s={c.status}/></div></div></div></div>)}</div>:<div className="flex-1 flex items-center justify-center"><p className="text-xs text-neutral-300">No calls to show</p></div>}
     </div>
     <div className="flex-1 bg-white border border-neutral-100 flex items-center justify-center py-16 md:py-0">
       {sel?<div className="w-full h-full p-7"><div className="flex items-center gap-4 mb-6"><Av n={sel.name} s={48}/><div><p className="text-lg text-neutral-900">{sel.name}</p><p className="text-sm text-neutral-400">{sel.ph}</p></div></div><div className="space-y-4"><div><p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Issue</p><p className="text-sm text-neutral-700">{sel.issue}</p></div><div className="grid grid-cols-3 gap-4"><div><p className="text-xs text-neutral-400 mb-1">Urgency</p><p className="text-sm text-neutral-700 capitalize">{sel.urg}</p></div><div><p className="text-xs text-neutral-400 mb-1">Source</p><p className="text-sm text-neutral-700">{sel.src}</p></div><div><p className="text-xs text-neutral-400 mb-1">Status</p><Bg s={sel.status}/></div></div></div></div>
-      :<Empty icon={I.phone} title="No calls yet" sub="When your AI answers its first call, it'll show up here with a full transcript, recording, and action items." action="Log a call" onAction={()=>setPanel("newcall")}/>}
+      :<Empty icon={I.phone} title="No calls yet" sub="When your AI answers its first call, it'll show up here with a full transcript, recording, and action items."/>}
     </div>
   </div>);
 };
