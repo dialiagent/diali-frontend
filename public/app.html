@@ -4466,13 +4466,24 @@ const QuotesEmpty=()=>{
 const DEMO_EMAIL="demo@diali.com";
 const VALID_PAGES=new Set(["home","calls","calendar","jobs","quotes","leads","agent","settings"]);
 const hashPage=()=>{const h=window.location.hash.replace("#","");return VALID_PAGES.has(h)?h:"home";};
+/* Workspace URL helpers — e.g. /app/xk7m2p#calls */
+const getWorkspaceFromPath=()=>{const m=window.location.pathname.match(/^\/app\/([a-z0-9]+)/i);return m?m[1]:null;};
+const setWorkspaceUrl=(wid,page)=>{
+  if(!wid)return;
+  const hash=page&&page!=="home"?"#"+page:"";
+  const target="/app/"+wid+hash;
+  if(window.location.pathname!=="/app/"+wid||window.location.hash!==hash){
+    window.history.replaceState(null,"",target);
+  }
+};
 const App=()=>{
   const[auth,setAuth]=useState("loading");
   const[isNew,setIsNew]=useState(false);
   const[isDemo,setIsDemo]=useState(false);
+  const[workspaceId,setWorkspaceId]=useState(null);
   const[pg,setPg]=useState(hashPage);
-  const go=p=>{setPg(p);window.location.hash=p==="home"?"":p;};
-  React.useEffect(()=>{const h=()=>setPg(hashPage());window.addEventListener("hashchange",h);return()=>window.removeEventListener("hashchange",h);},[]);
+  const go=p=>{setPg(p);const hash=p==="home"?"":"#"+p;if(workspaceId){window.history.pushState(null,"","/app/"+workspaceId+hash);}else{window.location.hash=p==="home"?"":p;}};
+  React.useEffect(()=>{const h=()=>setPg(hashPage());window.addEventListener("hashchange",h);window.addEventListener("popstate",h);return()=>{window.removeEventListener("hashchange",h);window.removeEventListener("popstate",h);};},[]);
   const[vapiKeys,setVapiKeys]=useState({publicKey:"",privateKey:""});
   const[userId,setUserId]=useState(null);
   const[agentCfg,setAgentCfg]=useState(null);
@@ -4499,7 +4510,10 @@ const App=()=>{
       setAgentCfg(settings);
     }
     const{data:prof}=await sb.from('profiles').select('*').eq('id',uid).single();
-    if(prof)setProfile(prof);
+    if(prof){
+      setProfile(prof);
+      if(prof.workspace_id){setWorkspaceId(prof.workspace_id);setWorkspaceUrl(prof.workspace_id,hashPage());}
+    }
     return prof;
   };
 
@@ -4615,6 +4629,9 @@ const App=()=>{
         const metaName=authUser?.user_metadata?.full_name||"";
         await window.supabase.from('profiles').upsert({id:userId,trade:obData.trade||'',service_area:obData.area||'',phone:obData.phone||'',team_size:obData.teamSize||'',services:obData.services||[],business_name:metaBiz,full_name:metaName,email:authUser?.email||''});
         await window.supabase.from('settings').upsert({id:userId,voice_id:obData.voiceId||'O7LV5fxosQChiBE7l6Wz',voice_name:obData.voiceName||'Kim',greeting:obData.greeting||"Hi, thanks for calling! I can help you with scheduling a service appointment or answer any questions. What's going on?"});
+        /* Reload profile to get the DB-generated workspace_id */
+        const{data:freshProf}=await window.supabase.from('profiles').select('*').eq('id',userId).single();
+        if(freshProf){setProfile(freshProf);if(freshProf.workspace_id){setWorkspaceId(freshProf.workspace_id);setWorkspaceUrl(freshProf.workspace_id,"home");}}
       }catch(e){console.error('Onboard save error:',e);}
     }
     setAuth("app");
@@ -4631,7 +4648,8 @@ const App=()=>{
   /* Handle logout */
   const handleLogout=async()=>{
     try{await window.supabase?.auth.signOut();}catch(e){}
-    setAuth("auth");setUserId(null);
+    setAuth("auth");setUserId(null);setWorkspaceId(null);
+    window.history.replaceState(null,"","/app");
   };
 
   if(auth==="loading")return<div className="min-h-screen flex items-center justify-center bg-neutral-50"><div className="text-center fu"><Logo s={48}/><p className="text-sm text-neutral-300 mt-6">Loading...</p></div></div>;
