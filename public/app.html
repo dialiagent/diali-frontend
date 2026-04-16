@@ -4515,6 +4515,8 @@ const App=()=>{
   const[pendingEmail,setPendingEmail]=useState("");
   const[pendingPass,setPendingPass]=useState("");
   const[showTutorial,setShowTutorial]=useState(false);
+  /* Debug hook — remove in production */
+  React.useEffect(()=>{window.__showTutorial=()=>setShowTutorial(true);window.__hideTutorial=()=>setShowTutorial(false);},[]);
 
   /* Wait for Supabase SDK to load */
   React.useEffect(()=>{
