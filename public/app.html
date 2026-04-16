@@ -3533,7 +3533,110 @@ const QuoteView=({data,onClose})=>{
   );
 };
 
-const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agentCfg,profile,onProfileSave})=>{
+/* ══════════════════ TUTORIAL WALKTHROUGH ══════════════════ */
+const Tutorial=({onDone,go})=>{
+  const[step,setStep]=useState(0);
+  const steps=[
+    {
+      id:"home",
+      icon:I.home,
+      title:"Your Dashboard",
+      desc:"This is your command center. See today's stats, recent calls, upcoming appointments, and your AI daily briefing — all at a glance.",
+      tip:"The dashboard updates in real time as calls come in and jobs move through your pipeline.",
+      nav:"home"
+    },
+    {
+      id:"agent",
+      icon:I.bot,
+      title:"Your AI Receptionist",
+      desc:"This is where you configure how your AI answers the phone. Pick a voice, customize the greeting, set qualification questions, and make test calls.",
+      tip:"Hit 'Test Call' to talk to your AI receptionist right in the browser before going live.",
+      nav:"agent"
+    },
+    {
+      id:"calls",
+      icon:I.phone,
+      title:"Calls & Leads",
+      desc:"Every call your AI handles shows up here with a full transcript, summary, and extracted lead info. No more missed details or forgotten voicemails.",
+      tip:"Click any call to see the full AI transcript, send follow-up texts, or reschedule.",
+      nav:"calls"
+    },
+    {
+      id:"jobs",
+      icon:I.wrench,
+      title:"Jobs & Pipeline",
+      desc:"Track every job from lead to invoice. Drag jobs across stages, add checklists, attach parts, and keep your whole team on the same page.",
+      tip:"Jobs are automatically created from booked calls — no double entry.",
+      nav:"jobs"
+    },
+    {
+      id:"calendar",
+      icon:I.cal,
+      title:"Your Calendar",
+      desc:"See all your booked appointments in one view. Your AI receptionist checks availability here before scheduling, so you never get double-booked.",
+      tip:"Click any day to see that day's appointments or add a block for time off.",
+      nav:"calendar"
+    }
+  ];
+  const s=steps[step];
+  const isLast=step===steps.length-1;
+
+  /* Navigate to the page this step highlights */
+  React.useEffect(()=>{if(s.nav)go(s.nav);},[step]);
+
+  return portal(
+    <div className="fixed inset-0 flex items-end justify-center pb-8 pointer-events-none" style={{zIndex:99999}}>
+      {/* Subtle overlay */}
+      <div className="fixed inset-0 bg-black/20 pointer-events-auto" style={{animation:"fadeIn .3s ease both"}}/>
+
+      {/* Tutorial card */}
+      <div className="relative pointer-events-auto w-full max-w-lg mx-4" style={{animation:"fu .4s cubic-bezier(.22,1,.36,1) both"}}>
+        {/* Progress bar */}
+        <div className="flex gap-1.5 mb-3 px-1">
+          {steps.map((_,i)=>(
+            <div key={i} className="h-0.5 flex-1 transition-all duration-500" style={{background:i<=step?"#171717":"rgba(255,255,255,0.3)"}}/>
+          ))}
+        </div>
+
+        <div className="bg-white border border-neutral-200 shadow-2xl">
+          <div className="p-6">
+            {/* Step counter + skip */}
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-xs text-neutral-400">{step+1} of {steps.length}</span>
+              <button onClick={onDone} className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">Skip tutorial</button>
+            </div>
+
+            {/* Icon + content */}
+            <div className="flex gap-5">
+              <div className="w-12 h-12 bg-neutral-900 text-white flex items-center justify-center shrink-0">
+                <span className="w-5 h-5">{s.icon}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg text-neutral-900 tracking-tight mb-2">{s.title}</p>
+                <p className="text-sm text-neutral-500 leading-relaxed mb-3">{s.desc}</p>
+                <div className="flex items-start gap-2 bg-neutral-50 px-3 py-2.5">
+                  <span className="w-3.5 h-3.5 text-neutral-400 shrink-0 mt-0.5">{I.zap}</span>
+                  <p className="text-xs text-neutral-500">{s.tip}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center border-t border-neutral-100 px-6 py-4 gap-3">
+            {step>0&&<button onClick={()=>setStep(step-1)} className="text-sm text-neutral-400 hover:text-neutral-900 transition-colors mr-auto">Back</button>}
+            {step===0&&<div className="mr-auto"/>}
+            <button onClick={()=>{if(isLast){onDone();}else{setStep(step+1);}}} className="bg-neutral-900 text-white text-sm px-6 py-2.5 hover:bg-black transition-colors">
+              {isLast?"Get started":"Next"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agentCfg,profile,onProfileSave,showTutorial,onTutorialDone})=>{
   /* ── Quote view state ── */
   const[quoteView,setQuoteView]=useState(null);
   /* ── Plan state (lives at Layout level so all pages can access) ── */
@@ -3654,6 +3757,7 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
         </div>
       </div>
       {upgradePrompt&&<UpgradePrompt feature={upgradePrompt.feature} requiredPlan={upgradePrompt.requiredPlan} curPlan={curPlan} onUpgrade={()=>{go("settings");}} onClose={()=>setUpgradePrompt(null)}/>}
+      {showTutorial&&<Tutorial onDone={onTutorialDone} go={go}/>}
     </div>
   );
 };
@@ -4056,39 +4160,62 @@ const Onboarding=({onDone})=>{
 
           {/* Step 5 — Ready */}
           {step===5&&<div>
-            <div className="text-center mb-14">
-              <div className="w-20 h-20 bg-neutral-900 text-white flex items-center justify-center mx-auto mb-8"><span className="w-8 h-8">{I.check}</span></div>
-              <p className="text-5xl text-neutral-900 tracking-tight mb-4">You're live</p>
-              <p className="text-neutral-400 leading-relaxed max-w-sm mx-auto">Diali is ready. Forward your business line to start answering calls with AI.</p>
+            {/* Celebration header */}
+            <div className="text-center mb-10">
+              <div className="w-16 h-16 bg-neutral-900 text-white flex items-center justify-center mx-auto mb-6" style={{animation:"fu .6s cubic-bezier(.22,1,.36,1) both"}}><span className="w-7 h-7">{I.check}</span></div>
+              <p className="text-4xl text-neutral-900 tracking-tight mb-3">You're all set</p>
+              <p className="text-neutral-400 leading-relaxed max-w-md mx-auto">Your AI receptionist is configured and ready. Here's everything you need to go live.</p>
             </div>
 
-            <div className="bg-neutral-50 p-6 mb-8">
-              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Your Diali number</p>
-              <div className="flex items-center gap-4">
-                <span className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0"><span className="w-4 h-4">{I.phone}</span></span>
-                <div className="flex-1"><p className="text-2xl text-neutral-900 tracking-tight tabular-nums">(855) 342-5411</p><p className="text-xs text-neutral-400 mt-1">Forward your business line here to go live</p></div>
+            {/* Setup summary — compact */}
+            <div className="bg-neutral-50 p-5 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                {[[I.wrench,trade||"General","Trade"],[I.mic,voicePick,"Voice"],
+                  [I.clock,(hours.start||"8:00")+" – "+(hours.end||"17:00"),"Hours"],[I.check,services.length+" services","Coverage"]].map(([ic,v,l])=>(
+                  <div key={l} className="flex items-center gap-3">
+                    <span className="w-8 h-8 bg-white border border-neutral-200 flex items-center justify-center shrink-0"><span className="w-3.5 h-3.5 text-neutral-400">{ic}</span></span>
+                    <div><p className="text-xs text-neutral-400">{l}</p><p className="text-sm text-neutral-900">{v}</p></div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="border border-neutral-200 mb-8">
-              <p className="text-xs text-neutral-400 uppercase tracking-widest px-6 pt-5 pb-3">Your setup</p>
-              {[[trade||"HVAC","Trade"],[voicePick,"AI voice"],[(hours.start||"8:00")+" – "+(hours.end||"17:00"),"Hours"],[services.length+" services","Coverage"]].map(([v,l],i)=>(
-                <div key={l} className={"flex items-center justify-between px-6 py-3.5 "+(i<3?"border-b border-neutral-100":"")}>
-                  <span className="text-xs text-neutral-400">{l}</span>
-                  <span className="text-sm text-neutral-900">{v}</span>
+            {/* How call forwarding works */}
+            <div className="border border-neutral-200 mb-6">
+              <div className="px-5 pt-5 pb-4">
+                <p className="text-sm text-neutral-900 mb-1">How it works</p>
+                <p className="text-xs text-neutral-400 leading-relaxed">Forward your business phone to your Diali number. When a customer calls, your AI receptionist picks up — qualifies the lead, books appointments, and gives pricing from your pricebook.</p>
+              </div>
+              <div className="border-t border-neutral-200 px-5 py-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <span className="w-9 h-9 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-neutral-400">{I.phone}</span></span>
+                    <div><p className="text-xs text-neutral-400">Your Diali number</p><p className="text-lg text-neutral-900 tracking-tight tabular-nums">(855) 342-5411</p></div>
+                  </div>
+                  <button onClick={()=>{navigator.clipboard.writeText("8553425411");}} className="text-xs text-neutral-400 hover:text-neutral-900 border border-neutral-200 px-3 py-1.5 transition-colors">Copy</button>
                 </div>
-              ))}
+              </div>
+              <div className="border-t border-neutral-100 px-5 py-3 bg-neutral-50">
+                <p className="text-xs text-neutral-400">Set up call forwarding from your carrier's settings or dial *72 then your Diali number on most landlines.</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-px bg-neutral-200 mb-8">
-              {[["98%","Answer rate"],["4.2s","Avg pickup"],["$847","Avg daily rev"]].map(([v,l])=>(
-                <div key={l} className="bg-white py-5 text-center"><p className="text-2xl text-neutral-900 tracking-tight tabular-nums">{v}</p><p className="text-xs text-neutral-400 mt-1">{l}</p></div>
-              ))}
+            {/* What's next */}
+            <div className="mb-8">
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">What's next</p>
+              <div className="space-y-2">
+                {[["Forward your business line to your Diali number","Takes about 2 minutes in your carrier settings"],
+                  ["Make a test call to hear your AI in action","Try it from the Agent page once you're inside"],
+                  ["Customize your pricebook for accurate quotes","Add your real rates so the AI can give ballpark pricing"]].map(([t,s],i)=>(
+                  <div key={i} className="flex items-start gap-3 py-2">
+                    <span className="w-5 h-5 bg-neutral-900 text-white flex items-center justify-center shrink-0 text-xs mt-0.5">{i+1}</span>
+                    <div><p className="text-sm text-neutral-900">{t}</p><p className="text-xs text-neutral-400 mt-0.5">{s}</p></div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-neutral-300 text-center mb-8">Average stats from Diali users in their first week</p>
 
-            <button onClick={next} className="w-full bg-neutral-900 text-white py-4 text-sm hover:bg-black transition-colors">Go to dashboard</button>
-            <button className="w-full text-center text-xs text-neutral-400 hover:text-neutral-900 transition-colors mt-4 py-2">I'll set up forwarding later</button>
+            <button onClick={next} className="w-full bg-neutral-900 text-white py-4 text-sm hover:bg-black transition-colors">Enter dashboard</button>
           </div>}
 
         </div>
@@ -4387,6 +4514,7 @@ const App=()=>{
   const[sbReady,setSbReady]=useState(!!window.supabase);
   const[pendingEmail,setPendingEmail]=useState("");
   const[pendingPass,setPendingPass]=useState("");
+  const[showTutorial,setShowTutorial]=useState(false);
 
   /* Wait for Supabase SDK to load */
   React.useEffect(()=>{
@@ -4524,6 +4652,7 @@ const App=()=>{
       }catch(e){console.error('Onboard save error:',e);}
     }
     setAuth("app");
+    setShowTutorial(true);
   };
 
   /* Save profile changes */
@@ -4543,7 +4672,7 @@ const App=()=>{
   if(auth==="auth")return<Auth onLogin={handleLogin} onSignup={handleSignup}/>;
   if(auth==="verify")return<VerifyOtp email={pendingEmail} onVerify={handleVerifyOtp} onResend={handleResendOtp} onBack={()=>setAuth("auth")}/>;
   if(auth==="onboard")return<Onboarding onDone={handleOnboardDone}/>;
-  return<Layout pg={pg} go={go} isNew={isNew} isDemo={isDemo} vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={handleLogout} agentCfg={agentCfg} profile={profile} onProfileSave={handleProfileSave}/>;
+  return<Layout pg={pg} go={go} isNew={isNew} isDemo={isDemo} vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={handleLogout} agentCfg={agentCfg} profile={profile} onProfileSave={handleProfileSave} showTutorial={showTutorial} onTutorialDone={()=>{setShowTutorial(false);go("home");}}/>;
 };
 ReactDOM.render(<App/>,document.getElementById("root"));
 </script>
