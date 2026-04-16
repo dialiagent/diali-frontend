@@ -3585,19 +3585,12 @@ const Tutorial=({onDone,go})=>{
   React.useEffect(()=>{if(s.nav)go(s.nav);},[step]);
 
   return portal(
-    <div className="fixed inset-0 flex items-end justify-center pb-8 pointer-events-none" style={{zIndex:99999}}>
+    <div className="fixed inset-0 pointer-events-none" style={{zIndex:99999}}>
       {/* Subtle overlay */}
-      <div className="fixed inset-0 bg-black/20 pointer-events-auto" style={{animation:"fadeIn .3s ease both"}}/>
+      <div className="fixed inset-0 bg-black/10 pointer-events-auto" style={{animation:"fadeIn .3s ease both"}}/>
 
-      {/* Tutorial card */}
-      <div className="relative pointer-events-auto w-full max-w-lg mx-4" style={{animation:"fu .4s cubic-bezier(.22,1,.36,1) both"}}>
-        {/* Progress bar */}
-        <div className="flex gap-1.5 mb-3 px-1">
-          {steps.map((_,i)=>(
-            <div key={i} className="h-0.5 flex-1 transition-all duration-500" style={{background:i<=step?"#171717":"rgba(255,255,255,0.3)"}}/>
-          ))}
-        </div>
-
+      {/* Tutorial card — bottom right */}
+      <div className="fixed bottom-6 right-6 pointer-events-auto w-full max-w-sm" style={{animation:"fu .4s cubic-bezier(.22,1,.36,1) both"}}>
         <div className="bg-white border border-neutral-200 shadow-2xl">
           <div className="p-6">
             {/* Step counter + skip */}
