@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Diali — AI front office for home service contractors</title>
+<meta name="description" content="Diali answers every call, qualifies leads, and books appointments 24/7 — so you never miss revenue again.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-weight:400;border-radius:0!important}
@@ -24,9 +25,8 @@ nav .w{display:flex;align-items:center;height:64px;gap:40px;max-width:1400px;pad
 .brand{display:flex;align-items:center}
 .brand svg{width:24px;height:24px;display:block}
 .nav-links{display:none;gap:28px;align-items:center}
-.nav-links a{font-size:14px;color:#525252;transition:color .2s;display:flex;align-items:center;gap:4px}
+.nav-links a{font-size:14px;color:#525252;transition:color .2s}
 .nav-links a:hover{color:#171717}
-.nav-links svg{width:10px;height:10px;opacity:.5}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
 @media(min-width:900px){.nav-links{display:flex}}
 
@@ -107,15 +107,15 @@ section{padding:120px 0;position:relative}
 .section-title{font-size:clamp(32px,4vw,48px);line-height:1.05;letter-spacing:-1.8px;max-width:720px;margin-bottom:20px}
 .section-desc{font-size:17px;color:#525252;line-height:1.6;max-width:560px}
 
-/* ── Stats strip ── */
-.stats-strip{border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:60px 0;background:#fff}
-.stats-grid{display:grid;grid-template-columns:1fr;gap:40px}
-@media(min-width:768px){.stats-grid{grid-template-columns:repeat(3,1fr);gap:0}}
-.stat-item{padding:0 24px;text-align:left}
-@media(min-width:768px){.stat-item{border-left:1px solid #f0f0f0;padding:0 40px}.stat-item:first-child{border-left:none;padding-left:24px}}
-.stat-quote{font-size:15px;color:#171717;line-height:1.5;letter-spacing:-.3px;margin-bottom:16px}
-.stat-big{font-size:28px;color:#171717;letter-spacing:-1px;margin-bottom:4px;font-variant-numeric:tabular-nums}
-.stat-label{font-size:11px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1.5px}
+/* ── How it works strip ── */
+.how-strip{border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:80px 0;background:#fff}
+.how-grid{display:grid;grid-template-columns:1fr;gap:48px}
+@media(min-width:768px){.how-grid{grid-template-columns:repeat(3,1fr);gap:0}}
+.how-item{padding:0 24px;text-align:left}
+@media(min-width:768px){.how-item{border-left:1px solid #f0f0f0;padding:0 40px}.how-item:first-child{border-left:none;padding-left:24px}}
+.how-num{font-size:11px;color:#a3a3a3;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;font-family:'DM Mono',monospace}
+.how-title{font-size:20px;letter-spacing:-.5px;margin-bottom:10px}
+.how-desc{font-size:14px;color:#737373;line-height:1.6}
 
 /* ── Tabs section ── */
 .tabs-section{background:#fafafa;padding:140px 0}
@@ -151,16 +151,15 @@ section{padding:120px 0;position:relative}
 .split-stat-row .k{font-size:11px;color:#737373;text-transform:uppercase;letter-spacing:1.5px}
 .split-stat-row .v{font-size:28px;color:#fff;letter-spacing:-1px;font-variant-numeric:tabular-nums}
 
-.terminal{background:#0a0a0a;border:1px solid #262626;padding:0;font-family:'DM Mono',monospace}
-.terminal-head{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #262626}
-.terminal-dots{display:flex;gap:6px}
-.terminal-dots span{width:8px;height:8px;background:#262626}
-.terminal-title{font-size:11px;color:#525252;letter-spacing:.5px}
-.terminal-body{padding:28px 24px;font-size:12px;line-height:1.9;color:#a3a3a3}
-.terminal-body .c{color:#525252}
-.terminal-body .k{color:#fff}
-.terminal-body .s{color:#737373}
-.terminal-body .p{color:#fff}
+.voice-grid{display:grid;grid-template-columns:1fr;gap:1px;background:#262626;border:1px solid #262626}
+@media(min-width:600px){.voice-grid{grid-template-columns:1fr 1fr}}
+.voice-card{background:#0a0a0a;padding:28px 24px;transition:background .2s}
+.voice-card:hover{background:#111}
+.voice-name{font-size:15px;color:#fff;margin-bottom:6px}
+.voice-desc{font-size:12px;color:#737373;line-height:1.5}
+.voice-bar{height:3px;background:#262626;margin-top:16px;position:relative;overflow:hidden}
+.voice-bar span{position:absolute;left:0;top:0;height:100%;background:#fff;width:0;animation:vbar 2s ease-in-out infinite}
+@keyframes vbar{0%{width:0;left:0}50%{width:60%}100%{width:0;left:100%}}
 
 /* ── Features grid ── */
 .features-section{padding:140px 0;background:#fff}
@@ -173,15 +172,13 @@ section{padding:120px 0;position:relative}
 .feature-num{font-size:10px;color:#a3a3a3;letter-spacing:2px;margin-bottom:24px;font-family:'DM Mono',monospace}
 .feature h4{font-size:18px;letter-spacing:-.5px;margin-bottom:10px}
 .feature p{font-size:14px;color:#737373;line-height:1.6;flex:1}
-.feature-link{font-size:13px;color:#171717;margin-top:20px;display:flex;align-items:center;gap:6px}
-.feature-link svg{width:10px;height:10px;transition:transform .2s}
-.feature:hover .feature-link svg{transform:translateX(3px)}
 
 /* ── Pricing ── */
 .pricing-section{background:#fafafa;padding:140px 0}
 .pricing-head{text-align:center;margin-bottom:72px}
 .pricing-head .section-title,.pricing-head .section-desc{margin-left:auto;margin-right:auto}
 .pricing-head .section-desc{text-align:center}
+.beta-badge{display:inline-flex;align-items:center;gap:6px;background:#171717;color:#fff;padding:6px 14px;font-size:12px;letter-spacing:-.2px;margin-bottom:24px}
 .pricing-grid{display:grid;grid-template-columns:1fr;gap:1px;background:#e5e5e5;border:1px solid #e5e5e5;max-width:1100px;margin:0 auto}
 @media(min-width:900px){.pricing-grid{grid-template-columns:repeat(3,1fr)}}
 .tier{background:#fff;padding:48px 40px;display:flex;flex-direction:column}
@@ -191,6 +188,7 @@ section{padding:120px 0;position:relative}
 .tier-price{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
 .tier-price .amt{font-size:44px;letter-spacing:-2px;font-variant-numeric:tabular-nums}
 .tier-price .per{font-size:14px;color:#a3a3a3}
+.tier-price .strike{text-decoration:line-through;color:#a3a3a3;font-size:20px;letter-spacing:-1px}
 .tier.featured .tier-price .per{color:#737373}
 .tier-desc{font-size:14px;color:#737373;line-height:1.55;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #f0f0f0}
 .tier.featured .tier-desc{color:#a3a3a3;border-bottom-color:#262626}
@@ -204,14 +202,20 @@ section{padding:120px 0;position:relative}
 .tier.featured .tier-cta{background:#fff;color:#171717;border-color:#fff}
 .tier.featured .tier-cta:hover{background:#f5f5f5}
 
+/* ── Coming soon ── */
+.roadmap-section{padding:100px 0;background:#fff;border-top:1px solid #f0f0f0}
+.roadmap-grid{display:grid;grid-template-columns:1fr;gap:1px;background:#e5e5e5;border:1px solid #e5e5e5;margin-top:48px}
+@media(min-width:768px){.roadmap-grid{grid-template-columns:repeat(4,1fr)}}
+.roadmap-item{background:#fff;padding:32px;transition:background .2s}
+.roadmap-item:hover{background:#fafafa}
+.roadmap-tag{font-size:10px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;font-family:'DM Mono',monospace}
+.roadmap-item h4{font-size:16px;letter-spacing:-.3px;margin-bottom:8px}
+.roadmap-item p{font-size:13px;color:#737373;line-height:1.55}
+
 /* ── Big CTA ── */
 .cta-section{padding:140px 0;text-align:center;background:#fff;border-top:1px solid #f0f0f0}
 .cta-section h2{font-size:clamp(36px,5vw,64px);line-height:1;letter-spacing:-2.5px;margin-bottom:28px;max-width:800px;margin-left:auto;margin-right:auto}
 .cta-section p{font-size:17px;color:#525252;line-height:1.6;max-width:520px;margin:0 auto 40px}
-.cta-bullets{display:grid;grid-template-columns:1fr;gap:8px;max-width:440px;margin:0 auto 40px;text-align:left}
-@media(min-width:600px){.cta-bullets{grid-template-columns:1fr 1fr}}
-.cta-bullets div{font-size:13px;color:#525252;display:flex;align-items:center;gap:10px;padding:10px 0}
-.cta-bullets svg{width:12px;height:12px;stroke:#171717;stroke-width:2;fill:none;flex-shrink:0}
 .cta-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
 /* ── Footer ── */
@@ -237,7 +241,6 @@ footer{background:#fafafa;border-top:1px solid #e5e5e5;padding:80px 0 40px}
 .sr.v{opacity:1;transform:translateY(0)}
 .d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}.d4{transition-delay:.32s}
 
-/* Accent: italic serif feel */
 em{font-style:italic;color:#a3a3a3}
 </style>
 </head>
@@ -255,15 +258,13 @@ em{font-style:italic;color:#a3a3a3}
       </svg>
     </a>
     <div class="nav-links">
-      <a href="#product">Product <svg viewBox="0 0 10 10"><path d="M2 4l3 3 3-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></a>
+      <a href="#product">Product</a>
       <a href="#features">Features</a>
       <a href="#pricing">Pricing</a>
-      <a href="#customers">Customers</a>
-      <a href="#docs">Docs</a>
     </div>
     <div class="nav-right">
       <a href="/app" class="btn btn-ghost">Log in</a>
-      <a href="/app" class="btn btn-dark">Sign up</a>
+      <a href="/app" class="btn btn-dark">Get started free</a>
     </div>
   </div>
 </nav>
@@ -273,11 +274,11 @@ em{font-style:italic;color:#a3a3a3}
   <div class="grid-bg"></div>
   <div class="hero-inner">
     <div class="announce">
-      <span class="announce-tag">New</span>
-      <span class="announce-text">Diali now books jobs in 42 languages <svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></span>
+      <span class="announce-tag">Beta</span>
+      <span class="announce-text">Free for early adopters — no credit card required <svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></span>
     </div>
-    <h1>Your AI front office<br>for home services.</h1>
-    <p>Diali answers every call, books jobs, qualifies leads, and sends quotes — so you never miss revenue again.</p>
+    <h1>Your AI receptionist<br>for home services.</h1>
+    <p>Diali answers every call 24/7, qualifies the lead, books the appointment, and gives ballpark pricing — so you never miss a job again.</p>
     <div class="hero-actions">
       <a href="/app" class="btn btn-dark btn-lg">
         <svg width="14" height="14" viewBox="0 0 29 29" fill="none">
@@ -286,9 +287,9 @@ em{font-style:italic;color:#a3a3a3}
           <rect x="14.1406" y="14.1415" width="4" height="4" transform="rotate(-45 14.1406 14.1415)" fill="#171717"/>
           <rect x="11.3125" y="25.454" width="4" height="4" transform="rotate(-45 11.3125 25.454)" fill="#fff"/>
         </svg>
-        Start free trial
+        Get started free
       </a>
-      <a href="#product" class="btn btn-light btn-lg">Get a demo</a>
+      <a href="#product" class="btn btn-light btn-lg">See how it works</a>
     </div>
   </div>
 
@@ -306,7 +307,7 @@ em{font-style:italic;color:#a3a3a3}
             <div class="caller-name">Maria Chen</div>
             <div class="caller-meta">(415) 555-0142 · First-time caller</div>
           </div>
-          <div class="caller-status">Routing</div>
+          <div class="caller-status">Active</div>
         </div>
         <div class="wave">
           <span></span><span></span><span></span><span></span><span></span>
@@ -319,32 +320,31 @@ em{font-style:italic;color:#a3a3a3}
         <div class="transcript">
           <div><span class="role">Diali</span>Hi, thanks for calling Martinez HVAC. How can we help you today?</div>
           <div><span class="role">Caller</span>My AC just stopped working and it's really hot in here.</div>
-          <div><span class="role">Diali</span>I'm sorry to hear that. I can get a technician out today between 3–5 PM. Does that work?</div>
-          <div><span class="role">Caller</span>Yes, that would be perfect. Thank you.</div>
+          <div><span class="role">Diali</span>I'm sorry to hear that. Let me get some details so we can send a tech out. What kind of AC unit do you have?</div>
+          <div><span class="role">Caller</span>It's a central unit, maybe 8 years old.</div>
         </div>
       </div>
 
       <div class="device-panel">
         <div>
-          <div class="panel-label">Call summary</div>
+          <div class="panel-label">AI-extracted details</div>
           <div class="panel-card">
-            <div class="panel-row"><span class="k">Issue</span><span class="v">AC unit failure</span></div>
-            <div class="panel-row"><span class="k">Priority</span><span class="v">Same-day</span></div>
-            <div class="panel-row"><span class="k">Service area</span><span class="v">Mission District</span></div>
-            <div class="panel-row"><span class="k">Est. duration</span><span class="v">90 min</span></div>
+            <div class="panel-row"><span class="k">Issue</span><span class="v">AC not cooling</span></div>
+            <div class="panel-row"><span class="k">Equipment</span><span class="v">Central AC, ~8 yrs</span></div>
+            <div class="panel-row"><span class="k">Urgency</span><span class="v">Same-day</span></div>
+            <div class="panel-row"><span class="k">Ballpark given</span><span class="v">$95 diagnostic</span></div>
           </div>
         </div>
         <div>
-          <div class="panel-label">Booking</div>
+          <div class="panel-label">Appointment booked</div>
           <div class="panel-card">
-            <div class="panel-row"><span class="k">Technician</span><span class="v">Carlos R.</span></div>
-            <div class="panel-row"><span class="k">Window</span><span class="v">3:00 – 5:00 PM</span></div>
-            <div class="panel-row"><span class="k">Confirmation</span><span class="v">#A24-887</span></div>
+            <div class="panel-row"><span class="k">Date</span><span class="v">Today, 3:00 – 5:00 PM</span></div>
+            <div class="panel-row"><span class="k">Address</span><span class="v">423 Maple St</span></div>
+            <div class="panel-row"><span class="k">Phone confirmed</span><span class="v">(415) 555-0142</span></div>
           </div>
           <div class="panel-booked">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
-            Job booked · SMS sent
-            <span class="amt">+$285</span>
+            Booked on the call — no callback needed
           </div>
         </div>
       </div>
@@ -352,24 +352,24 @@ em{font-style:italic;color:#a3a3a3}
   </div>
 </section>
 
-<!-- ═══════════════ STATS STRIP ═══════════════ -->
-<section class="stats-strip" style="padding:60px 0">
+<!-- ═══════════════ HOW IT WORKS ═══════════════ -->
+<section class="how-strip">
   <div class="w">
-    <div class="stats-grid">
-      <div class="stat-item sr">
-        <p class="stat-quote">"We're booking <em>3x more jobs</em> without hiring a single receptionist."</p>
-        <div class="stat-big">+312%</div>
-        <div class="stat-label">Martinez HVAC · Booked Jobs</div>
+    <div class="how-grid">
+      <div class="how-item sr">
+        <div class="how-num">01</div>
+        <div class="how-title">Forward your line</div>
+        <div class="how-desc">Forward your business phone to your Diali number. Takes 30 seconds. Customers call your normal number — Diali picks up.</div>
       </div>
-      <div class="stat-item sr d1">
-        <p class="stat-quote">"Diali answers at 2 AM. That used to be <em>lost revenue</em> for us."</p>
-        <div class="stat-big">98.4%</div>
-        <div class="stat-label">Apex Plumbing · Answer Rate</div>
+      <div class="how-item sr d1">
+        <div class="how-num">02</div>
+        <div class="how-title">AI handles the call</div>
+        <div class="how-desc">Diali answers in under a second, qualifies the issue, collects their info, gives a ballpark price, and books the appointment — all on the same call.</div>
       </div>
-      <div class="stat-item sr d2">
-        <p class="stat-quote">"Quotes go out before the customer even hangs up. <em>Game changer.</em>"</p>
-        <div class="stat-big">4.2 min</div>
-        <div class="stat-label">Stellar Roofing · Avg. Quote Time</div>
+      <div class="how-item sr d2">
+        <div class="how-num">03</div>
+        <div class="how-title">You show up prepared</div>
+        <div class="how-desc">Full transcript, call recording, customer details, and a draft quote waiting in your dashboard. Your tech knows exactly what to expect.</div>
       </div>
     </div>
   </div>
@@ -380,183 +380,176 @@ em{font-style:italic;color:#a3a3a3}
   <div class="w">
     <div class="tabs-head">
       <div>
-        <div class="section-label">Your customers, handled.</div>
-        <h2 class="section-title">Every call, every job,<br>every hour of the day.</h2>
+        <div class="section-label">What Diali does</div>
+        <h2 class="section-title">A receptionist that never<br>misses a call.</h2>
       </div>
-      <p class="section-desc">Diali handles what your receptionist, dispatcher, and quoter do — automatically, around the clock, and at a fraction of the cost.</p>
+      <p class="section-desc">Built specifically for home service contractors. Not a generic chatbot — a trade-aware AI that knows HVAC, plumbing, electrical, and roofing.</p>
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="intake">Call intake</button>
-      <button class="tab" data-tab="booking">Booking</button>
-      <button class="tab" data-tab="quotes">Instant quotes</button>
-      <button class="tab" data-tab="dispatch">Dispatch</button>
-      <button class="tab" data-tab="followup">Follow-ups</button>
+      <button class="tab active" data-tab="intake">Call handling</button>
+      <button class="tab" data-tab="qualify">Lead qualification</button>
+      <button class="tab" data-tab="booking">Appointment booking</button>
+      <button class="tab" data-tab="quotes">Ballpark pricing</button>
     </div>
 
-    <!-- Tab Panel: Call Intake -->
+    <!-- Tab: Call handling -->
     <div class="tab-panel active" data-panel="intake">
       <div class="tab-content">
-        <h3>Answer every call in under one ring.</h3>
-        <p>Diali picks up in under 800ms, identifies the caller, and routes the conversation based on what your business actually sells.</p>
+        <h3>Answers every call, day or night.</h3>
+        <p>Diali picks up in under a second with a natural-sounding voice. It greets callers by your business name and handles the conversation like a trained receptionist would.</p>
         <ul class="tab-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Sub-second answer time</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Trained on your trade & services</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Multilingual (42 languages)</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>CRM & calendar integrations</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Answers 24/7 — nights, weekends, holidays</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>7 natural-sounding voice options</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Custom greeting with your business name</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Full transcript and recording for every call</li>
         </ul>
       </div>
       <div class="tab-visual">
-        <div class="panel-label">INCOMING · +1 (415) 555-0142</div>
+        <div class="panel-label">INCOMING CALL · 2:47 PM</div>
         <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
           <div class="avatar">MC</div>
           <div>
             <div style="font-size:14px">Maria Chen</div>
-            <div style="font-size:11px;color:#a3a3a3">First-time caller · Mission District</div>
+            <div style="font-size:11px;color:#a3a3a3">First-time caller</div>
           </div>
         </div>
-        <div class="panel-row"><span class="k">Detected intent</span><span class="v">Emergency service</span></div>
-        <div class="panel-row"><span class="k">Sentiment</span><span class="v">Urgent · Concerned</span></div>
-        <div class="panel-row"><span class="k">Response time</span><span class="v">0.7s</span></div>
-        <div class="panel-row"><span class="k">Language</span><span class="v">English (US)</span></div>
-        <div class="panel-row"><span class="k">Confidence</span><span class="v">98.2%</span></div>
+        <div class="panel-row"><span class="k">Answer time</span><span class="v">0.8 seconds</span></div>
+        <div class="panel-row"><span class="k">Voice</span><span class="v">Kim (Conversational)</span></div>
+        <div class="panel-row"><span class="k">Greeting</span><span class="v">"Thanks for calling Martinez HVAC..."</span></div>
+        <div class="panel-row"><span class="k">Call duration</span><span class="v">3m 12s</span></div>
+        <div class="panel-row"><span class="k">Transcript</span><span class="v">Full · 24 exchanges</span></div>
       </div>
     </div>
 
-    <!-- Hidden tab panels (populated via JS) -->
+    <!-- Tab: Lead qualification -->
+    <div class="tab-panel" data-panel="qualify">
+      <div class="tab-content">
+        <h3>Deep qualification, not just a message pad.</h3>
+        <p>Diali doesn't just take a name and number. It asks the right diagnostic questions for your trade — equipment type, symptoms, urgency, prior attempts — so your tech shows up prepared.</p>
+        <ul class="tab-features">
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Trade-specific qualification questions</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Emergency detection (gas leaks, flooding, no heat)</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Collects name, phone, address on every call</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Confirms phone number back to caller</li>
+        </ul>
+      </div>
+      <div class="tab-visual">
+        <div class="panel-label">QUALIFICATION · COMPLETED</div>
+        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
+        <div class="panel-row"><span class="k">Equipment</span><span class="v">Central AC, Lennox, ~8 yrs</span></div>
+        <div class="panel-row"><span class="k">Symptoms</span><span class="v">Not cooling, fan running</span></div>
+        <div class="panel-row"><span class="k">Started</span><span class="v">Yesterday afternoon</span></div>
+        <div class="panel-row"><span class="k">Prior attempts</span><span class="v">Changed filter, reset breaker</span></div>
+        <div class="panel-row"><span class="k">Urgency</span><span class="v" style="color:#171717;font-weight:500">Same-day</span></div>
+        <div class="panel-row"><span class="k">Affected area</span><span class="v">Whole house</span></div>
+      </div>
+    </div>
+
+    <!-- Tab: Appointment booking -->
     <div class="tab-panel" data-panel="booking">
       <div class="tab-content">
-        <h3>Fill your calendar while you sleep.</h3>
-        <p>Diali checks technician availability in real-time and books jobs directly into your dispatch board — no human required.</p>
+        <h3>Books the appointment on the call.</h3>
+        <p>Diali doesn't say "someone will call you back." It books the appointment right there, confirms the time, and captures the address — all while the customer is still on the phone.</p>
         <ul class="tab-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Real-time calendar sync</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Geofenced technician matching</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>SMS & email confirmations</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>ServiceTitan, HCP, Jobber sync</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Books directly during the call</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Knows your business hours</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Confirms date, time, and address</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Shows booked jobs in your calendar</li>
         </ul>
       </div>
       <div class="tab-visual">
-        <div class="panel-label">TODAY · TUE APR 9</div>
+        <div class="panel-label">APPOINTMENT · BOOKED</div>
         <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
-        <div class="panel-row"><span class="k">8:00 AM · Carlos R.</span><span class="v">Booked</span></div>
-        <div class="panel-row"><span class="k">10:30 AM · Jamal T.</span><span class="v">Booked</span></div>
-        <div class="panel-row"><span class="k">1:00 PM · Carlos R.</span><span class="v">Booked</span></div>
-        <div class="panel-row"><span class="k">3:00 PM · Jamal T.</span><span class="v">Just booked</span></div>
-        <div class="panel-row"><span class="k">5:30 PM · Carlos R.</span><span class="v">Available</span></div>
+        <div class="panel-row"><span class="k">Customer</span><span class="v">Maria Chen</span></div>
+        <div class="panel-row"><span class="k">Phone</span><span class="v">(415) 555-0142 · Confirmed</span></div>
+        <div class="panel-row"><span class="k">Address</span><span class="v">423 Maple St, San Francisco</span></div>
+        <div class="panel-row"><span class="k">Date</span><span class="v">Today</span></div>
+        <div class="panel-row"><span class="k">Window</span><span class="v">3:00 – 5:00 PM</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;background:#171717;color:#fff;font-size:12px;margin-top:16px">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+          Confirmed on the call — customer is expecting you
+        </div>
       </div>
     </div>
 
+    <!-- Tab: Ballpark pricing -->
     <div class="tab-panel" data-panel="quotes">
       <div class="tab-content">
-        <h3>Draft quotes before the call ends.</h3>
-        <p>Diali never commits your business to a firm price on the phone — only ballpark ranges. The moment a call wraps, Diali drafts a full quote from your pricebook so you can review and send in a single tap.</p>
+        <h3>Gives pricing ranges, never firm quotes.</h3>
+        <p>Diali references your pricebook to give callers a realistic ballpark — anchored to your diagnostic fee. It never locks you into a price. After the call, a draft quote is waiting for you to review.</p>
         <ul class="tab-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Rule-based matching from call transcripts</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Ballpark ranges only on-call, never firm</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>You review and send — you stay in control</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>SMS/email delivery with one-tap approval</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>References your pricebook in real-time</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Gives ranges, anchors to diagnostic fee</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>AI drafts a quote after each call</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>You review and adjust before sending</li>
         </ul>
       </div>
       <div class="tab-visual">
-        <div class="panel-label">DRAFT · Q-4428 · READY FOR REVIEW</div>
+        <div class="panel-label">AI DRAFT QUOTE · READY FOR REVIEW</div>
         <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
-        <div class="panel-row"><span class="k">Diagnostic <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$95</span></div>
+        <div class="panel-row"><span class="k">Diagnostic fee</span><span class="v">$95</span></div>
         <div class="panel-row"><span class="k">R-410A refrigerant (3 lb) <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$255</span></div>
         <div class="panel-row"><span class="k">Coil cleaning <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$150</span></div>
         <div class="panel-row"><span class="k">Labor (2h) <span style="font-size:9px;background:#171717;color:#fff;padding:1px 5px;margin-left:4px">AI</span></span><span class="v">$250</span></div>
-        <div class="panel-row" style="padding-top:16px;margin-top:4px;border-top:1px solid #e5e5e5"><span class="k" style="color:#171717">Total</span><span class="v" style="font-size:18px">$750.00</span></div>
-      </div>
-    </div>
-
-    <div class="tab-panel" data-panel="dispatch">
-      <div class="tab-content">
-        <h3>Dispatch without the dispatcher.</h3>
-        <p>Diali assigns jobs to the right tech based on skill, location, and workload — and routes them in real-time as the day changes.</p>
-        <ul class="tab-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Skill-based routing</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Live traffic optimization</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Auto-rescheduling on delays</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>ETA updates to customers</li>
-        </ul>
-      </div>
-      <div class="tab-visual">
-        <div class="panel-label">DISPATCH · LIVE</div>
-        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
-        <div class="panel-row"><span class="k">Carlos R. · Mission</span><span class="v">En route</span></div>
-        <div class="panel-row"><span class="k">Jamal T. · Noe Valley</span><span class="v">On job</span></div>
-        <div class="panel-row"><span class="k">Dana K. · Sunset</span><span class="v">Traveling</span></div>
-        <div class="panel-row"><span class="k">Avg. ETA accuracy</span><span class="v">±4 min</span></div>
-        <div class="panel-row"><span class="k">Today's jobs</span><span class="v">28 / 32</span></div>
-      </div>
-    </div>
-
-    <div class="tab-panel" data-panel="followup">
-      <div class="tab-content">
-        <h3>Close the loop on every job.</h3>
-        <p>After the job is done, Diali follows up for reviews, upsells maintenance plans, and books the next visit automatically.</p>
-        <ul class="tab-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Google & Yelp review asks</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Maintenance plan upsells</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Recurring service booking</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>NPS & feedback collection</li>
-        </ul>
-      </div>
-      <div class="tab-visual">
-        <div class="panel-label">FOLLOW-UPS · LAST 7 DAYS</div>
-        <div style="height:1px;background:#e5e5e5;margin:20px 0"></div>
-        <div class="panel-row"><span class="k">Review asks sent</span><span class="v">128</span></div>
-        <div class="panel-row"><span class="k">New Google reviews</span><span class="v">+42</span></div>
-        <div class="panel-row"><span class="k">Maintenance plans sold</span><span class="v">14</span></div>
-        <div class="panel-row"><span class="k">Rebookings</span><span class="v">31</span></div>
-        <div class="panel-row"><span class="k">Avg. rating</span><span class="v">4.9 ★</span></div>
+        <div class="panel-row" style="padding-top:16px;margin-top:4px;border-top:1px solid #e5e5e5"><span class="k" style="color:#171717">Estimated total</span><span class="v" style="font-size:18px">$750</span></div>
+        <div style="font-size:11px;color:#a3a3a3;margin-top:12px">Matched from call transcript — review before sending</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════ SPLIT SECTION (Dark) ═══════════════ -->
+<!-- ═══════════════ SPLIT SECTION (Dark) — Voice & Setup ═══════════════ -->
 <section class="split-section">
   <div class="w">
     <div class="split-grid">
       <div class="split-left sr">
-        <div class="section-label">Infrastructure</div>
-        <h2>Scale your business <em>without</em> hiring another person.</h2>
-        <p>Diali runs on enterprise-grade voice infrastructure. It never sleeps, never takes a break, and never has a bad day. One Diali handles the workload of a 10-person call center.</p>
+        <div class="section-label">Setup</div>
+        <h2>Live in <em>under</em> 10 minutes.</h2>
+        <p>Pick your trade, choose a voice, customize your greeting, and forward your phone line. That's it. No integrations to configure, no IT department needed.</p>
         <div class="split-stats">
-          <div class="split-stat-row"><span class="k">Calls handled / month</span><span class="v">2.4M+</span></div>
+          <div class="split-stat-row"><span class="k">Avg. setup time</span><span class="v">&lt; 10 min</span></div>
           <div class="divider"></div>
-          <div class="split-stat-row"><span class="k">Avg. answer time</span><span class="v">0.8s</span></div>
+          <div class="split-stat-row"><span class="k">Voice options</span><span class="v">7</span></div>
           <div class="divider"></div>
-          <div class="split-stat-row"><span class="k">Uptime SLA</span><span class="v">99.99%</span></div>
+          <div class="split-stat-row"><span class="k">Supported trades</span><span class="v">6</span></div>
           <div class="divider"></div>
-          <div class="split-stat-row"><span class="k">Languages supported</span><span class="v">42</span></div>
+          <div class="split-stat-row"><span class="k">Availability</span><span class="v">24/7</span></div>
         </div>
       </div>
 
       <div class="sr d1">
-        <div class="terminal">
-          <div class="terminal-head">
-            <div class="terminal-dots"><span></span><span></span><span></span></div>
-            <div class="terminal-title">~ diali / call-handler.ts</div>
+        <div class="voice-grid">
+          <div class="voice-card">
+            <div class="voice-name">Kim</div>
+            <div class="voice-desc">Conversational, friendly. Our most popular voice.</div>
+            <div class="voice-bar"><span></span></div>
           </div>
-          <div class="terminal-body">
-            <div><span class="c">// Diali picks up in under 800ms</span></div>
-            <div><span class="k">const</span> <span class="p">call</span> = <span class="k">await</span> diali.<span class="p">answer</span>(<span class="s">incoming</span>)</div>
-            <br>
-            <div><span class="c">// Understands intent instantly</span></div>
-            <div><span class="k">const</span> <span class="p">intent</span> = <span class="k">await</span> call.<span class="p">detectIntent</span>({</div>
-            <div>&nbsp;&nbsp;business: <span class="s">'hvac'</span>,</div>
-            <div>&nbsp;&nbsp;priceBook: priceBook.<span class="p">latest</span>()</div>
-            <div>})</div>
-            <br>
-            <div><span class="c">// Books the job in your calendar</span></div>
-            <div><span class="k">const</span> <span class="p">booking</span> = <span class="k">await</span> call.<span class="p">book</span>({</div>
-            <div>&nbsp;&nbsp;window: <span class="s">'same-day'</span>,</div>
-            <div>&nbsp;&nbsp;tech: diali.<span class="p">matchTech</span>(intent)</div>
-            <div>})</div>
-            <br>
-            <div><span class="c">// Revenue: +$285 · Time: 2m 47s</span></div>
+          <div class="voice-card">
+            <div class="voice-name">Sarah</div>
+            <div class="voice-desc">Warm, professional tone.</div>
+            <div class="voice-bar"><span style="animation-delay:.3s"></span></div>
+          </div>
+          <div class="voice-card">
+            <div class="voice-name">Drew</div>
+            <div class="voice-desc">Deep, confident delivery.</div>
+            <div class="voice-bar"><span style="animation-delay:.6s"></span></div>
+          </div>
+          <div class="voice-card">
+            <div class="voice-name">Daniel</div>
+            <div class="voice-desc">Authoritative, measured.</div>
+            <div class="voice-bar"><span style="animation-delay:.9s"></span></div>
+          </div>
+          <div class="voice-card">
+            <div class="voice-name">Lily</div>
+            <div class="voice-desc">Friendly, energetic.</div>
+            <div class="voice-bar"><span style="animation-delay:1.2s"></span></div>
+          </div>
+          <div class="voice-card">
+            <div class="voice-name">Liam</div>
+            <div class="voice-desc">Calm, measured pace.</div>
+            <div class="voice-bar"><span style="animation-delay:1.5s"></span></div>
           </div>
         </div>
       </div>
@@ -568,47 +561,41 @@ em{font-style:italic;color:#a3a3a3}
 <section class="features-section" id="features">
   <div class="w">
     <div class="features-head sr">
-      <div class="section-label">Everything you need</div>
-      <h2 class="section-title">Built for how contractors actually work.</h2>
-      <p class="section-desc" style="margin-top:20px">Purpose-built for HVAC, plumbing, electrical, and roofing — not a generic AI bolted onto a phone line.</p>
+      <div class="section-label">Your dashboard</div>
+      <h2 class="section-title">Everything from every call, in one place.</h2>
+      <p class="section-desc" style="margin-top:20px">Full visibility into every conversation your AI handles — calls, leads, jobs, quotes, and calendar.</p>
     </div>
 
     <div class="features-grid">
       <div class="feature sr">
-        <div class="feature-num">01 / VOICE</div>
-        <h4>Natural-sounding AI</h4>
-        <p>Voices trained on real contractor calls — no robotic scripts, no "press 1 for English."</p>
-        <div class="feature-link">Learn more <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+        <div class="feature-num">01 / CALLS</div>
+        <h4>Call history & transcripts</h4>
+        <p>Every call logged with a full AI transcript, recording, duration, and caller details. Click into any call to see the complete conversation.</p>
       </div>
       <div class="feature sr d1">
-        <div class="feature-num">02 / CRM</div>
-        <h4>Deep integrations</h4>
-        <p>ServiceTitan, Housecall Pro, Jobber, FieldEdge — Diali writes to all of them in real-time.</p>
-        <div class="feature-link">View integrations <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+        <div class="feature-num">02 / LEADS</div>
+        <h4>Lead pipeline</h4>
+        <p>Every caller becomes a lead. Track status from new to booked to won. See urgency, source, and AI confidence at a glance.</p>
       </div>
       <div class="feature sr d2">
-        <div class="feature-num">03 / PRICING</div>
-        <h4>Your pricebook, live</h4>
-        <p>Diali quotes from your live pricing — not last year's PDF. Margins stay protected automatically.</p>
-        <div class="feature-link">See pricing engine <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+        <div class="feature-num">03 / QUOTES</div>
+        <h4>AI-drafted quotes</h4>
+        <p>After each call, Diali matches transcript details against your pricebook to draft a quote. You review it, adjust if needed, and send.</p>
       </div>
       <div class="feature sr">
-        <div class="feature-num">04 / ROUTING</div>
-        <h4>Smart dispatch</h4>
-        <p>Matches jobs to the right tech based on skill, location, traffic, and current workload.</p>
-        <div class="feature-link">How routing works <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+        <div class="feature-num">04 / JOBS</div>
+        <h4>Job board</h4>
+        <p>Track every job from booking to completion. Board view or list view with checklists, parts, and notes for each job.</p>
       </div>
       <div class="feature sr d1">
-        <div class="feature-num">05 / ANALYTICS</div>
-        <h4>Call insights</h4>
-        <p>See every call, transcript, outcome, and revenue impact in a single dashboard.</p>
-        <div class="feature-link">Explore dashboard <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+        <div class="feature-num">05 / CALENDAR</div>
+        <h4>Appointment calendar</h4>
+        <p>See all your booked appointments in a clean calendar view. Click into any day to see what's scheduled and who's coming.</p>
       </div>
       <div class="feature sr d2">
-        <div class="feature-num">06 / COMPLIANCE</div>
-        <h4>Secure & compliant</h4>
-        <p>SOC 2 Type II, HIPAA-ready, and call recording with full opt-in consent handling.</p>
-        <div class="feature-link">Security overview <svg viewBox="0 0 10 10"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></div>
+        <div class="feature-num">06 / AI AGENT</div>
+        <h4>Fully configurable</h4>
+        <p>Choose your voice, customize the greeting, set qualification questions, upload your pricebook. Test call your AI right from the browser.</p>
       </div>
     </div>
   </div>
@@ -618,50 +605,84 @@ em{font-style:italic;color:#a3a3a3}
 <section class="pricing-section" id="pricing">
   <div class="w">
     <div class="pricing-head sr">
+      <div class="beta-badge">Free during beta</div>
       <div class="section-label">Pricing</div>
-      <h2 class="section-title">Simple, per-minute pricing.</h2>
-      <p class="section-desc">Pay only for the time Diali is actually on the phone. Cancel anytime.</p>
+      <h2 class="section-title">Simple pricing, built for contractors.</h2>
+      <p class="section-desc">We're in early access. Every feature is free while we dial things in. No credit card required.</p>
     </div>
 
     <div class="pricing-grid">
       <div class="tier sr">
         <div class="tier-name">Starter</div>
-        <div class="tier-price"><span class="amt">$99</span><span class="per">/ month</span></div>
-        <p class="tier-desc">For solo operators and new contractors testing the waters.</p>
+        <div class="tier-price"><span class="strike">$99</span><span class="amt">$0</span><span class="per">/ month</span></div>
+        <p class="tier-desc">For solo operators getting started with AI call handling.</p>
         <ul class="tier-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Up to 500 minutes / mo</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>AI receptionist — 24/7</li>
           <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>1 phone number</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Basic calendar sync</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Email & SMS alerts</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Community support</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Call transcripts & recordings</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Lead pipeline</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Dashboard & calendar</li>
         </ul>
-        <a href="/app" class="tier-cta">Start free trial</a>
+        <a href="/app" class="tier-cta">Get started free</a>
       </div>
       <div class="tier featured sr d1">
         <div class="tier-name">Pro · Most popular</div>
-        <div class="tier-price"><span class="amt">$299</span><span class="per">/ month</span></div>
-        <p class="tier-desc">Everything a growing shop needs to fully automate intake and dispatch.</p>
+        <div class="tier-price"><span class="strike" style="color:#737373">$299</span><span class="amt">$0</span><span class="per">/ month</span></div>
+        <p class="tier-desc">Everything a growing shop needs to automate intake and quoting.</p>
         <ul class="tier-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Up to 2,000 minutes / mo</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Unlimited numbers</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>CRM integrations (all)</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Instant quotes from pricebook</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Everything in Starter</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Pricebook & AI quotes</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Job board with checklists</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Custom qualification questions</li>
           <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Priority support</li>
         </ul>
-        <a href="/app" class="tier-cta">Start free trial</a>
+        <a href="/app" class="tier-cta">Get started free</a>
       </div>
       <div class="tier sr d2">
         <div class="tier-name">Enterprise</div>
         <div class="tier-price"><span class="amt">Custom</span></div>
-        <p class="tier-desc">For multi-location operators and franchise networks. Volume pricing.</p>
+        <p class="tier-desc">For multi-location operators and franchise networks.</p>
         <ul class="tier-features">
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Unlimited minutes</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Multi-location routing</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Everything in Pro</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Multiple locations</li>
           <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Custom voice training</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Dedicated CSM</li>
-          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>99.99% uptime SLA</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Dedicated account manager</li>
+          <li><svg viewBox="0 0 14 14"><path d="M3 7l3 3 5-6"/></svg>Volume pricing</li>
         </ul>
-        <a href="/app" class="tier-cta">Talk to sales</a>
+        <a href="/app" class="tier-cta">Talk to us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ COMING SOON ═══════════════ -->
+<section class="roadmap-section">
+  <div class="w">
+    <div class="sr">
+      <div class="section-label">On the roadmap</div>
+      <h2 class="section-title">We're just getting started.</h2>
+      <p class="section-desc">These features are in active development. Early adopters get them first.</p>
+    </div>
+    <div class="roadmap-grid sr d1">
+      <div class="roadmap-item">
+        <div class="roadmap-tag">Soon</div>
+        <h4>SMS confirmations</h4>
+        <p>Automatic text messages to confirm appointments and send reminders.</p>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-tag">Soon</div>
+        <h4>CRM integrations</h4>
+        <p>ServiceTitan, Housecall Pro, Jobber — sync calls and jobs in real-time.</p>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-tag">Q3 2026</div>
+        <h4>Smart dispatch</h4>
+        <p>Auto-assign jobs to technicians based on skill, location, and availability.</p>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-tag">Q3 2026</div>
+        <h4>Review follow-ups</h4>
+        <p>Automatic review requests after job completion. Google and Yelp.</p>
       </div>
     </div>
   </div>
@@ -671,10 +692,9 @@ em{font-style:italic;color:#a3a3a3}
 <section class="cta-section">
   <div class="w">
     <h2 class="sr">Stop missing calls.<br>Start booking jobs.</h2>
-    <p class="sr d1">Set up takes under 10 minutes. Your first 100 minutes are on us.</p>
+    <p class="sr d1">Set up in under 10 minutes. Free during beta — no credit card required.</p>
     <div class="cta-actions sr d2">
-      <a href="/app" class="btn btn-dark btn-lg">Start free trial</a>
-      <a href="#" class="btn btn-light btn-lg">Book a 15-min demo</a>
+      <a href="/app" class="btn btn-dark btn-lg">Get started free</a>
     </div>
   </div>
 </section>
@@ -692,43 +712,32 @@ em{font-style:italic;color:#a3a3a3}
             <rect x="11.3125" y="25.454" width="4" height="4" transform="rotate(-45 11.3125 25.454)" fill="#171717"/>
           </svg>
         </div>
-        <p class="foot-tag">The AI front office for home service contractors. Answer every call. Book every job.</p>
+        <p class="foot-tag">The AI receptionist for home service contractors. Answer every call. Book every job.</p>
       </div>
       <div class="foot-col">
         <h5>Product</h5>
         <ul>
-          <li><a href="#">Features</a></li>
-          <li><a href="#">Integrations</a></li>
-          <li><a href="#">Pricing</a></li>
-          <li><a href="#">Changelog</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="/app">Dashboard</a></li>
         </ul>
       </div>
       <div class="foot-col">
         <h5>Company</h5>
         <ul>
-          <li><a href="#">About</a></li>
-          <li><a href="#">Customers</a></li>
-          <li><a href="#">Careers</a></li>
-          <li><a href="#">Contact</a></li>
+          <li><a href="mailto:hello@usediali.com">Contact</a></li>
         </ul>
       </div>
       <div class="foot-col">
-        <h5>Resources</h5>
+        <h5>Legal</h5>
         <ul>
-          <li><a href="#">Docs</a></li>
-          <li><a href="#">Guides</a></li>
-          <li><a href="#">Security</a></li>
-          <li><a href="#">Status</a></li>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Terms</a></li>
         </ul>
       </div>
     </div>
     <div class="foot-bottom">
-      <p>© 2026 Diali, Inc. All rights reserved.</p>
-      <div class="foot-socials">
-        <a href="#">Twitter</a>
-        <a href="#">LinkedIn</a>
-        <a href="#">GitHub</a>
-      </div>
+      <p>&copy; 2026 Diali, Inc.</p>
     </div>
   </div>
 </footer>
