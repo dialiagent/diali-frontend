@@ -4160,19 +4160,6 @@ const Onboarding=({onDone})=>{
               <p className="text-neutral-400 leading-relaxed max-w-md mx-auto">Your AI receptionist is configured and ready. Here's everything you need to go live.</p>
             </div>
 
-            {/* Setup summary — compact */}
-            <div className="bg-neutral-50 p-5 mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                {[[I.wrench,trade||"General","Trade"],[I.mic,voicePick,"Voice"],
-                  [I.clock,(hours.start||"8:00")+" – "+(hours.end||"17:00"),"Hours"],[I.check,services.length+" services","Coverage"]].map(([ic,v,l])=>(
-                  <div key={l} className="flex items-center gap-3">
-                    <span className="w-8 h-8 bg-white border border-neutral-200 flex items-center justify-center shrink-0"><span className="w-3.5 h-3.5 text-neutral-400">{ic}</span></span>
-                    <div><p className="text-xs text-neutral-400">{l}</p><p className="text-sm text-neutral-900">{v}</p></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* How call forwarding works */}
             <div className="border border-neutral-200 mb-6">
               <div className="px-5 pt-5 pb-4">
@@ -4190,21 +4177,6 @@ const Onboarding=({onDone})=>{
               </div>
               <div className="border-t border-neutral-100 px-5 py-3 bg-neutral-50">
                 <p className="text-xs text-neutral-400">Set up call forwarding from your carrier's settings or dial *72 then your Diali number on most landlines.</p>
-              </div>
-            </div>
-
-            {/* What's next */}
-            <div className="mb-8">
-              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">What's next</p>
-              <div className="space-y-2">
-                {[["Forward your business line to your Diali number","Takes about 2 minutes in your carrier settings"],
-                  ["Make a test call to hear your AI in action","Try it from the Agent page once you're inside"],
-                  ["Customize your pricebook for accurate quotes","Add your real rates so the AI can give ballpark pricing"]].map(([t,s],i)=>(
-                  <div key={i} className="flex items-start gap-3 py-2">
-                    <span className="w-5 h-5 bg-neutral-900 text-white flex items-center justify-center shrink-0 text-xs mt-0.5">{i+1}</span>
-                    <div><p className="text-sm text-neutral-900">{t}</p><p className="text-xs text-neutral-400 mt-0.5">{s}</p></div>
-                  </div>
-                ))}
               </div>
             </div>
 
