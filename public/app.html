@@ -3,7 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Diali</title>
+<script>
+/* Force reload when restored from bfcache (address-bar Enter, back/forward) */
+window.addEventListener("pageshow",function(e){if(e.persisted)window.location.reload();});
+/* Also catch bfcache on older browsers via hidden/visible transitions */
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="visible"&&window.__dialiLastHidden&&(Date.now()-window.__dialiLastHidden>2000))window.location.reload();
+});
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")window.__dialiLastHidden=Date.now();});
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{fontFamily:{sans:['"DM Sans"','system-ui','sans-serif']}}}</script>
