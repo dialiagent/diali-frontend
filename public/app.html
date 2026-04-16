@@ -122,78 +122,13 @@ let C=[];
    - confidence: how confident Diali is about the match (high/medium/low)
    Lines without pbId are manual/custom additions the business would add.
 */
-let quoteItems={
-1:[{desc:"AC diagnostic and inspection",qty:1,rate:95,pbId:"pb-01",matchedBy:"Any service call",matchReason:"\"can you come check it out\"",confidence:"high"},{desc:"Refrigerant R-410A recharge (per lb)",qty:3,rate:85,pbId:"pb-07",matchedBy:"AC not cooling / low refrigerant",matchReason:"\"not cooling\" · \"warm air\"",confidence:"high"},{desc:"Condenser coil cleaning",qty:1,rate:150,pbId:"pb-15",matchedBy:"Efficiency drop",matchReason:"\"not cooling well\"",confidence:"medium"},{desc:"Labor (estimated 2 hours)",qty:2,rate:125,pbId:"pb-04",matchedBy:"Any repair job",matchReason:"\"need it fixed\"",confidence:"high"}],
-2:[{desc:"Furnace safety inspection",qty:1,rate:95,pbId:"pb-01",matchedBy:"Any service call",matchReason:"\"check the furnace\"",confidence:"high"},{desc:"Emergency dispatch fee",qty:1,rate:150,pbId:"pb-02",matchedBy:"Urgent dispatch",matchReason:"urgency=emergency · \"asap\"",confidence:"high"},{desc:"Blower motor bearing replacement",qty:1,rate:185},{desc:"Fan belt replacement",qty:1,rate:45},{desc:"Combustion safety test",qty:1,rate:75},{desc:"Labor (estimated 1.5 hours)",qty:1.5,rate:125,pbId:"pb-04",matchedBy:"Any repair job",matchReason:"\"fix the noise\"",confidence:"high"}],
-3:[{desc:"Spring HVAC maintenance package",qty:1,rate:189,pbId:"pb-13",matchedBy:"Seasonal maintenance request",matchReason:"\"spring tune up\"",confidence:"high"},{desc:"Air filter replacement",qty:1,rate:25,pbId:"pb-11",matchedBy:"Maintenance / tune-up",matchReason:"\"filter\"",confidence:"high"},{desc:"Duct inspection",qty:1,rate:75}],
-4:[{desc:"Emergency service call",qty:1,rate:150,pbId:"pb-02",matchedBy:"Urgent dispatch",matchReason:"urgency=emergency · \"water leak\"",confidence:"high"},{desc:"Leak detection and diagnosis",qty:1,rate:125},{desc:"Condensate drain repair",qty:1,rate:95},{desc:"Water damage assessment",qty:1,rate:75},{desc:"Parts and materials",qty:1,rate:65},{desc:"Labor (estimated 2 hours)",qty:2,rate:125,pbId:"pb-04",matchedBy:"Any repair job",matchReason:"\"fix the leak\"",confidence:"high"}],
-6:[{desc:"HVAC system design — 3,200 sq ft",qty:1,rate:2400},{desc:"Carrier high-efficiency furnace",qty:1,rate:2800,pbId:"pb-18",matchedBy:"Furnace replacement",matchReason:"\"new furnace\"",confidence:"high"},{desc:"Central AC condenser unit",qty:1,rate:1900,pbId:"pb-17",matchedBy:"AC replacement",matchReason:"\"new AC\"",confidence:"high"},{desc:"Ductwork installation",qty:1,rate:1800,pbId:"pb-19",matchedBy:"New ductwork project",matchReason:"\"new build\"",confidence:"medium"},{desc:"Thermostat — Ecobee Smart",qty:1,rate:249,pbId:"pb-12",matchedBy:"Thermostat issue",matchReason:"\"ecobee\"",confidence:"high"},{desc:"Permits and inspection fees",qty:1,rate:350,pbId:"pb-20",matchedBy:"Major install",matchReason:"\"new system\"",confidence:"medium"}],
-7:[{desc:"Whole-home duct cleaning",qty:1,rate:249,pbId:"pb-14",matchedBy:"Dust / air quality concern",matchReason:"\"ductwork cleaning\"",confidence:"high"},{desc:"Vent sanitization treatment",qty:1,rate:75},{desc:"HEPA filter upgrade",qty:1,rate:45}],
-8:[{desc:"Annual heat pump maintenance",qty:1,rate:149,pbId:"pb-13",matchedBy:"Seasonal maintenance request",matchReason:"\"annual service\"",confidence:"high"},{desc:"Air filter replacement",qty:1,rate:22,pbId:"pb-11",matchedBy:"Maintenance / tune-up",matchReason:"\"filter\"",confidence:"high"},{desc:"Coil cleaner treatment",qty:1,rate:35}],
-9:[{desc:"AC diagnostic",qty:1,rate:95,pbId:"pb-01",matchedBy:"Any service call",matchReason:"\"check the AC\"",confidence:"high"},{desc:"Refrigerant R-410A recharge (per lb)",qty:4,rate:85,pbId:"pb-07",matchedBy:"AC not cooling / low refrigerant",matchReason:"\"refrigerant refill\"",confidence:"high"},{desc:"System performance test",qty:1,rate:75},{desc:"Labor (estimated 1.5 hours)",qty:1.5,rate:125,pbId:"pb-04",matchedBy:"Any repair job",matchReason:"\"refill\"",confidence:"medium"}],
-11:[{desc:"50-unit RTU inspection — per unit",qty:50,rate:85},{desc:"Preventive maintenance agreement — annual",qty:1,rate:4500},{desc:"Emergency priority response add-on",qty:1,rate:1200},{desc:"Quarterly filter change program",qty:4,rate:625}],
-12:[{desc:"Warranty assessment and lookup",qty:1,rate:0},{desc:"System diagnostic (covered under warranty)",qty:1,rate:0}]
-};
+let quoteItems={};
 
 /* ── Lead-level draft metadata. Which leads have an AI draft? ── */
-let leadDraftMeta={
-  1:{draftedAt:"7 min ago",conf:94,matchCount:4,totalLines:4},
-  2:{draftedAt:"2 hr ago",conf:91,matchCount:3,totalLines:6},
-  3:{draftedAt:"3 hr ago",conf:88,matchCount:2,totalLines:3},
-  4:{draftedAt:"3 hr ago",conf:96,matchCount:2,totalLines:6},
-  6:{draftedAt:"6 hr ago",conf:82,matchCount:5,totalLines:6},
-  7:{draftedAt:"7 hr ago",conf:89,matchCount:1,totalLines:3},
-  8:{draftedAt:"1 day ago",conf:93,matchCount:2,totalLines:3},
-  9:{draftedAt:"1 day ago",conf:90,matchCount:3,totalLines:4}
-};
+let leadDraftMeta={};
 
-/* ── Pricebook seed (mock data for the Quotes page) ──
-   Each item has:
-   - rate: base unit rate (used when building the actual quote)
-   - rangeLow/rangeHigh: ballpark range Diali gives on the phone
-   - rules: conditional match rules that decide when Diali auto-adds this item to a draft quote
-*/
-const PRICEBOOK_SEED=[
-  {id:"pb-01",cat:"Service",name:"Standard diagnostic",desc:"On-site diagnostic and system inspection",unit:"each",rate:95,rangeLow:95,rangeHigh:150,tax:true,uses:42,updated:"2 days ago",
-    rules:[{id:"r1",name:"Any service call",logic:"any",qty:1,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["diagnose","check","inspect","take a look","whats wrong","not working","look at"]}]}]},
-  {id:"pb-02",cat:"Service",name:"Emergency service call",desc:"After-hours or same-day dispatch fee",unit:"each",rate:150,rangeLow:150,rangeHigh:250,tax:true,uses:18,updated:"1 week ago",
-    rules:[{id:"r1",name:"Urgent dispatch",logic:"any",qty:1,confidence:"high",conditions:[{field:"urgency",op:"equals",value:"emergency"},{field:"transcript",op:"contains_any",value:["emergency","urgent","asap","right now","today","need someone now"]}]}]},
-  {id:"pb-03",cat:"Service",name:"Weekend service call",desc:"Saturday and Sunday dispatch fee",unit:"each",rate:125,rangeLow:125,rangeHigh:200,tax:true,uses:7,updated:"3 weeks ago",
-    rules:[{id:"r1",name:"Weekend dispatch",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["weekend","saturday","sunday"]}]}]},
-  {id:"pb-04",cat:"Labor",name:"Standard labor rate",desc:"Licensed HVAC technician — weekday hours",unit:"hour",rate:125,rangeLow:125,rangeHigh:250,tax:false,uses:89,updated:"5 days ago",
-    rules:[{id:"r1",name:"Any repair job",logic:"any",qty:2,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["repair","fix","replace","broken","not working"]}]}]},
-  {id:"pb-05",cat:"Labor",name:"Apprentice labor rate",desc:"Apprentice technician under supervision",unit:"hour",rate:85,rangeLow:85,rangeHigh:170,tax:false,uses:24,updated:"3 weeks ago",rules:[]},
-  {id:"pb-06",cat:"Labor",name:"Overtime labor rate",desc:"Evenings, weekends, and holidays",unit:"hour",rate:187,rangeLow:187,rangeHigh:374,tax:false,uses:11,updated:"1 week ago",
-    rules:[{id:"r1",name:"After-hours work",logic:"all",qty:2,confidence:"medium",conditions:[{field:"urgency",op:"equals",value:"emergency"},{field:"transcript",op:"contains_any",value:["tonight","after hours","evening","late","weekend"]}]}]},
-  {id:"pb-07",cat:"Parts",name:"R-410A refrigerant",desc:"Per pound refill charge",unit:"lb",rate:85,rangeLow:250,rangeHigh:500,tax:true,uses:56,updated:"4 days ago",
-    rules:[{id:"r1",name:"AC not cooling / low refrigerant",logic:"any",qty:3,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["not cooling","warm air","blowing warm","refrigerant","freon","low coolant","not cold","ice","frozen"]}]}]},
-  {id:"pb-08",cat:"Parts",name:"Capacitor (dual-run)",desc:"Standard 45/5 MFD replacement",unit:"each",rate:85,rangeLow:85,rangeHigh:200,tax:true,uses:34,updated:"1 week ago",
-    rules:[{id:"r1",name:"AC won't start / humming",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["wont start","humming","buzzing","not starting","clicking"]}]}]},
-  {id:"pb-09",cat:"Parts",name:"Contactor relay",desc:"24V universal 30 amp contactor",unit:"each",rate:65,rangeLow:65,rangeHigh:150,tax:true,uses:22,updated:"2 weeks ago",
-    rules:[{id:"r1",name:"Unit won't turn on",logic:"any",qty:1,confidence:"low",conditions:[{field:"transcript",op:"contains_any",value:["contactor","relay","wont turn on","dead","no power"]}]}]},
-  {id:"pb-10",cat:"Parts",name:"Condenser fan motor",desc:"Universal 1/4 HP replacement",unit:"each",rate:220,rangeLow:220,rangeHigh:450,tax:true,uses:9,updated:"1 month ago",
-    rules:[{id:"r1",name:"Fan not spinning",logic:"any",qty:1,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["fan not spinning","fan stopped","fan noise","condenser fan","outdoor unit not running"]}]}]},
-  {id:"pb-11",cat:"Parts",name:"Air filter (standard)",desc:"1-inch pleated MERV 8",unit:"each",rate:25,rangeLow:25,rangeHigh:50,tax:true,uses:67,updated:"3 days ago",
-    rules:[{id:"r1",name:"Maintenance / tune-up",logic:"any",qty:1,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["filter","maintenance","tune up","clean","service"]}]}]},
-  {id:"pb-12",cat:"Parts",name:"Smart thermostat",desc:"Ecobee or Nest — parts only",unit:"each",rate:249,rangeLow:249,rangeHigh:500,tax:true,uses:14,updated:"2 weeks ago",
-    rules:[{id:"r1",name:"Thermostat issue",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["thermostat","nest","ecobee","temperature control","smart thermostat"]}]}]},
-  {id:"pb-13",cat:"Maintenance",name:"Seasonal tune-up",desc:"Full spring or fall HVAC service",unit:"each",rate:189,rangeLow:189,rangeHigh:350,tax:true,uses:31,updated:"5 days ago",
-    rules:[{id:"r1",name:"Seasonal maintenance request",logic:"any",qty:1,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["tune up","seasonal","spring","fall","check up","annual service"]}]}]},
-  {id:"pb-14",cat:"Maintenance",name:"Whole-home duct cleaning",desc:"Duct, register, and vent sanitization",unit:"each",rate:249,rangeLow:249,rangeHigh:500,tax:true,uses:8,updated:"3 weeks ago",
-    rules:[{id:"r1",name:"Dust / air quality concern",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["duct","dust","air quality","dirty vents","allergies","musty"]}]}]},
-  {id:"pb-15",cat:"Maintenance",name:"Coil cleaning",desc:"Condenser or evaporator coil treatment",unit:"each",rate:150,rangeLow:150,rangeHigh:300,tax:true,uses:16,updated:"2 weeks ago",
-    rules:[{id:"r1",name:"Efficiency drop",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["not cooling well","dirty coil","performance","efficiency","higher bills"]}]}]},
-  {id:"pb-16",cat:"Maintenance",name:"Annual maintenance plan",desc:"Two visits per year plus priority service",unit:"year",rate:299,rangeLow:299,rangeHigh:500,tax:true,uses:47,updated:"1 week ago",
-    rules:[{id:"r1",name:"Maintenance agreement ask",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["maintenance plan","annual","twice a year","preventive","service agreement"]}]}]},
-  {id:"pb-17",cat:"Install",name:"AC condenser install",desc:"Standard residential 2-3 ton unit",unit:"each",rate:2400,rangeLow:3500,rangeHigh:7500,tax:true,uses:5,updated:"2 months ago",
-    rules:[{id:"r1",name:"AC replacement",logic:"any",qty:1,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["replace ac","new ac","new unit","old unit","dying","20 years old","15 years old","new system"]}]}]},
-  {id:"pb-18",cat:"Install",name:"Gas furnace install",desc:"High-efficiency 80k+ BTU furnace",unit:"each",rate:2800,rangeLow:4000,rangeHigh:8500,tax:true,uses:4,updated:"2 months ago",
-    rules:[{id:"r1",name:"Furnace replacement",logic:"any",qty:1,confidence:"high",conditions:[{field:"transcript",op:"contains_any",value:["replace furnace","new furnace","old furnace","furnace dying","new heating"]}]}]},
-  {id:"pb-19",cat:"Install",name:"Ductwork — linear ft",desc:"Standard flex or rigid installation",unit:"ft",rate:45,rangeLow:2000,rangeHigh:5000,tax:true,uses:12,updated:"1 month ago",
-    rules:[{id:"r1",name:"New ductwork project",logic:"any",qty:40,confidence:"low",conditions:[{field:"transcript",op:"contains_any",value:["new ducts","ductwork","duct install","new build","addition"]}]}]},
-  {id:"pb-20",cat:"Install",name:"Permits and inspection",desc:"Pass-through permit and inspection fees",unit:"each",rate:350,rangeLow:350,rangeHigh:750,tax:false,uses:8,updated:"1 month ago",
-    rules:[{id:"r1",name:"Major install",logic:"any",qty:1,confidence:"medium",conditions:[{field:"transcript",op:"contains_any",value:["install","replacement","new system","permit"]}]}]}
-];
+/* Pricebook items are loaded from Supabase per-user. No seed data. */
+const PRICEBOOK_SEED=[];
 
 /* ── Shared ── */
 const Av=({n,s=36})=>{const i=(n||"").split(" ").map(x=>x?.[0]||"").join("").slice(0,2);return<div style={{width:s,height:s,minWidth:s,fontSize:s*.36}} className="bg-neutral-900 text-white flex items-center justify-center">{i}</div>};
@@ -360,7 +295,7 @@ const Home=()=>{
   const[selAppt,setSelAppt]=useState(null);
   const[aiPanel,setAiPanel]=useState(false);
   const[checkedActions,setCheckedActions]=useState({});
-  const actions={1:["Confirm tech dispatch","Verify address on file","Prep refrigerant check tools"],2:["Priority: safety check first","Bring CO detector","Call customer 30 min before"],3:["Send available time slots","Upsell filter replacement package"],4:["Bring wet vac and leak detection kit","Check homeowner insurance docs","Priority: prevent water damage"],6:["Prepare new build HVAC quote template","Review blueprints before meeting","Bring commercial rate sheet"],8:["Pull last year's maintenance records","Check warranty status","Bring standard filter set"],11:["Review commercial bid requirements","Prepare 50-unit volume pricing","Bring corporate agreement template"]};
+  const actions={};
   const toggleAction=(cId,idx,val)=>setCheckedActions(p=>({...p,[cId+"_"+idx]:val}));
 
   const urgentItems=C.filter(c=>c.urg==="emergency"||c.urg==="urgent");
@@ -455,33 +390,28 @@ const Home=()=>{
             ))}</div>
           </div>
 
-          {/* Recommended actions */}
-          <div>
+          {/* Recommended actions — dynamically generated from real data */}
+          {followUps.length>0&&<div>
             <SL>Recommended next actions</SL>
             <div className="space-y-2">
-              {["Call Susan Martinez back — she's been waiting since yesterday for a refrigerant refill quote. High risk of losing this lead.",
-                "Finalize the 50-unit volume pricing for Jennifer Lee's commercial bid before Monday's meeting.",
-                "Send Elena Vasquez available time slots for her seasonal maintenance — she's been waiting for a response.",
-                "Follow up with Chris Brown on warranty lookup — quick call could convert to a service visit.",
-                "Review Robert Williams' new build blueprints and prepare the $8,500 HVAC system quote before Friday."
-              ].map((a,i)=>(
+              {followUps.slice(0,5).map((c,i)=>(
                 <div key={i} className="flex items-start gap-3 p-4 border border-neutral-100 hover:border-neutral-300 transition-colors">
-                  <CK text={a} done={!!checkedActions["ai_"+i]} onChange={v=>toggleAction("ai",i,v)}/>
+                  <CK text={`Follow up with ${c.name} — ${c.issue}`} done={!!checkedActions["ai_"+i]} onChange={v=>toggleAction("ai",i,v)}/>
                 </div>
               ))}
             </div>
-          </div>
+          </div>}
         </div>
       </Panel>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-10 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">Good afternoon, Joe</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">Tuesday, March 26 — here's your day at a glance.</p></div><button onClick={()=>setAiPanel(true)} className="bg-neutral-900 text-white px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors w-fit"><span className="w-4 h-4">{I.zap}</span>AI Summary</button></div>
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-10 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">{(()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening"})()}</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} — here's your day at a glance.</p></div><button onClick={()=>setAiPanel(true)} className="bg-neutral-900 text-white px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors w-fit"><span className="w-4 h-4">{I.zap}</span>AI Summary</button></div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-6 md:mb-8">
-        {[["$"+rev.toLocaleString(),"Revenue","+$2.1k this week",[2,4,3,7,5,8,6,10,9,12]],[C.length,"Total Calls","+4 vs yesterday",[2,3,2,4,3,5,2,3,4,3]],[booked,"Jobs Booked",Math.round(booked/C.length*100)+"% rate",[1,2,1,3,2,4,3,4,3,5]],[conf+"%","AI Confidence","+3% this month",[60,65,62,70,68,75,72,78,80,82]]].map(([v,l,s,sp],i)=>(
+        {[["$"+rev.toLocaleString(),"Revenue",C.length+" calls"],[C.length,"Total Calls",booked+" booked"],[booked,"Jobs Booked",(C.length?Math.round(booked/C.length*100):0)+"% rate"],[conf+"%","AI Confidence",C.length+" rated"]].map(([v,l,s],i)=>(
           <div key={i} className="bg-white border border-neutral-100 p-4 md:p-7 hover:border-neutral-300 transition-all duration-300 cursor-default">
-            <div className="flex items-center justify-between mb-3 md:mb-6"><span className="text-xs text-neutral-400 uppercase tracking-widest">{l}</span><span className="hidden md:block"><Spark d={sp} w={80} h={28}/></span></div>
+            <div className="flex items-center justify-between mb-3 md:mb-6"><span className="text-xs text-neutral-400 uppercase tracking-widest">{l}</span></div>
             <p className="text-3xl md:text-5xl text-neutral-900 tracking-tight leading-none">{v}</p>
-            <div className="flex items-center gap-1.5 mt-2 md:mt-4"><span className="w-3 h-3 text-neutral-400">{I.arrowUp}</span><span className="text-xs text-neutral-400">{s}</span></div>
+            <div className="flex items-center gap-1.5 mt-2 md:mt-4"><span className="text-xs text-neutral-400">{s}</span></div>
           </div>
         ))}
       </div>
@@ -668,16 +598,7 @@ const Jobs=()=>{
   const[panel,setPanel]=useState(null);
   const[selJob,setSelJob]=useState(null);
   const[loadedReal,setLoadedReal]=useState(false);
-  const[jobs,setJobs]=useState([
-    {id:1,day:"Today",time:"2:30 PM",cust:"Michael Chen",ph:"(555) 890-1234",addr:"1842 Elm St, Denver CO 80205",issue:"Water leak inspection",tech:"John S.",rev:600,st:"Confirmed",pct:30,checklist:["Inspect water source and identify leak origin","Check condensate drain line for blockage","Test water pressure at furnace connection","Inspect surrounding drywall for water damage","Document findings with photos","Provide written repair estimate"],parts:["Condensate drain fitting","PVC cement and primer","Wet/dry vacuum","Moisture meter"],notes:"Customer reports water pooling near furnace base. Likely condensate line. Bring wet vac. Homeowner has dog — ring doorbell first."},
-    {id:2,day:"Today",time:"5:00 PM",cust:"James Rodriguez",ph:"(555) 456-7890",addr:"567 Oak Ave, Denver CO 80220",issue:"Furnace noise repair",tech:"Mike T.",rev:350,st:"Confirmed",pct:0,checklist:["Run furnace and identify grinding source","Inspect blower motor and bearings","Check belt tension and alignment","Inspect inducer motor","Lubricate all moving parts","Run safety combustion test"],parts:["Blower motor bearings","Fan belt (size B-48)","High-temp lubricant","CO detector"],notes:"Grinding started 2 days ago. Customer worried about safety. Check gas connections first. Unit is 8 years old — may need blower motor replacement."},
-    {id:3,day:"Tomorrow",time:"2:00 PM",cust:"Sarah Mitchell",ph:"(555) 234-5678",addr:"2215 Maple Dr, Denver CO 80210",issue:"AC cooling repair",tech:"John S.",rev:450,st:"Confirmed",pct:0,checklist:["Check refrigerant levels and pressure","Inspect condenser coils for debris","Test compressor amp draw","Verify thermostat calibration","Check air filter condition","Test airflow at all vents"],parts:["Refrigerant R-410A","Air filter (20x25x1)","Contactor relay","Capacitor (45/5 MFD)"],notes:"AC stopped cooling yesterday. Likely low refrigerant or dirty condenser. Customer very responsive and easy to work with."},
-    {id:4,day:"Tomorrow",time:"10:00 AM",cust:"Robert Williams",ph:"(555) 345-6789",addr:"New construction — 890 Pine Rd, Lakewood CO",issue:"New build HVAC quote",tech:"You",rev:8500,st:"Quote",pct:15,checklist:["Review architectural blueprints","Perform Manual J load calculation","Design duct layout","Prepare equipment specification list","Calculate labor and material costs","Draft formal proposal with timeline"],parts:["N/A — quote visit only"],notes:"3,200 sq ft new build. Customer wants high-efficiency system. Bring commercial rate sheet and financing options. Big opportunity."},
-    {id:5,day:"Wednesday",time:"1:00 PM",cust:"David Thompson",ph:"(555) 789-0123",addr:"445 Birch Ln, Denver CO 80230",issue:"Heat pump maintenance",tech:"John S.",rev:180,st:"Confirmed",pct:0,checklist:["Inspect and clean outdoor coil","Check defrost controls","Test reversing valve operation","Measure refrigerant charge","Inspect electrical connections","Replace air filter"],parts:["Air filter (16x25x1)","Coil cleaner","Electrical contact cleaner"],notes:"Annual maintenance visit. Loyal customer — 3rd year in a row. System is Carrier 25HPA6, installed 2019. No known issues."},
-    {id:6,day:"Friday",time:"10:00 AM",cust:"Jennifer Lee",ph:"(555) 456-7890",addr:"1200 Commerce Blvd, Suite 400, Denver CO",issue:"Commercial proposal — 50 units",tech:"Team",rev:12000,st:"Quote",pct:10,checklist:["Walk all 4 floors and document existing equipment","Photograph each rooftop unit model/serial","Assess ductwork condition per floor","Meet with building manager for access schedule","Prepare 50-unit service agreement draft","Calculate volume discount pricing"],parts:["N/A — assessment visit only"],notes:"Major commercial opportunity. 50 rooftop package units across 4-story office building. Jennifer is VP of Operations. Bring corporate agreement template and references."},
-    {id:7,day:"Today",time:"11:00 AM",cust:"Karen Price",ph:"(555) 333-4444",addr:"78 Sunset Dr, Denver CO 80211",issue:"Duct cleaning — whole home",tech:"Mike T.",rev:325,st:"Completed",pct:100,checklist:["Clean supply and return ducts","Sanitize vent covers","Replace all filters","Final airflow test"],parts:["HEPA filter set","Sanitization spray"],notes:"Completed on time. Customer very satisfied. Upsold annual maintenance plan."},
-    {id:8,day:"Yesterday",time:"3:00 PM",cust:"Tom Bradley",ph:"(555) 555-6666",addr:"321 Aspen Way, Lakewood CO",issue:"Thermostat replacement",tech:"John S.",rev:275,st:"Completed",pct:100,checklist:["Remove old thermostat","Install Ecobee Smart thermostat","Configure WiFi and app","Test heating and cooling cycles"],parts:["Ecobee Smart Thermostat","Wire nuts","Wall plate"],notes:"Clean install. Customer walked through app setup. Left 5-star review."}
-  ]);
+  const[jobs,setJobs]=useState([]);
   /* Load real appointments from Supabase. Any authenticated user gets real
      data (even if empty — they'll see the empty state). Demo seed is only
      shown to unauthenticated / demo users. */
@@ -1485,7 +1406,7 @@ const Leads=({profile,setQuoteView})=>{
   const[selLead,setSelLead]=useState(null);
   const[quoteOpen,setQuoteOpen]=useState(null);
   const[quoteSent,setQuoteSent]=useState({});
-  const[quoteMsg,setQuoteMsg]=useState("Hi {name}, thank you for contacting Martinez HVAC. Please find your service quote below. This estimate is valid for 30 days. Feel free to call us with any questions.");
+  const[quoteMsg,setQuoteMsg]=useState("Hi {name}, thank you for contacting us. Please find your service quote below. This estimate is valid for 30 days. Feel free to call us with any questions.");
   /* Freshness bucket from the string "time" field on each lead */
   const freshness=(t="")=>{
     const s=t.toLowerCase();
@@ -2928,18 +2849,9 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
     }catch(e){setBillingError(e.message||"Something went wrong");setPortalBusy(false);}
   };
 
-  /* ── Team state ── */
-  const demoTeam=[
-    {id:1,name:"Joe Martinez",email:"joe@martinezhvac.com",role:"Owner",status:"Active",phone:"(303) 555-0100",hours:"7 AM – 5 PM",days:"Mon – Fri",area:"Denver Metro"},
-    {id:2,name:"John Stokes",email:"john@martinezhvac.com",role:"Technician",status:"Active",phone:"(303) 555-0102",hours:"7 AM – 4 PM",days:"Mon – Fri",area:"Denver, Lakewood, Arvada"},
-    {id:3,name:"Mike Torres",email:"mike@martinezhvac.com",role:"Technician",status:"Active",phone:"(303) 555-0103",hours:"8 AM – 5 PM",days:"Mon – Sat",area:"Aurora, Commerce City"},
-    {id:4,name:"Rachel Kim",email:"rachel@martinezhvac.com",role:"Dispatcher",status:"Active",phone:"(303) 555-0104",hours:"6 AM – 3 PM",days:"Mon – Fri",area:"All areas"},
-    {id:5,name:"Carlos Ruiz",email:"carlos@martinezhvac.com",role:"Admin",status:"Active",phone:"(303) 555-0105",hours:"8 AM – 6 PM",days:"Mon – Fri",area:"All areas"},
-    {id:6,name:"David Park",email:"david@martinezhvac.com",role:"Technician",status:"Pending",phone:"",hours:"7 AM – 4 PM",days:"Mon – Fri",area:"Boulder, Westminster"},
-    {id:7,name:"Lisa Tran",email:"lisa@martinezhvac.com",role:"Technician",status:"Deactivated",phone:"(303) 555-0107",hours:"—",days:"—",area:"Denver South"},
-  ];
-  const emptyTeam=profile?[{id:0,name:profile.full_name||"You",email:profile.email||"",role:"Owner",status:"Active",phone:profile.phone||"",hours:"",days:"",area:profile.service_area||""}]:[];
-  const[team,setTeam]=useState(isDemo?demoTeam:emptyTeam);
+  /* ── Team state — seeded from the user's own profile ── */
+  const initialTeam=profile?[{id:0,name:profile.full_name||"You",email:profile.email||"",role:"Owner",status:"Active",phone:profile.phone||"",hours:"",days:"",area:profile.service_area||""}]:[];
+  const[team,setTeam]=useState(initialTeam);
   const[teamPanel,setTeamPanel]=useState(null);
   const[editMember,setEditMember]=useState(null);
   const[invite,setInvite]=useState({email:"",role:"Technician",hours:"7 AM – 5 PM",days:"Mon – Fri",area:""});
@@ -3171,14 +3083,7 @@ const Calendar=()=>{
   const fmtMonth=d=>d.toLocaleDateString("en-US",{month:"long",year:"numeric"});
   const sameDay=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
 
-  const[bookings,setBookings]=useState([
-    {id:1,name:"Robert Chen",phone:"(555) 123-4567",address:"4521 Elm St, Denver CO",issue:"AC not cooling — blowing warm air, unit is 8 years old",time:"9:00 AM",timeEnd:"10:00 AM",date:day(0),status:"confirmed",urgency:"standard",source:"AI Call"},
-    {id:2,name:"Maria Santos",phone:"(555) 234-5678",address:"1280 Pine Ave, Denver CO",issue:"Furnace making loud banging noise on startup, burning smell",time:"11:00 AM",timeEnd:"12:00 PM",date:day(0),status:"confirmed",urgency:"urgent",source:"AI Call"},
-    {id:3,name:"James Wilson",phone:"(555) 345-6789",address:"789 Oak Dr, Lakewood CO",issue:"Thermostat not responding, replaced batteries already",time:"2:00 PM",timeEnd:"3:00 PM",date:day(1),status:"pending",urgency:"standard",source:"AI Call"},
-    {id:4,name:"Karen Thompson",phone:"(555) 456-7890",address:"332 Maple Ct, Aurora CO",issue:"Duct cleaning — hasn't been done in 5 years, allergies getting worse",time:"10:00 AM",timeEnd:"11:30 AM",date:day(2),status:"confirmed",urgency:"standard",source:"AI Call"},
-    {id:5,name:"David Park",phone:"(555) 567-8901",address:"1456 Birch Ln, Denver CO",issue:"No heat — furnace won't ignite, gas smell near unit",time:"8:00 AM",timeEnd:"9:00 AM",date:day(1),status:"pending",urgency:"emergency",source:"AI Call"},
-    {id:6,name:"Lisa Martinez",phone:"(555) 678-9012",address:"905 Cedar St, Arvada CO",issue:"AC maintenance plan — annual tune-up, last service 14 months ago",time:"3:00 PM",timeEnd:"4:00 PM",date:day(3),status:"confirmed",urgency:"standard",source:"Phone"},
-  ]);
+  const[bookings,setBookings]=useState([]);
   /* Load real appointments — same source of truth as the Jobs page.
      Authenticated users always get real data (even if empty). */
   React.useEffect(()=>{
@@ -3807,10 +3712,10 @@ const Auth=({onLogin,onSignup})=>{
 
           <div className="space-y-4">
             {mode==="signup"&&<>
-              <div><label className="text-xs text-neutral-400 mb-1.5 block">Full name</label><input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKey} type="text" placeholder="Joe Martinez" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
-              <div><label className="text-xs text-neutral-400 mb-1.5 block">Business name</label><input value={biz} onChange={e=>setBiz(e.target.value)} onKeyDown={handleKey} type="text" placeholder="Martinez HVAC" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
+              <div><label className="text-xs text-neutral-400 mb-1.5 block">Full name</label><input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKey} type="text" placeholder="Your full name" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
+              <div><label className="text-xs text-neutral-400 mb-1.5 block">Business name</label><input value={biz} onChange={e=>setBiz(e.target.value)} onKeyDown={handleKey} type="text" placeholder="Your Business Name" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
             </>}
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Email</label><input value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={handleKey} type="email" placeholder="joe@martinezhvac.com" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
+            <div><label className="text-xs text-neutral-400 mb-1.5 block">Email</label><input value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={handleKey} type="email" placeholder="you@company.com" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
             <div><label className="text-xs text-neutral-400 mb-1.5 block">Password</label><input value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={handleKey} type="password" placeholder={mode==="login"?"Enter your password":"Create a password (6+ chars)"} className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
             {mode==="login"&&<div className="flex justify-end"><button className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">Forgot password?</button></div>}
           </div>
