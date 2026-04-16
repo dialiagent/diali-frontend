@@ -355,7 +355,7 @@ const HomeCallDetail=({c,actions,onClose,checkedActions,toggleAction})=>{
 const Home=()=>{
   const booked=C.filter(c=>c.status==="booked").length;
   const rev=C.reduce((a,c)=>a+c.rev,0);
-  const conf=Math.round(C.reduce((a,c)=>a+c.conf,0)/C.length);
+  const conf=C.length?Math.round(C.reduce((a,c)=>a+c.conf,0)/C.length):0;
   const[selCall,setSelCall]=useState(null);
   const[selAppt,setSelAppt]=useState(null);
   const[aiPanel,setAiPanel]=useState(false);
@@ -367,7 +367,7 @@ const Home=()=>{
   const followUps=C.filter(c=>c.status==="follow-up");
   const todayJobs=C.filter(c=>c.booked);
   const pipeline=C.reduce((a,c)=>a+c.rev,0);
-  const avgConf=Math.round(C.reduce((a,c)=>a+c.conf,0)/C.length);
+  const avgConf=C.length?Math.round(C.reduce((a,c)=>a+c.conf,0)/C.length):0;
 
   return(
     <div className="fu">
@@ -678,8 +678,9 @@ const Jobs=()=>{
     {id:7,day:"Today",time:"11:00 AM",cust:"Karen Price",ph:"(555) 333-4444",addr:"78 Sunset Dr, Denver CO 80211",issue:"Duct cleaning — whole home",tech:"Mike T.",rev:325,st:"Completed",pct:100,checklist:["Clean supply and return ducts","Sanitize vent covers","Replace all filters","Final airflow test"],parts:["HEPA filter set","Sanitization spray"],notes:"Completed on time. Customer very satisfied. Upsold annual maintenance plan."},
     {id:8,day:"Yesterday",time:"3:00 PM",cust:"Tom Bradley",ph:"(555) 555-6666",addr:"321 Aspen Way, Lakewood CO",issue:"Thermostat replacement",tech:"John S.",rev:275,st:"Completed",pct:100,checklist:["Remove old thermostat","Install Ecobee Smart thermostat","Configure WiFi and app","Test heating and cooling cycles"],parts:["Ecobee Smart Thermostat","Wire nuts","Wall plate"],notes:"Clean install. Customer walked through app setup. Left 5-star review."}
   ]);
-  /* Load real appointments from Supabase. If any exist, replace the demo seed.
-     Demo Joe-Martinez user keeps the seed since he has no real bookings. */
+  /* Load real appointments from Supabase. Any authenticated user gets real
+     data (even if empty — they'll see the empty state). Demo seed is only
+     shown to unauthenticated / demo users. */
   React.useEffect(()=>{
     let stop=false;
     (async()=>{
@@ -693,9 +694,12 @@ const Jobs=()=>{
           .eq("user_id",uid)
           .order("starts_at",{ascending:false})
           .limit(200);
-        if(stop||error||!data||data.length===0)return;
-        setJobs(data.map(apptToJob));
+        if(stop||error)return;
+        /* Always mark real for authenticated users — even with 0 rows.
+           This ensures persistJob / create-job / pricebook writes go to Supabase. */
         setLoadedReal(true);
+        if(data&&data.length>0){setJobs(data.map(apptToJob));}
+        else{setJobs([]);}
       }catch(e){console.warn("jobs load:",e.message);}
     })();
     return()=>{stop=true;};
@@ -842,12 +846,15 @@ const Jobs=()=>{
     setSelJob(prev=>({...prev,tech:t}));
     persistJob(selJob.id,{tech:t});
   };
-  /* Persist a single field change back to the appointments table — only for
-     real (loaded) jobs; demo seed edits stay local. */
+  /* Persist a single field change back to the appointments table.
+     Always attempts the write for authenticated users — even if they have 0
+     existing appointments (loadedReal covers that now). */
   const persistJob=async(id,patch)=>{
-    if(!loadedReal)return;
-    try{await window.supabase.from("appointments").update(patch).eq("id",id);}
-    catch(e){console.warn("job persist:",e.message);}
+    try{
+      const sess=await window.supabase.auth.getSession();
+      if(!sess?.data?.session?.user?.id)return;
+      await window.supabase.from("appointments").update(patch).eq("id",id);
+    }catch(e){console.warn("job persist:",e.message);}
   };
   /* Transition a job to the next pipeline stage.
      Updates both local state and the appointments row. */
@@ -994,7 +1001,7 @@ const Jobs=()=>{
               try{
                 const sess=await window.supabase.auth.getSession();
                 const uid=sess?.data?.session?.user?.id;
-                if(uid&&loadedReal!==false){
+                if(uid){
                   /* Create the lead first */
                   const{data:lead,error:le}=await window.supabase.from("leads").insert({
                     user_id:uid,
@@ -1861,8 +1868,8 @@ const Quotes=()=>{
   const[cat,setCat]=useState("All");
   const[draft,setDraft]=useState(null);
 
-  /* Load user's real pricebook from Supabase on mount. If they have items,
-     swap the demo seed for their real ones. */
+  /* Load user's real pricebook from Supabase on mount. Authenticated users
+     always get real data (even if empty). Demo seed only for unauthed. */
   React.useEffect(()=>{
     let stop=false;
     (async()=>{
@@ -1877,10 +1884,9 @@ const Quotes=()=>{
           .eq("active",true)
           .order("created_at",{ascending:true});
         if(stop||error)return;
-        if(data&&data.length>0){
-          setItems(data.map(dbToItem));
-          setLoadedReal(true);
-        }
+        setLoadedReal(true);
+        if(data&&data.length>0){setItems(data.map(dbToItem));}
+        else{setItems([]);}
       }catch(e){console.warn("pricebook load:",e.message);}
     })();
     return()=>{stop=true;};
@@ -1915,16 +1921,12 @@ const Quotes=()=>{
       setEditing(null);setAdding(false);return;
     }
     try{
-      if(editing&&loadedReal){
+      if(editing){
         const{data}=await window.supabase.from("pricebook_items").update(itemToDb(draft,uid)).eq("id",editing.id).select().single();
         if(data)setItems(p=>p.map(i=>i.id===editing.id?dbToItem(data):i));
       }else{
-        /* First save for a demo user promotes their pricebook from seed → real */
         const{data}=await window.supabase.from("pricebook_items").insert(itemToDb(draft,uid)).select().single();
-        if(data){
-          if(!loadedReal){setItems([dbToItem(data)]);setLoadedReal(true);}
-          else setItems(p=>[...p,dbToItem(data)]);
-        }
+        if(data)setItems(p=>[...p,dbToItem(data)]);
       }
     }catch(e){
       console.error("pricebook save:",e.message);
@@ -1938,9 +1940,7 @@ const Quotes=()=>{
     if(!editing)return;
     const id=editing.id;
     try{
-      if(loadedReal){
-        await window.supabase.from("pricebook_items").update({active:false}).eq("id",id);
-      }
+      await window.supabase.from("pricebook_items").update({active:false}).eq("id",id);
       setItems(p=>p.filter(i=>i.id!==id));
     }catch(e){
       console.error("pricebook delete:",e.message);
@@ -3179,7 +3179,8 @@ const Calendar=()=>{
     {id:5,name:"David Park",phone:"(555) 567-8901",address:"1456 Birch Ln, Denver CO",issue:"No heat — furnace won't ignite, gas smell near unit",time:"8:00 AM",timeEnd:"9:00 AM",date:day(1),status:"pending",urgency:"emergency",source:"AI Call"},
     {id:6,name:"Lisa Martinez",phone:"(555) 678-9012",address:"905 Cedar St, Arvada CO",issue:"AC maintenance plan — annual tune-up, last service 14 months ago",time:"3:00 PM",timeEnd:"4:00 PM",date:day(3),status:"confirmed",urgency:"standard",source:"Phone"},
   ]);
-  /* Load real appointments — same source of truth as the Jobs page */
+  /* Load real appointments — same source of truth as the Jobs page.
+     Authenticated users always get real data (even if empty). */
   React.useEffect(()=>{
     let stop=false;
     (async()=>{
@@ -3193,8 +3194,9 @@ const Calendar=()=>{
           .eq("user_id",uid)
           .order("starts_at",{ascending:true})
           .limit(200);
-        if(stop||error||!data||data.length===0)return;
-        setBookings(data.map(apptToBooking));
+        if(stop||error)return;
+        if(data&&data.length>0){setBookings(data.map(apptToBooking));}
+        else{setBookings([]);}
       }catch(e){console.warn("calendar load:",e.message);}
     })();
     return()=>{stop=true;};
@@ -3735,11 +3737,14 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
               mounts the new one fresh, re-running its useEffects so data refetches.
               Trade-off: in-page state (selected detail, scroll position, partially
               filled forms) is lost on navigation. That matches how most apps work. */}
+          {/* Jobs, Calendar, Quotes load their own data from Supabase independently.
+              Always render the real component — they handle empty states internally.
+              Calls + Home still use the global C array (populated by dialiLoader). */}
           {pg==="home"&&(C.length>0?<Home/>:<HomeEmpty/>)}
           {pg==="calls"&&<div className="h-full">{C.length>0?<Calls/>:<CallsEmpty/>}</div>}
-          {pg==="calendar"&&<div className="h-full">{C.length>0?<Calendar/>:<CalendarEmpty/>}</div>}
-          {pg==="jobs"&&(C.length>0?<Jobs/>:<JobsEmpty/>)}
-          {pg==="quotes"&&(C.length>0?<Quotes/>:<QuotesEmpty/>)}
+          {pg==="calendar"&&<div className="h-full"><Calendar/></div>}
+          {pg==="jobs"&&<Jobs/>}
+          {pg==="quotes"&&<Quotes/>}
           {pg==="leads"&&(C.length>0?<Leads profile={profile} setQuoteView={setQuoteView}/>:<LeadsEmpty/>)}
           {pg==="agent"&&<div className="h-full"><Agent vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} agentCfg={agentCfg}/></div>}
           {pg==="settings"&&<div className="h-full"><Settings vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={onLogout} profile={profile} onProfileSave={onProfileSave} isDemo={isDemo} curPlan={curPlan} setCurPlan={setCurPlan} curPlanData={curPlanData} requirePlan={requirePlan} sub={sub}/></div>}
@@ -4412,11 +4417,16 @@ const App=()=>{
     return null;
   };
 
-  /* Handle onboarding done — save profile + initial agent config */
+  /* Handle onboarding done — save profile + initial agent config.
+     Also pull business_name from the signup metadata to persist it. */
   const handleOnboardDone=async(obData)=>{
     if(userId&&window.supabase){
       try{
-        await window.supabase.from('profiles').upsert({id:userId,trade:obData.trade||'',service_area:obData.area||'',phone:obData.phone||'',team_size:obData.teamSize||'',services:obData.services||[]});
+        /* Pull business_name + full_name from the auth user metadata (set during signup) */
+        const{data:{user:authUser}}=await window.supabase.auth.getUser();
+        const metaBiz=authUser?.user_metadata?.business_name||"";
+        const metaName=authUser?.user_metadata?.full_name||"";
+        await window.supabase.from('profiles').upsert({id:userId,trade:obData.trade||'',service_area:obData.area||'',phone:obData.phone||'',team_size:obData.teamSize||'',services:obData.services||[],business_name:metaBiz,full_name:metaName,email:authUser?.email||''});
         await window.supabase.from('settings').upsert({id:userId,voice_id:obData.voiceId||'O7LV5fxosQChiBE7l6Wz',voice_name:obData.voiceName||'Kim',greeting:obData.greeting||"Hi, thanks for calling! I can help you with scheduling a service appointment or answer any questions. What's going on?"});
       }catch(e){console.error('Onboard save error:',e);}
     }
@@ -4479,8 +4489,15 @@ async function dialiLoader(){
     const calls = cr.data||[], leads = lr.data||[];
     console.log("Diali loader: got " + calls.length + " calls, " + leads.length + " leads");
 
-    /* No data — C is already empty, nothing to do */
-    if (!calls.length && !leads.length) { console.log("Diali loader: no data yet"); return; }
+    /* No data — ensure C is empty (clear any stale demo data) and re-render */
+    if (!calls.length && !leads.length) {
+      console.log("Diali loader: no data yet");
+      C = [];
+      const root = document.getElementById("root");
+      ReactDOM.unmountComponentAtNode(root);
+      ReactDOM.render(React.createElement(App), root);
+      return;
+    }
 
     const newC = [];
     calls.forEach((call,i) => {
