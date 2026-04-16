@@ -3739,6 +3739,154 @@ const Auth=({onLogin,onSignup})=>{
   );
 };
 
+/* ══════════════════ VERIFY OTP ══════════════════ */
+const VerifyOtp=({email,onVerify,onResend,onBack})=>{
+  const[code,setCode]=useState(["","","","","",""]);
+  const[loading,setLoading]=useState(false);
+  const[error,setError]=useState("");
+  const[resent,setResent]=useState(false);
+  const[cooldown,setCooldown]=useState(0);
+  const refs=[React.useRef(),React.useRef(),React.useRef(),React.useRef(),React.useRef(),React.useRef()];
+
+  /* Auto-focus first input on mount */
+  React.useEffect(()=>{refs[0].current?.focus();},[]);
+
+  /* Cooldown timer for resend */
+  React.useEffect(()=>{if(cooldown<=0)return;const t=setTimeout(()=>setCooldown(c=>c-1),1000);return()=>clearTimeout(t);},[cooldown]);
+
+  const handleChange=(idx,val)=>{
+    /* Only digits */
+    const d=val.replace(/\D/g,"");
+    if(!d&&!val){
+      /* Backspace on empty — move back */
+      const next=[...code];next[idx]="";setCode(next);
+      if(idx>0)refs[idx-1].current?.focus();
+      return;
+    }
+    if(d.length===1){
+      const next=[...code];next[idx]=d;setCode(next);
+      if(idx<5)refs[idx+1].current?.focus();
+      /* Auto-submit when all 6 digits filled */
+      if(idx===5||next.every(c=>c)){
+        const full=next.join("");
+        if(full.length===6)doVerify(full);
+      }
+    }
+    /* Handle paste of full code */
+    if(d.length>=6){
+      const digits=d.slice(0,6).split("");
+      setCode(digits);
+      refs[5].current?.focus();
+      doVerify(digits.join(""));
+    }
+  };
+
+  const handleKeyDown=(idx,e)=>{
+    if(e.key==="Backspace"&&!code[idx]&&idx>0){
+      const next=[...code];next[idx-1]="";setCode(next);
+      refs[idx-1].current?.focus();
+    }
+    if(e.key==="Enter"){
+      const full=code.join("");
+      if(full.length===6)doVerify(full);
+    }
+  };
+
+  const handlePaste=(e)=>{
+    e.preventDefault();
+    const paste=e.clipboardData.getData("text").replace(/\D/g,"").slice(0,6);
+    if(paste.length>=1){
+      const digits=paste.padEnd(6," ").slice(0,6).split("").map(c=>c===" "?"":c);
+      setCode(digits);
+      const nextEmpty=digits.findIndex(c=>!c);
+      refs[nextEmpty>=0?nextEmpty:5].current?.focus();
+      if(paste.length===6)doVerify(paste);
+    }
+  };
+
+  const doVerify=async(token)=>{
+    setError("");setLoading(true);
+    const err=await onVerify(token);
+    if(err){setError(err);setCode(["","","","","",""]);refs[0].current?.focus();}
+    setLoading(false);
+  };
+
+  const doResend=async()=>{
+    if(cooldown>0)return;
+    setError("");
+    const err=await onResend();
+    if(err){setError(err);}
+    else{setResent(true);setCooldown(30);setTimeout(()=>setResent(false),3000);}
+  };
+
+  return(
+    <div className="min-h-screen bg-neutral-50 flex">
+      {/* Left — branding (same as Auth) */}
+      <div className="hidden lg:flex w-[480px] bg-neutral-900 flex-col justify-between p-12 shrink-0">
+        <div>
+          <div className="mb-16"><Logo s={44} light/></div>
+          <p className="text-4xl text-white tracking-tight leading-tight mb-6">Your AI front office for home services</p>
+          <p className="text-neutral-500 leading-relaxed">Diali answers every call, books jobs, qualifies leads, and sends quotes — so you never miss revenue again.</p>
+        </div>
+        <div className="space-y-8">
+          <div className="h-px bg-neutral-800"/>
+          {[["2,400+","Contractors use Diali"],["$12M+","Revenue booked by AI"],["98%","Call answer rate"]].map(([v,l])=>(
+            <div key={l} className="flex items-center justify-between"><span className="text-xs text-neutral-500 uppercase tracking-widest">{l}</span><span className="text-2xl text-white tabular-nums tracking-tight">{v}</span></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right — OTP form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-[400px] fu">
+          <div className="lg:hidden mb-10"><Logo s={40}/></div>
+
+          {/* Lock icon */}
+          <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center mb-8">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="0"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+
+          <p className="text-3xl text-neutral-900 tracking-tight mb-2">Check your email</p>
+          <p className="text-neutral-400 mb-2">We sent a 6-digit verification code to</p>
+          <p className="text-neutral-900 text-sm font-medium mb-8">{email}</p>
+
+          {error&&<div className="bg-neutral-100 border border-neutral-200 px-4 py-3 mb-6"><p className="text-sm text-neutral-700">{error}</p></div>}
+
+          {/* 6-digit input boxes */}
+          <div className="flex gap-3 mb-8" onPaste={handlePaste}>
+            {code.map((digit,i)=>(
+              <input key={i} ref={refs[i]} type="text" inputMode="numeric" maxLength={1} value={digit}
+                onChange={e=>handleChange(i,e.target.value)}
+                onKeyDown={e=>handleKeyDown(i,e)}
+                className={"w-full aspect-square text-center text-2xl text-neutral-900 border transition-colors outline-none "+(digit?"border-neutral-900":"border-neutral-200 hover:border-neutral-300")}
+                style={{fontSize:"1.5rem"}}
+                disabled={loading}
+              />
+            ))}
+          </div>
+
+          <button onClick={()=>{const full=code.join("");if(full.length===6)doVerify(full);}} disabled={loading||code.join("").length<6}
+            className={"w-full py-3.5 text-sm transition-colors flex items-center justify-center gap-2 "+(loading||code.join("").length<6?"bg-neutral-300 text-neutral-500 cursor-not-allowed":"bg-neutral-900 text-white hover:bg-black")}>
+            {loading&&<div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>}
+            {loading?"Verifying...":"Verify & continue"}
+          </button>
+
+          <div className="flex items-center justify-between mt-6">
+            <button onClick={onBack} className="text-sm text-neutral-400 hover:text-neutral-900 transition-colors flex items-center gap-1.5">
+              <span className="w-4 h-4">{I.arrowL}</span>Back
+            </button>
+            <button onClick={doResend} disabled={cooldown>0} className={"text-sm transition-colors "+(cooldown>0?"text-neutral-300 cursor-not-allowed":"text-neutral-400 hover:text-neutral-900")}>
+              {resent?"Code sent!":cooldown>0?`Resend in ${cooldown}s`:"Resend code"}
+            </button>
+          </div>
+
+          <p className="text-xs text-neutral-300 text-center mt-10">Didn't get the email? Check your spam folder or click resend.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ══════════════════ ONBOARDING ══════════════════ */
 const Onboarding=({onDone})=>{
   const[step,setStep]=useState(0);
@@ -4237,6 +4385,8 @@ const App=()=>{
   const[agentCfg,setAgentCfg]=useState(null);
   const[profile,setProfile]=useState(null);
   const[sbReady,setSbReady]=useState(!!window.supabase);
+  const[pendingEmail,setPendingEmail]=useState("");
+  const[pendingPass,setPendingPass]=useState("");
 
   /* Wait for Supabase SDK to load */
   React.useEffect(()=>{
@@ -4311,13 +4461,53 @@ const App=()=>{
     return null;
   };
 
-  /* Handle signup */
+  /* Handle signup — creates user + sends OTP via backend */
   const handleSignup=async(email,password,name,biz)=>{
     const sb=window.supabase;if(!sb)return"Supabase not loaded yet. Try again.";
     const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,business_name:biz}}});
     if(error)return error.message;
-    if(data.user){setUserId(data.user.id);setIsNew(true);setAuth("onboard");}
+    /* Store credentials temporarily for post-verification login */
+    setPendingEmail(email);
+    setPendingPass(password);
+    /* Send OTP via backend */
+    try{
+      const resp=await fetch(BACKEND_URL+"/api/auth/send-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+      const body=await resp.json();
+      if(!resp.ok)return body.error||"Failed to send verification code.";
+    }catch(e){console.error("send-otp error:",e);}
+    setAuth("verify");
     return null;
+  };
+
+  /* Verify OTP code via backend, then sign in */
+  const handleVerifyOtp=async(code)=>{
+    try{
+      const resp=await fetch(BACKEND_URL+"/api/auth/verify-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:pendingEmail,code})});
+      const body=await resp.json();
+      if(!resp.ok)return body.error||"Verification failed.";
+    }catch(e){return"Network error. Please try again.";}
+    /* Code verified — now sign in with the stored credentials */
+    const sb=window.supabase;if(!sb)return"Supabase not loaded yet.";
+    const{data,error}=await sb.auth.signInWithPassword({email:pendingEmail,password:pendingPass});
+    if(error)return error.message;
+    if(data.user){
+      setUserId(data.user.id);
+      setIsNew(true);
+      const prof=await loadUserData(data.user.id);
+      setPendingPass("");/* Clear stored password */
+      setAuth("onboard");
+    }
+    return null;
+  };
+
+  /* Resend OTP via backend */
+  const handleResendOtp=async()=>{
+    try{
+      const resp=await fetch(BACKEND_URL+"/api/auth/send-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:pendingEmail})});
+      const body=await resp.json();
+      if(!resp.ok)return body.error||"Failed to resend code.";
+      return null;
+    }catch(e){return"Network error.";}
   };
 
   /* Handle onboarding done — save profile + initial agent config.
@@ -4351,6 +4541,7 @@ const App=()=>{
 
   if(auth==="loading")return<div className="min-h-screen flex items-center justify-center bg-neutral-50"><div className="text-center fu"><Logo s={48}/><p className="text-sm text-neutral-300 mt-6">Loading...</p></div></div>;
   if(auth==="auth")return<Auth onLogin={handleLogin} onSignup={handleSignup}/>;
+  if(auth==="verify")return<VerifyOtp email={pendingEmail} onVerify={handleVerifyOtp} onResend={handleResendOtp} onBack={()=>setAuth("auth")}/>;
   if(auth==="onboard")return<Onboarding onDone={handleOnboardDone}/>;
   return<Layout pg={pg} go={go} isNew={isNew} isDemo={isDemo} vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={handleLogout} agentCfg={agentCfg} profile={profile} onProfileSave={handleProfileSave}/>;
 };
