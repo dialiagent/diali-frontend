@@ -338,9 +338,7 @@ const Home=()=>{
           <div className="bg-neutral-900 p-6">
             <div className="flex items-center gap-2 mb-4"><span className="w-4 h-4 text-neutral-500">{I.zap}</span><p className="text-xs text-neutral-500 uppercase tracking-widest">Top priorities today</p></div>
             <div className="space-y-3">
-              <div className="flex items-start gap-3"><span className="text-white text-sm">1.</span><div><p className="text-white text-sm">James Rodriguez — emergency furnace noise repair at 5 PM. Mike T. dispatched. Verify he has CO detector and replacement bearings.</p></div></div>
-              <div className="flex items-start gap-3"><span className="text-white text-sm">2.</span><div><p className="text-white text-sm">Michael Chen — active water leak at 2:30 PM. Emergency dispatch confirmed. Bring wet vac and leak detection kit. Check if homeowner has filed insurance.</p></div></div>
-              <div className="flex items-start gap-3"><span className="text-white text-sm">3.</span><div><p className="text-white text-sm">Jennifer Lee commercial bid — 50-unit service agreement worth $12K. Meeting Monday 9 AM. Volume pricing needs to be finalized before then.</p></div></div>
+              {(()=>{const pri=[...C].filter(c=>c.urg==="emergency"||c.urg==="urgent"||c.status==="booked").sort((a,b)=>(a.urg==="emergency"?0:a.urg==="urgent"?1:2)-(b.urg==="emergency"?0:b.urg==="urgent"?1:2)).slice(0,3);return pri.length?pri.map((c,i)=>(<div key={i} className="flex items-start gap-3"><span className="text-white text-sm">{i+1}.</span><div><p className="text-white text-sm">{c.name} — {c.issue}{c.booked?" ("+c.booked+")":""}{c.urg!=="normal"?" ["+c.urg+"]":""}</p></div></div>)):<div className="text-neutral-400 text-sm">No urgent priorities right now. Great job staying on top of things!</div>})()}
             </div>
           </div>
 
