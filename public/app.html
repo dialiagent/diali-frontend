@@ -581,7 +581,7 @@ const Calls=()=>{
                 )}
               </div>
             </Sec>
-            <Sec open={showSms} onToggle={()=>setShowSms(!showSms)} title="SMS" count={sel.sms?.length||0}><div className="p-5 space-y-3">{sel.sms?.map((m,i)=>(<div key={i} className={m.f==="sys"?"mr-16":"ml-16"}><div className={"p-4 text-sm "+(m.f==="sys"?"bg-neutral-100 text-neutral-700":"bg-neutral-50 text-neutral-700 border border-neutral-200")}>{m.t}</div><p className="text-xs text-neutral-300 mt-1.5 px-1">{m.at}</p></div>))}{(sel.sms?.length||0)===0&&<p className="text-sm text-neutral-300 text-center py-6">No messages yet</p>}<div className="flex gap-2 mt-2"><input value={smsText} onChange={e=>setSmsText(e.target.value)} placeholder="Type a message..." className="flex-1 px-4 py-2.5 border border-neutral-200 text-sm"/><button onClick={()=>{if(smsText.trim()&&sel){const newSms={f:"user",t:smsText.trim(),at:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})};setCalls(p=>p.map(c=>c.id===sel.id?{...c,sms:[...c.sms,newSms]}:c));setSel(prev=>({...prev,sms:[...prev.sms,newSms]}));setSmsText('');}}} className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-4 h-4">{I.send}</span></button></div></div></Sec>
+            <Sec open={showSms} onToggle={()=>setShowSms(!showSms)} title="SMS" count={sel.sms?.length||0}><div className="p-5 space-y-3">{sel.sms?.map((m,i)=>(<div key={i} className={m.f==="sys"?"mr-16":"ml-16"}><div className={"p-4 text-sm "+(m.f==="sys"?"bg-neutral-100 text-neutral-700":"bg-neutral-50 text-neutral-700 border border-neutral-200")}>{m.t}</div><p className="text-xs text-neutral-300 mt-1.5 px-1">{m.at}</p></div>))}{(sel.sms?.length||0)===0&&<p className="text-sm text-neutral-300 text-center py-6">No messages yet</p>}<div className="flex gap-2 mt-2"><input value={smsText} onChange={e=>setSmsText(e.target.value)} placeholder="Type a message..." className="flex-1 px-4 py-2.5 border border-neutral-200 text-sm"/><button onClick={()=>{if(smsText.trim()&&sel){const newSms={f:"user",t:smsText.trim(),at:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})};setCalls(p=>p.map(c=>c.id===sel.id?{...c,sms:[...(c.sms||[]),newSms]}:c));setSel(prev=>({...prev,sms:[...(prev.sms||[]),newSms]}));setSmsText('');}}} className="w-10 h-10 bg-neutral-900 text-white flex items-center justify-center shrink-0 hover:bg-black transition-colors"><span className="w-4 h-4">{I.send}</span></button></div></div></Sec>
             <Sec open={showNotes} onToggle={()=>setShowNotes(!showNotes)} title="Notes"><div className="p-5"><p className="text-sm text-neutral-600 bg-neutral-50 p-4 mb-4 leading-relaxed">{sel.notes}</p><textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Add a note..." rows={2} className="w-full border border-neutral-200 p-4 text-sm mb-3"/><button onClick={()=>{if(noteText.trim()&&sel){const updated=sel.notes&&sel.notes!=="—"?sel.notes+"\n"+noteText.trim():noteText.trim();setCalls(p=>p.map(c=>c.id===sel.id?{...c,notes:updated}:c));setSel(prev=>({...prev,notes:updated}));setNoteText("");}}} className="text-sm px-5 py-2.5 bg-neutral-900 text-white hover:bg-black transition-colors">Save note</button></div></Sec>
             <div className="flex gap-3 pt-2"><button className="flex-1 bg-neutral-900 text-white py-3.5 text-sm hover:bg-black transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.phone}</span>Call back</button><button className="flex-1 border border-neutral-200 text-neutral-600 py-3.5 text-sm hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2"><span className="w-4 h-4">{I.msg}</span>Send SMS</button></div>
           </div>
@@ -893,7 +893,7 @@ const Jobs=()=>{
                 <option>Mike T.</option>
               </SE>
             </FF>
-            <FF label="Revenue estimate" hint="What you expect to bill"><TI type="number" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:e.target.value})} placeholder="0"/></FF>
+            <FF label="Revenue estimate" hint="What you expect to bill"><TI type="number" value={newJob.rev} onChange={e=>setNewJob({...newJob,rev:parseFloat(e.target.value)||0})} placeholder="0"/></FF>
           </div>
           <FF label="Source" hint="How did this customer find you?">
             <SE value={newJob.source} onChange={e=>setNewJob({...newJob,source:e.target.value})}>
@@ -1600,7 +1600,7 @@ const Leads=({profile,setQuoteView})=>{
                       </SE>
                     </FF>
                     <FF label="Valid for">
-                      <SE value={validDays} onChange={e=>setValidDays(e.target.value)}>
+                      <SE value={validDays} onChange={e=>setValidDays(parseInt(e.target.value)||30)}>
                         <option value={15}>15 days</option>
                         <option value={30}>30 days</option>
                         <option value={45}>45 days</option>
@@ -2367,7 +2367,7 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
     if(audioRef.current){audioRef.current.pause();audioRef.current=null;}
     if(playingVoice===vId){setPlayingVoice(null);return;}
     setLoadingVoice(vId);setPlayingVoice(null);
-    fetch("/api/voice-preview?voiceId="+encodeURIComponent(vId))
+    fetch(BACKEND_URL+"/api/voice-preview?voiceId="+encodeURIComponent(vId))
     .then(r=>{if(!r.ok)return r.json().then(d=>{throw new Error(d.error||"Preview failed")});return r.blob();}).then(blob=>{
       const url=URL.createObjectURL(blob);
       const a=new Audio(url);
@@ -3113,7 +3113,7 @@ const Calendar=()=>{
 
   React.useEffect(()=>{
     if(selBook){setBookTech(selBook.tech||"Unassigned");setBookNotes(selBook.notes||"");}
-  },[selBook?.id]);
+  },[selBook]);
 
   /* Week helpers */
   const weekStart=new Date(today);
@@ -3154,7 +3154,7 @@ const Calendar=()=>{
             <div><p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Notes</p><textarea rows={3} value={bookNotes} onChange={e=>setBookNotes(e.target.value)} className="w-full border border-neutral-200 p-4 text-sm" placeholder="Add notes for the technician..."/></div>
           </div>
           <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
-            <button onClick={()=>{setBookings(p=>p.map(b=>b.id===selBook.id?{...b,tech:bookTech,notes:bookNotes}:b));setSelBook(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save changes</button>
+            <button onClick={async()=>{setBookings(p=>p.map(b=>b.id===selBook.id?{...b,tech:bookTech,notes:bookNotes}:b));try{await window.supabase?.from("appointments").update({tech:bookTech,notes:bookNotes}).eq("id",selBook.id);}catch(e){console.warn("booking save:",e.message);}setSelBook(null);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Save changes</button>
           </div>
         </>}
       </Panel>
@@ -3680,7 +3680,7 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
   /* Simplified nav: Jobs is the unified pipeline (replaces Leads). Calls is
      an audit log, Calendar is the time view of the same jobs data. Pricebook
      stays in its own spot for now. */
-  const nav=[{id:"home",ic:I.home,l:"Home"},{id:"jobs",ic:I.wrench,l:"Jobs"},{id:"calendar",ic:I.cal,l:"Calendar"},{id:"calls",ic:I.phone,l:"Calls"},{id:"quotes",ic:I.dollar,l:"Pricebook"},{id:"agent",ic:I.bot,l:"Agent"},{id:"settings",ic:I.settings,l:"Settings"}];
+  const nav=[{id:"home",ic:I.home,l:"Home"},{id:"jobs",ic:I.wrench,l:"Jobs"},{id:"calendar",ic:I.cal,l:"Calendar"},{id:"calls",ic:I.phone,l:"Calls"},{id:"leads",ic:I.users,l:"Leads"},{id:"quotes",ic:I.dollar,l:"Pricebook"},{id:"agent",ic:I.bot,l:"Agent"},{id:"settings",ic:I.settings,l:"Settings"}];
   const[mobileMenu,setMobileMenu]=useState(false);
   if(quoteView)return<QuoteView data={quoteView} onClose={()=>setQuoteView(null)}/>;
   return(
@@ -4007,7 +4007,7 @@ const Onboarding=({onDone})=>{
     if(obPlaying===name){setObPlaying(null);return;}
     const vid=obVoiceIdMap2[name];if(!vid)return;
     setObLoading(name);setObPlaying(null);
-    fetch("/api/voice-preview?voiceId="+encodeURIComponent(vid))
+    fetch(BACKEND_URL+"/api/voice-preview?voiceId="+encodeURIComponent(vid))
     .then(r=>{if(!r.ok)throw new Error("err");return r.blob();}).then(blob=>{
       const url=URL.createObjectURL(blob);
       const a=new Audio(url);
