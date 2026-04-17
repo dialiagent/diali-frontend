@@ -311,7 +311,7 @@ const HomeCallDetail=({c,actions,onClose,checkedActions,toggleAction})=>{
 const Home=()=>{
   const booked=C.filter(c=>c.status==="booked").length;
   const rev=C.reduce((a,c)=>a+c.rev,0);
-  const conf=C.length?Math.round(C.reduce((a,c)=>a+c.conf,0)/C.length):0;
+  const bookRate=C.length?Math.round(booked/C.length*100):0;
   const[selCall,setSelCall]=useState(null);
   const[selAppt,setSelAppt]=useState(null);
   const[aiPanel,setAiPanel]=useState(false);
@@ -323,7 +323,7 @@ const Home=()=>{
   const followUps=C.filter(c=>c.status==="follow-up");
   const todayJobs=C.filter(c=>c.booked);
   const pipeline=C.reduce((a,c)=>a+c.rev,0);
-  const avgConf=C.length?Math.round(C.reduce((a,c)=>a+c.conf,0)/C.length):0;
+  const avgBookRate=C.length?Math.round(booked/C.length*100):0;
 
   return(
     <div className="fu">
@@ -369,7 +369,7 @@ const Home=()=>{
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-neutral-50 p-5 text-center"><p className="text-2xl text-neutral-900 tracking-tight">${pipeline.toLocaleString()}</p><p className="text-xs text-neutral-400 mt-1">Total pipeline</p></div>
               <div className="bg-neutral-50 p-5 text-center"><p className="text-2xl text-neutral-900 tracking-tight">${C.filter(c=>c.status==="booked").reduce((a,c)=>a+c.rev,0).toLocaleString()}</p><p className="text-xs text-neutral-400 mt-1">Booked revenue</p></div>
-              <div className="bg-neutral-50 p-5 text-center"><p className="text-2xl text-neutral-900 tracking-tight">{avgConf}%</p><p className="text-xs text-neutral-400 mt-1">Avg AI confidence</p></div>
+              <div className="bg-neutral-50 p-5 text-center"><p className="text-2xl text-neutral-900 tracking-tight">{avgBookRate}%</p><p className="text-xs text-neutral-400 mt-1">Booking rate</p></div>
             </div>
           </div>
 
@@ -426,7 +426,7 @@ const Home=()=>{
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-5 md:mb-10 gap-3"><div><p className="text-xl md:text-4xl text-neutral-900 tracking-tight">{(()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening"})()}</p><p className="text-neutral-400 mt-1 md:mt-2 text-xs md:text-base">{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} — here's your day at a glance.</p></div><button onClick={()=>setAiPanel(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2 md:py-2.5 text-xs md:text-sm flex items-center gap-2 hover:bg-black transition-colors w-fit"><span className="w-3.5 h-3.5 md:w-4 md:h-4">{I.zap}</span>AI Summary</button></div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-        {[["$"+rev.toLocaleString(),"Revenue",C.length+" calls"],[C.length,"Total Calls",booked+" booked"],[booked,"Jobs Booked",(C.length?Math.round(booked/C.length*100):0)+"% rate"],[conf+"%","AI Confidence",C.length+" rated"]].map(([v,l,s],i)=>(
+        {[["$"+rev.toLocaleString(),"Revenue",C.length+" calls"],[C.length,"Total Calls",booked+" booked"],[booked,"Jobs Booked",(C.length?Math.round(booked/C.length*100):0)+"% rate"],[(C.length?Math.round(booked/C.length*100):0)+"%","Booking Rate",booked+" of "+C.length+" calls"]].map(([v,l,s],i)=>(
           <div key={i} className="bg-white border border-neutral-100 p-5">
             <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">{l}</p>
             <p className="text-2xl text-neutral-900 tabular-nums tracking-tight">{v}</p>
