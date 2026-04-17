@@ -3751,6 +3751,7 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
 
 /* ══════════════════ AUTH ══════════════════ */
 const Auth=({onSendOtp})=>{
+  const[mode,setMode]=useState("login");
   const[email,setEmail]=useState("");
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState("");
@@ -3790,8 +3791,8 @@ const Auth=({onSendOtp})=>{
 
           <div className="mb-8"><Logo s={48}/></div>
 
-          <p className="text-3xl text-neutral-900 tracking-tight mb-2">Sign in to Diali</p>
-          <p className="text-neutral-400 mb-10">Enter your email and we'll send you a secure login code. No password needed.</p>
+          <p className="text-3xl text-neutral-900 tracking-tight mb-2">{mode==="login"?"Sign in to Diali":"Create your account"}</p>
+          <p className="text-neutral-400 mb-10">{mode==="login"?"Enter your email and we'll send you a secure login code. No password needed.":"Enter your email to get started. We'll send you a verification code."}</p>
 
           {error&&<div className="bg-neutral-100 border border-neutral-200 px-4 py-3 mb-6"><p className="text-sm text-neutral-700">{error}</p></div>}
 
@@ -3801,10 +3802,12 @@ const Auth=({onSendOtp})=>{
 
           <button onClick={handleSubmit} disabled={loading} className={"w-full py-3.5 text-sm mt-8 transition-colors flex items-center justify-center gap-2 "+(loading?"bg-neutral-400 text-white cursor-not-allowed":"bg-neutral-900 text-white hover:bg-black")}>
             {loading&&<div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>}
-            {loading?"Sending code...":"Continue with email"}
+            {loading?"Sending code...":(mode==="login"?"Continue with email":"Sign up with email")}
           </button>
 
-          <p className="text-xs text-neutral-300 text-center mt-6">We'll email you an 8-digit code to verify your identity.</p>
+          <p className="text-xs text-neutral-300 text-center mt-6">We'll email you a 6-digit code to verify your identity.</p>
+
+          <p className="text-center mt-8 text-sm text-neutral-400">{mode==="login"?"Don't have an account?":"Already have an account?"} <button onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}} className="text-neutral-900 hover:underline">{mode==="login"?"Sign up":"Sign in"}</button></p>
         </div>
       </div>
     </div>
@@ -3813,7 +3816,7 @@ const Auth=({onSendOtp})=>{
 
 /* ══════════════════ VERIFY OTP ══════════════════ */
 const VerifyOtp=({email,onVerify,onResend,onBack})=>{
-  const OTP_LEN=8;
+  const OTP_LEN=6;
   const[code,setCode]=useState(Array(OTP_LEN).fill(""));
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState("");
@@ -3920,13 +3923,13 @@ const VerifyOtp=({email,onVerify,onResend,onBack})=>{
           </div>
 
           <p className="text-3xl text-neutral-900 tracking-tight mb-2">Check your email</p>
-          <p className="text-neutral-400 mb-2">We sent an 8-digit verification code to</p>
+          <p className="text-neutral-400 mb-2">We sent a 6-digit verification code to</p>
           <p className="text-neutral-900 text-sm font-medium mb-8">{email}</p>
 
           {error&&<div className="bg-neutral-100 border border-neutral-200 px-4 py-3 mb-6"><p className="text-sm text-neutral-700">{error}</p></div>}
 
-          {/* 8-digit input boxes */}
-          <div className="flex gap-2 mb-8" onPaste={handlePaste}>
+          {/* 6-digit input boxes */}
+          <div className="flex gap-3 mb-8" onPaste={handlePaste}>
             {code.map((digit,i)=>(
               <input key={i} ref={refs[i]} type="text" inputMode="numeric" maxLength={1} value={digit}
                 onChange={e=>handleChange(i,e.target.value)}
