@@ -441,7 +441,7 @@ const Home=()=>{
             <div className="px-4 md:px-7 py-3 md:py-5 flex items-center justify-between border-b border-neutral-100"><span className="text-base md:text-lg text-neutral-900">Recent calls</span><button className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">View all →</button></div>
             {C.slice(0,8).map((c,idx)=>(
               <div key={c.id} onClick={()=>setSelCall(c)} className={"flex items-center gap-2.5 md:gap-5 px-3 md:px-7 py-2.5 md:py-4 hover:bg-neutral-50 cursor-pointer transition-colors "+(idx<7?"border-b border-neutral-50":"")}>
-                <Av n={c.name} s={32} className="md:hidden"/><Av n={c.name} s={38} className="hidden md:flex"/>
+                <Av n={c.name} s={36}/>
                 <div className="flex-1 min-w-0"><p className="text-xs md:text-sm text-neutral-900">{c.name}</p><p className="text-[10px] md:text-xs text-neutral-400 truncate mt-0.5">{c.issue}</p></div>
                 <span className="hidden md:block text-xs text-neutral-300 w-20 text-right">{c.time}</span>
                 <Bg s={c.status}/>
