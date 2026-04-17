@@ -3680,7 +3680,7 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
   /* Simplified nav: Jobs is the unified pipeline (replaces Leads). Calls is
      an audit log, Calendar is the time view of the same jobs data. Pricebook
      stays in its own spot for now. */
-  const nav=[{id:"home",ic:I.home,l:"Home"},{id:"jobs",ic:I.wrench,l:"Jobs"},{id:"calendar",ic:I.cal,l:"Calendar"},{id:"calls",ic:I.phone,l:"Calls"},{id:"leads",ic:I.users,l:"Leads"},{id:"quotes",ic:I.dollar,l:"Pricebook"},{id:"agent",ic:I.bot,l:"Agent"},{id:"settings",ic:I.settings,l:"Settings"}];
+  const nav=[{id:"home",ic:I.home,l:"Home"},{id:"jobs",ic:I.wrench,l:"Jobs"},{id:"calendar",ic:I.cal,l:"Calendar"},{id:"calls",ic:I.phone,l:"Calls"},{id:"quotes",ic:I.dollar,l:"Pricebook"},{id:"agent",ic:I.bot,l:"Agent"},{id:"settings",ic:I.settings,l:"Settings"}];
   const[mobileMenu,setMobileMenu]=useState(false);
   if(quoteView)return<QuoteView data={quoteView} onClose={()=>setQuoteView(null)}/>;
   return(
