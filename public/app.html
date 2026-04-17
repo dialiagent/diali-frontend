@@ -3750,23 +3750,16 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
 };
 
 /* ══════════════════ AUTH ══════════════════ */
-const Auth=({onLogin,onSignup})=>{
-  const[mode,setMode]=useState("login");
+const Auth=({onSendOtp})=>{
   const[email,setEmail]=useState("");
-  const[pass,setPass]=useState("");
-  const[name,setName]=useState("");
-  const[biz,setBiz]=useState("");
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState("");
 
   const handleSubmit=async()=>{
     setError("");
-    if(!email||!pass){setError("Please fill in all fields.");return;}
-    if(mode==="signup"&&(!name||!biz)){setError("Please fill in all fields.");return;}
+    if(!email){setError("Please enter your email address.");return;}
     setLoading(true);
-    let err;
-    if(mode==="login"){err=await onLogin(email,pass);}
-    else{err=await onSignup(email,pass,name,biz);}
+    const err=await onSendOtp(email);
     if(err)setError(err);
     setLoading(false);
   };
@@ -3794,36 +3787,27 @@ const Auth=({onLogin,onSignup})=>{
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-[400px] fu">
           <div className="lg:hidden mb-10"><Logo s={40}/></div>
-          <p className="text-3xl text-neutral-900 tracking-tight mb-2">{mode==="login"?"Welcome back":"Create your account"}</p>
-          <p className="text-neutral-400 mb-10">{mode==="login"?"Sign in to your Diali account":"Get started in under 2 minutes"}</p>
+
+          {/* Lock icon */}
+          <div className="w-14 h-14 bg-neutral-900 flex items-center justify-center mb-8">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l16 16M12 12v.01"/><rect x="2" y="6" width="20" height="12" rx="0"/><path d="M6 6h.01M2 12h20"/></svg>
+          </div>
+
+          <p className="text-3xl text-neutral-900 tracking-tight mb-2">Sign in to Diali</p>
+          <p className="text-neutral-400 mb-10">Enter your email and we'll send you a secure login code. No password needed.</p>
 
           {error&&<div className="bg-neutral-100 border border-neutral-200 px-4 py-3 mb-6"><p className="text-sm text-neutral-700">{error}</p></div>}
 
           <div className="space-y-4">
-            {mode==="signup"&&<>
-              <div><label className="text-xs text-neutral-400 mb-1.5 block">Full name</label><input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKey} type="text" placeholder="Your full name" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
-              <div><label className="text-xs text-neutral-400 mb-1.5 block">Business name</label><input value={biz} onChange={e=>setBiz(e.target.value)} onKeyDown={handleKey} type="text" placeholder="Your Business Name" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
-            </>}
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Email</label><input value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={handleKey} type="email" placeholder="you@company.com" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
-            <div><label className="text-xs text-neutral-400 mb-1.5 block">Password</label><input value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={handleKey} type="password" placeholder={mode==="login"?"Enter your password":"Create a password (6+ chars)"} className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors"/></div>
-            {mode==="login"&&<div className="flex justify-end"><button className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">Forgot password?</button></div>}
+            <div><label className="text-xs text-neutral-400 mb-1.5 block">Email</label><input value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={handleKey} type="email" placeholder="you@company.com" className="w-full border border-neutral-200 px-4 py-3 text-sm hover:border-neutral-300 transition-colors" autoFocus/></div>
           </div>
 
           <button onClick={handleSubmit} disabled={loading} className={"w-full py-3.5 text-sm mt-8 transition-colors flex items-center justify-center gap-2 "+(loading?"bg-neutral-400 text-white cursor-not-allowed":"bg-neutral-900 text-white hover:bg-black")}>
             {loading&&<div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>}
-            {loading?(mode==="login"?"Signing in...":"Creating account..."):(mode==="login"?"Sign in":"Get started")}
+            {loading?"Sending code...":"Continue with email"}
           </button>
 
-          {mode==="signup"&&<p className="text-xs text-neutral-300 text-center mt-4">By signing up you agree to our Terms and Privacy Policy</p>}
-
-          <div className="flex items-center gap-4 my-8"><div className="flex-1 h-px bg-neutral-200"/><span className="text-xs text-neutral-300">or</span><div className="flex-1 h-px bg-neutral-200"/></div>
-
-          <button className="w-full border border-neutral-200 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors flex items-center justify-center gap-3">
-            <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Continue with Google
-          </button>
-
-          <p className="text-center mt-8 text-sm text-neutral-400">{mode==="login"?"Don't have an account?":"Already have an account?"} <button onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}} className="text-neutral-900 hover:underline">{mode==="login"?"Sign up":"Sign in"}</button></p>
+          <p className="text-xs text-neutral-300 text-center mt-6">We'll email you an 8-digit code to verify your identity.</p>
         </div>
       </div>
     </div>
@@ -3832,12 +3816,13 @@ const Auth=({onLogin,onSignup})=>{
 
 /* ══════════════════ VERIFY OTP ══════════════════ */
 const VerifyOtp=({email,onVerify,onResend,onBack})=>{
-  const[code,setCode]=useState(["","","","","",""]);
+  const OTP_LEN=8;
+  const[code,setCode]=useState(Array(OTP_LEN).fill(""));
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState("");
   const[resent,setResent]=useState(false);
   const[cooldown,setCooldown]=useState(0);
-  const refs=[React.useRef(),React.useRef(),React.useRef(),React.useRef(),React.useRef(),React.useRef()];
+  const refs=Array.from({length:OTP_LEN},()=>React.useRef());
 
   /* Auto-focus first input on mount */
   React.useEffect(()=>{refs[0].current?.focus();},[]);
@@ -3856,18 +3841,18 @@ const VerifyOtp=({email,onVerify,onResend,onBack})=>{
     }
     if(d.length===1){
       const next=[...code];next[idx]=d;setCode(next);
-      if(idx<5)refs[idx+1].current?.focus();
-      /* Auto-submit when all 6 digits filled */
-      if(idx===5||next.every(c=>c)){
+      if(idx<OTP_LEN-1)refs[idx+1].current?.focus();
+      /* Auto-submit when all digits filled */
+      if(idx===OTP_LEN-1||next.every(c=>c)){
         const full=next.join("");
-        if(full.length===6)doVerify(full);
+        if(full.length===OTP_LEN)doVerify(full);
       }
     }
     /* Handle paste of full code */
-    if(d.length>=6){
-      const digits=d.slice(0,6).split("");
+    if(d.length>=OTP_LEN){
+      const digits=d.slice(0,OTP_LEN).split("");
       setCode(digits);
-      refs[5].current?.focus();
+      refs[OTP_LEN-1].current?.focus();
       doVerify(digits.join(""));
     }
   };
@@ -3879,26 +3864,26 @@ const VerifyOtp=({email,onVerify,onResend,onBack})=>{
     }
     if(e.key==="Enter"){
       const full=code.join("");
-      if(full.length===6)doVerify(full);
+      if(full.length===OTP_LEN)doVerify(full);
     }
   };
 
   const handlePaste=(e)=>{
     e.preventDefault();
-    const paste=e.clipboardData.getData("text").replace(/\D/g,"").slice(0,6);
+    const paste=e.clipboardData.getData("text").replace(/\D/g,"").slice(0,OTP_LEN);
     if(paste.length>=1){
-      const digits=paste.padEnd(6," ").slice(0,6).split("").map(c=>c===" "?"":c);
+      const digits=paste.padEnd(OTP_LEN," ").slice(0,OTP_LEN).split("").map(c=>c===" "?"":c);
       setCode(digits);
       const nextEmpty=digits.findIndex(c=>!c);
-      refs[nextEmpty>=0?nextEmpty:5].current?.focus();
-      if(paste.length===6)doVerify(paste);
+      refs[nextEmpty>=0?nextEmpty:OTP_LEN-1].current?.focus();
+      if(paste.length===OTP_LEN)doVerify(paste);
     }
   };
 
   const doVerify=async(token)=>{
     setError("");setLoading(true);
     const err=await onVerify(token);
-    if(err){setError(err);setCode(["","","","","",""]);refs[0].current?.focus();}
+    if(err){setError(err);setCode(Array(OTP_LEN).fill(""));refs[0].current?.focus();}
     setLoading(false);
   };
 
@@ -3938,13 +3923,13 @@ const VerifyOtp=({email,onVerify,onResend,onBack})=>{
           </div>
 
           <p className="text-3xl text-neutral-900 tracking-tight mb-2">Check your email</p>
-          <p className="text-neutral-400 mb-2">We sent a 6-digit verification code to</p>
+          <p className="text-neutral-400 mb-2">We sent an 8-digit verification code to</p>
           <p className="text-neutral-900 text-sm font-medium mb-8">{email}</p>
 
           {error&&<div className="bg-neutral-100 border border-neutral-200 px-4 py-3 mb-6"><p className="text-sm text-neutral-700">{error}</p></div>}
 
-          {/* 6-digit input boxes */}
-          <div className="flex gap-3 mb-8" onPaste={handlePaste}>
+          {/* 8-digit input boxes */}
+          <div className="flex gap-2 mb-8" onPaste={handlePaste}>
             {code.map((digit,i)=>(
               <input key={i} ref={refs[i]} type="text" inputMode="numeric" maxLength={1} value={digit}
                 onChange={e=>handleChange(i,e.target.value)}
@@ -3956,8 +3941,8 @@ const VerifyOtp=({email,onVerify,onResend,onBack})=>{
             ))}
           </div>
 
-          <button onClick={()=>{const full=code.join("");if(full.length===6)doVerify(full);}} disabled={loading||code.join("").length<6}
-            className={"w-full py-3.5 text-sm transition-colors flex items-center justify-center gap-2 "+(loading||code.join("").length<6?"bg-neutral-300 text-neutral-500 cursor-not-allowed":"bg-neutral-900 text-white hover:bg-black")}>
+          <button onClick={()=>{const full=code.join("");if(full.length===OTP_LEN)doVerify(full);}} disabled={loading||code.join("").length<OTP_LEN}
+            className={"w-full py-3.5 text-sm transition-colors flex items-center justify-center gap-2 "+(loading||code.join("").length<OTP_LEN?"bg-neutral-300 text-neutral-500 cursor-not-allowed":"bg-neutral-900 text-white hover:bg-black")}>
             {loading&&<div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>}
             {loading?"Verifying...":"Verify & continue"}
           </button>
@@ -3981,6 +3966,8 @@ const VerifyOtp=({email,onVerify,onResend,onBack})=>{
 /* ══════════════════ ONBOARDING ══════════════════ */
 const Onboarding=({onDone})=>{
   const[step,setStep]=useState(0);
+  const[fullName,setFullName]=useState("");
+  const[bizName,setBizName]=useState("");
   const[trade,setTrade]=useState("");
   const[area,setArea]=useState("");
   const[phone,setPhone]=useState("");
@@ -3992,7 +3979,7 @@ const Onboarding=({onDone})=>{
   const toggleSvc=s=>setServices(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
   const voiceIdMap={"Kim":"O7LV5fxosQChiBE7l6Wz","Asher":"tMvyQtpCVQ0DkixuYm6J","Brady":"Sr9Xhw1be5kyNtGEOV0y","Evan":"TWutjvRaJqAX89preB4e","Larry":"LoQnubeEKhw9RDkfeS80","Kiora":"hGQkZQUA5RiOXIw7P9iO"};
   const total=6;
-  const finish=()=>onDone({trade,area,phone,teamSize,services,voiceId:voiceIdMap[voicePick]||"O7LV5fxosQChiBE7l6Wz",voiceName:voicePick||"Kim",greeting});
+  const finish=()=>onDone({fullName,bizName,trade,area,phone,teamSize,services,voiceId:voiceIdMap[voicePick]||"O7LV5fxosQChiBE7l6Wz",voiceName:voicePick||"Kim",greeting});
   const next=()=>step<total-1?setStep(step+1):finish();
   const back=()=>step>0&&setStep(step-1);
   const pct=((step)/(total-1))*100;
@@ -4062,6 +4049,10 @@ const Onboarding=({onDone})=>{
             <p className="text-4xl text-neutral-900 tracking-tight mb-3">What do you do?</p>
             <p className="text-neutral-400 mb-12">This helps your AI understand your services and speak your customers' language.</p>
             <div className="space-y-8">
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="text-xs text-neutral-400 mb-1.5 block">Your name</label><input value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="John Smith" className="w-full border border-neutral-200 px-4 py-3.5 text-sm hover:border-neutral-300 transition-colors"/></div>
+                <div><label className="text-xs text-neutral-400 mb-1.5 block">Business name</label><input value={bizName} onChange={e=>setBizName(e.target.value)} placeholder="Smith HVAC" className="w-full border border-neutral-200 px-4 py-3.5 text-sm hover:border-neutral-300 transition-colors"/></div>
+              </div>
               <div>
                 <p className="text-sm text-neutral-900 mb-3">Trade</p>
                 <div className="grid grid-cols-3 gap-2">{["HVAC","Plumbing","Electrical","Roofing","General","Other"].map(t=>(
@@ -4473,7 +4464,6 @@ const App=()=>{
   const[profile,setProfile]=useState(null);
   const[sbReady,setSbReady]=useState(!!window.supabase);
   const[pendingEmail,setPendingEmail]=useState("");
-  const[pendingPass,setPendingPass]=useState("");
   const[showTutorial,setShowTutorial]=useState(false);
 
   /* Wait for Supabase SDK to load */
@@ -4538,67 +4528,42 @@ const App=()=>{
     return()=>clearTimeout(t);
   },[vapiKeys.publicKey]);
 
-  /* Handle login */
-  const handleLogin=async(email,password)=>{
+  /* Send OTP — works for both new and returning users */
+  const handleSendOtp=async(email)=>{
     const sb=window.supabase;if(!sb)return"Supabase not loaded yet. Try again.";
-    const{data,error}=await sb.auth.signInWithPassword({email,password});
+    const{error}=await sb.auth.signInWithOtp({email});
     if(error)return error.message;
-    const uid=data.user.id;
-    setUserId(uid);
-    const prof=await loadUserData(uid);
-    setIsNew(!prof?.trade);
-    setIsDemo(data.user.email===DEMO_EMAIL);
-    setAuth("app");
-    return null;
-  };
-
-  /* Handle signup — creates user + sends OTP via backend */
-  const handleSignup=async(email,password,name,biz)=>{
-    const sb=window.supabase;if(!sb)return"Supabase not loaded yet. Try again.";
-    const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,business_name:biz}}});
-    if(error)return error.message;
-    /* Store credentials temporarily for post-verification login */
     setPendingEmail(email);
-    setPendingPass(password);
-    /* Send OTP via backend */
-    try{
-      const resp=await fetch(BACKEND_URL+"/api/auth/send-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
-      const body=await resp.json();
-      if(!resp.ok)return body.error||"Failed to send verification code.";
-    }catch(e){console.error("send-otp error:",e);}
     setAuth("verify");
     return null;
   };
 
-  /* Verify OTP code via backend, then sign in */
+  /* Verify OTP code — Supabase creates the session automatically */
   const handleVerifyOtp=async(code)=>{
-    try{
-      const resp=await fetch(BACKEND_URL+"/api/auth/verify-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:pendingEmail,code})});
-      const body=await resp.json();
-      if(!resp.ok)return body.error||"Verification failed.";
-    }catch(e){return"Network error. Please try again.";}
-    /* Code verified — now sign in with the stored credentials */
     const sb=window.supabase;if(!sb)return"Supabase not loaded yet.";
-    const{data,error}=await sb.auth.signInWithPassword({email:pendingEmail,password:pendingPass});
+    const{data,error}=await sb.auth.verifyOtp({email:pendingEmail,token:code,type:'email'});
     if(error)return error.message;
     if(data.user){
-      setUserId(data.user.id);
-      setIsNew(true);
-      const prof=await loadUserData(data.user.id);
-      setPendingPass("");/* Clear stored password */
-      setAuth("onboard");
+      const uid=data.user.id;
+      setUserId(uid);
+      const prof=await loadUserData(uid);
+      setIsDemo(data.user.email===DEMO_EMAIL);
+      if(!prof?.trade){
+        setIsNew(true);
+        setAuth("onboard");
+      }else{
+        setAuth("app");
+      }
     }
     return null;
   };
 
-  /* Resend OTP via backend */
+  /* Resend OTP — just call signInWithOtp again */
   const handleResendOtp=async()=>{
-    try{
-      const resp=await fetch(BACKEND_URL+"/api/auth/send-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:pendingEmail})});
-      const body=await resp.json();
-      if(!resp.ok)return body.error||"Failed to resend code.";
-      return null;
-    }catch(e){return"Network error.";}
+    const sb=window.supabase;if(!sb)return"Supabase not loaded yet.";
+    const{error}=await sb.auth.signInWithOtp({email:pendingEmail});
+    if(error)return error.message;
+    return null;
   };
 
   /* Handle onboarding done — save profile + initial agent config.
@@ -4606,11 +4571,8 @@ const App=()=>{
   const handleOnboardDone=async(obData)=>{
     if(userId&&window.supabase){
       try{
-        /* Pull business_name + full_name from the auth user metadata (set during signup) */
         const{data:{user:authUser}}=await window.supabase.auth.getUser();
-        const metaBiz=authUser?.user_metadata?.business_name||"";
-        const metaName=authUser?.user_metadata?.full_name||"";
-        await window.supabase.from('profiles').upsert({id:userId,trade:obData.trade||'',service_area:obData.area||'',phone:obData.phone||'',team_size:obData.teamSize||'',services:obData.services||[],business_name:metaBiz,full_name:metaName,email:authUser?.email||''});
+        await window.supabase.from('profiles').upsert({id:userId,trade:obData.trade||'',service_area:obData.area||'',phone:obData.phone||'',team_size:obData.teamSize||'',services:obData.services||[],business_name:obData.bizName||'',full_name:obData.fullName||'',email:authUser?.email||''});
         await window.supabase.from('settings').upsert({id:userId,voice_id:obData.voiceId||'O7LV5fxosQChiBE7l6Wz',voice_name:obData.voiceName||'Kim',greeting:obData.greeting||"Hi, thanks for calling! I can help you with scheduling a service appointment or answer any questions. What's going on?"});
         /* Reload profile to get the DB-generated workspace_id */
         const{data:freshProf}=await window.supabase.from('profiles').select('*').eq('id',userId).single();
@@ -4636,7 +4598,7 @@ const App=()=>{
   };
 
   if(auth==="loading")return<div className="min-h-screen flex items-center justify-center bg-neutral-50"><div className="text-center fu"><Logo s={48}/><p className="text-sm text-neutral-300 mt-6">Loading...</p></div></div>;
-  if(auth==="auth")return<Auth onLogin={handleLogin} onSignup={handleSignup}/>;
+  if(auth==="auth")return<Auth onSendOtp={handleSendOtp}/>;
   if(auth==="verify")return<VerifyOtp email={pendingEmail} onVerify={handleVerifyOtp} onResend={handleResendOtp} onBack={()=>setAuth("auth")}/>;
   if(auth==="onboard")return<Onboarding onDone={handleOnboardDone}/>;
   return<Layout pg={pg} go={go} isNew={isNew} isDemo={isDemo} vapiKeys={vapiKeys} setVapiKeys={setVapiKeys} saveSetting={saveSetting} onLogout={handleLogout} agentCfg={agentCfg} profile={profile} onProfileSave={handleProfileSave} showTutorial={showTutorial} onTutorialDone={()=>{setShowTutorial(false);go("home");}}/>;
