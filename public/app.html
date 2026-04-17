@@ -4528,42 +4528,53 @@ const App=()=>{
     return()=>clearTimeout(t);
   },[vapiKeys.publicKey]);
 
-  /* Send OTP — works for both new and returning users */
+  /* Send OTP via backend (Resend) — works for both new and returning users */
   const handleSendOtp=async(email)=>{
-    const sb=window.supabase;if(!sb)return"Supabase not loaded yet. Try again.";
-    const{error}=await sb.auth.signInWithOtp({email});
-    if(error)return error.message;
-    setPendingEmail(email);
-    setAuth("verify");
-    return null;
+    try{
+      const resp=await fetch(BACKEND_URL+"/api/auth/send-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+      const body=await resp.json();
+      if(!resp.ok)return body.error||"Failed to send verification code.";
+      setPendingEmail(email);
+      setAuth("verify");
+      return null;
+    }catch(e){return"Network error. Please try again.";}
   };
 
-  /* Verify OTP code — Supabase creates the session automatically */
+  /* Verify OTP via backend, then use token_hash to create Supabase session */
   const handleVerifyOtp=async(code)=>{
     const sb=window.supabase;if(!sb)return"Supabase not loaded yet.";
-    const{data,error}=await sb.auth.verifyOtp({email:pendingEmail,token:code,type:'email'});
-    if(error)return error.message;
-    if(data.user){
-      const uid=data.user.id;
-      setUserId(uid);
-      const prof=await loadUserData(uid);
-      setIsDemo(data.user.email===DEMO_EMAIL);
-      if(!prof?.trade){
-        setIsNew(true);
-        setAuth("onboard");
-      }else{
-        setAuth("app");
+    try{
+      const resp=await fetch(BACKEND_URL+"/api/auth/verify-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:pendingEmail,code})});
+      const body=await resp.json();
+      if(!resp.ok)return body.error||"Verification failed.";
+      /* Use the magic link token to establish a Supabase session */
+      if(!body.token_hash)return"Session error. Please try again.";
+      const{data,error}=await sb.auth.verifyOtp({token_hash:body.token_hash,type:'magiclink'});
+      if(error)return error.message;
+      if(data.user){
+        const uid=data.user.id;
+        setUserId(uid);
+        const prof=await loadUserData(uid);
+        setIsDemo(data.user.email===DEMO_EMAIL);
+        if(!prof?.trade){
+          setIsNew(true);
+          setAuth("onboard");
+        }else{
+          setAuth("app");
+        }
       }
-    }
-    return null;
+      return null;
+    }catch(e){return"Network error. Please try again.";}
   };
 
-  /* Resend OTP — just call signInWithOtp again */
+  /* Resend OTP via backend (Resend) */
   const handleResendOtp=async()=>{
-    const sb=window.supabase;if(!sb)return"Supabase not loaded yet.";
-    const{error}=await sb.auth.signInWithOtp({email:pendingEmail});
-    if(error)return error.message;
-    return null;
+    try{
+      const resp=await fetch(BACKEND_URL+"/api/auth/send-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:pendingEmail})});
+      const body=await resp.json();
+      if(!resp.ok)return body.error||"Failed to resend code.";
+      return null;
+    }catch(e){return"Network error.";}
   };
 
   /* Handle onboarding done — save profile + initial agent config.
