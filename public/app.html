@@ -38,6 +38,13 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#171717}
   .hide-mobile{display:none!important}
   .mobile-stack{flex-direction:column!important}
 }
+/* ── Deep mobile polish for app pages ── */
+@media(max-width:639px){
+  /* Tighter content padding on small screens */
+  .mob-p{padding:16px!important}
+  /* Kill horizontal overflow globally */
+  body{overflow-x:hidden}
+}
 </style>
 </head>
 <body>
@@ -217,7 +224,7 @@ const ST=({icon,title,count,right,className=""})=>(
 
 /* Info grid — structured 2-col or 3-col data display */
 const IG=({items,cols=2})=>(
-  <div className={"grid gap-px bg-neutral-100 border border-neutral-100 grid-cols-"+cols}>
+  <div className={"grid gap-px bg-neutral-100 border border-neutral-100 grid-cols-2 md:grid-cols-"+cols}>
     {items.map(([l,v],i)=>(
       <div key={i} className="bg-white px-4 py-3">
         <p className="text-xs text-neutral-400 mb-0.5">{l}</p>
@@ -415,26 +422,26 @@ const Home=()=>{
         </div>
       </Panel>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-10 gap-3"><div><p className="text-2xl md:text-4xl text-neutral-900 tracking-tight">{(()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening"})()}</p><p className="text-neutral-400 mt-1 md:mt-2 text-sm md:text-base">{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} — here's your day at a glance.</p></div><button onClick={()=>setAiPanel(true)} className="bg-neutral-900 text-white px-5 py-2.5 text-sm flex items-center gap-2 hover:bg-black transition-colors w-fit"><span className="w-4 h-4">{I.zap}</span>AI Summary</button></div>
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-5 md:mb-10 gap-3"><div><p className="text-xl md:text-4xl text-neutral-900 tracking-tight">{(()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening"})()}</p><p className="text-neutral-400 mt-1 md:mt-2 text-xs md:text-base">{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} — here's your day at a glance.</p></div><button onClick={()=>setAiPanel(true)} className="bg-neutral-900 text-white px-4 md:px-5 py-2 md:py-2.5 text-xs md:text-sm flex items-center gap-2 hover:bg-black transition-colors w-fit"><span className="w-3.5 h-3.5 md:w-4 md:h-4">{I.zap}</span>AI Summary</button></div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-6 md:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-5 mb-5 md:mb-8">
         {[["$"+rev.toLocaleString(),"Revenue",C.length+" calls"],[C.length,"Total Calls",booked+" booked"],[booked,"Jobs Booked",(C.length?Math.round(booked/C.length*100):0)+"% rate"],[conf+"%","AI Confidence",C.length+" rated"]].map(([v,l,s],i)=>(
-          <div key={i} className="bg-white border border-neutral-100 p-4 md:p-7 hover:border-neutral-300 transition-all duration-300 cursor-default">
-            <div className="flex items-center justify-between mb-3 md:mb-6"><span className="text-xs text-neutral-400 uppercase tracking-widest">{l}</span></div>
-            <p className="text-3xl md:text-5xl text-neutral-900 tracking-tight leading-none">{v}</p>
-            <div className="flex items-center gap-1.5 mt-2 md:mt-4"><span className="text-xs text-neutral-400">{s}</span></div>
+          <div key={i} className="bg-white border border-neutral-100 p-3 md:p-7 hover:border-neutral-300 transition-all duration-300 cursor-default">
+            <div className="flex items-center justify-between mb-2 md:mb-6"><span className="text-[10px] md:text-xs text-neutral-400 uppercase tracking-widest">{l}</span></div>
+            <p className="text-2xl md:text-5xl text-neutral-900 tracking-tight leading-none">{v}</p>
+            <div className="flex items-center gap-1.5 mt-1.5 md:mt-4"><span className="text-[10px] md:text-xs text-neutral-400">{s}</span></div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-5">
         <div className="md:col-span-3">
           <div className="bg-white border border-neutral-100">
-            <div className="px-4 md:px-7 py-4 md:py-5 flex items-center justify-between border-b border-neutral-100"><span className="text-lg text-neutral-900">Recent calls</span><button className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">View all →</button></div>
+            <div className="px-4 md:px-7 py-3 md:py-5 flex items-center justify-between border-b border-neutral-100"><span className="text-base md:text-lg text-neutral-900">Recent calls</span><button className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">View all →</button></div>
             {C.slice(0,8).map((c,idx)=>(
-              <div key={c.id} onClick={()=>setSelCall(c)} className={"flex items-center gap-3 md:gap-5 px-4 md:px-7 py-3 md:py-4 hover:bg-neutral-50 cursor-pointer transition-colors "+(idx<7?"border-b border-neutral-50":"")}>
-                <Av n={c.name} s={38}/>
-                <div className="flex-1 min-w-0"><p className="text-sm text-neutral-900">{c.name}</p><p className="text-xs text-neutral-400 truncate mt-0.5">{c.issue}</p></div>
+              <div key={c.id} onClick={()=>setSelCall(c)} className={"flex items-center gap-2.5 md:gap-5 px-3 md:px-7 py-2.5 md:py-4 hover:bg-neutral-50 cursor-pointer transition-colors "+(idx<7?"border-b border-neutral-50":"")}>
+                <Av n={c.name} s={32} className="md:hidden"/><Av n={c.name} s={38} className="hidden md:flex"/>
+                <div className="flex-1 min-w-0"><p className="text-xs md:text-sm text-neutral-900">{c.name}</p><p className="text-[10px] md:text-xs text-neutral-400 truncate mt-0.5">{c.issue}</p></div>
                 <span className="hidden md:block text-xs text-neutral-300 w-20 text-right">{c.time}</span>
                 <Bg s={c.status}/>
                 <span className="hidden md:block text-sm text-neutral-900 w-24 text-right tabular-nums">{c.rev?"$"+c.rev.toLocaleString():"—"}</span>
@@ -442,21 +449,21 @@ const Home=()=>{
             ))}
           </div>
         </div>
-        <div className="md:col-span-2 space-y-5">
-          <div className="bg-white border border-neutral-100 p-7">
-            <div className="flex items-center justify-between mb-6"><span className="text-lg text-neutral-900">Upcoming</span><span className="text-xs text-neutral-300">{C.filter(c=>c.booked).length} scheduled</span></div>
-            <div className="space-y-5">{C.filter(c=>c.booked).slice(0,5).map(c=>(
-              <div key={c.id} onClick={()=>setSelAppt(c)} className="flex items-start gap-4 cursor-pointer hover:bg-neutral-50 -mx-3 px-3 py-2 transition-colors">
-                <div className="w-10 h-10 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-neutral-400">{I.cal}</span></div>
-                <div className="flex-1 min-w-0"><p className="text-sm text-neutral-900">{c.name}</p><p className="text-xs text-neutral-400 mt-0.5">{c.booked}</p></div>
+        <div className="md:col-span-2 space-y-4 md:space-y-5">
+          <div className="bg-white border border-neutral-100 p-4 md:p-7">
+            <div className="flex items-center justify-between mb-4 md:mb-6"><span className="text-base md:text-lg text-neutral-900">Upcoming</span><span className="text-xs text-neutral-300">{C.filter(c=>c.booked).length} scheduled</span></div>
+            <div className="space-y-3 md:space-y-5">{C.filter(c=>c.booked).slice(0,5).map(c=>(
+              <div key={c.id} onClick={()=>setSelAppt(c)} className="flex items-start gap-3 md:gap-4 cursor-pointer hover:bg-neutral-50 -mx-2 md:-mx-3 px-2 md:px-3 py-1.5 md:py-2 transition-colors">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-3.5 h-3.5 md:w-4 md:h-4 text-neutral-400">{I.cal}</span></div>
+                <div className="flex-1 min-w-0"><p className="text-xs md:text-sm text-neutral-900">{c.name}</p><p className="text-[10px] md:text-xs text-neutral-400 mt-0.5">{c.booked}</p></div>
                 <Dot s={c.score}/>
               </div>
             ))}</div>
           </div>
-          <div className="bg-neutral-900 p-7">
-            <div className="flex items-center gap-2.5 mb-4"><span className="w-4 h-4 text-neutral-500">{I.zap}</span><span className="text-xs text-neutral-400 uppercase tracking-widest">AI Insight</span></div>
-            <p className="text-neutral-300 leading-relaxed mb-6">3 follow-ups are overdue. Reaching out within 2 hours increases booking by 40%.</p>
-            <button className="bg-white text-neutral-900 text-sm px-5 py-2.5 hover:bg-neutral-100 transition-colors">View follow-ups</button>
+          <div className="bg-neutral-900 p-4 md:p-7">
+            <div className="flex items-center gap-2.5 mb-3 md:mb-4"><span className="w-4 h-4 text-neutral-500">{I.zap}</span><span className="text-xs text-neutral-400 uppercase tracking-widest">AI Insight</span></div>
+            <p className="text-sm md:text-base text-neutral-300 leading-relaxed mb-4 md:mb-6">3 follow-ups are overdue. Reaching out within 2 hours increases booking by 40%.</p>
+            <button className="bg-white text-neutral-900 text-xs md:text-sm px-4 md:px-5 py-2 md:py-2.5 hover:bg-neutral-100 transition-colors">View follow-ups</button>
           </div>
         </div>
       </div>
@@ -559,9 +566,9 @@ const Calls=()=>{
             <Sec open={showTr} onToggle={()=>setShowTr(!showTr)} title="Transcript" count={sel.tr?.length||0}>
               <div className="p-5 space-y-3">
                 {sel.tr?.length?sel.tr.map((m,i)=>(
-                  <div key={i} className={m.r==="ai"?"mr-16":"ml-16"}>
+                  <div key={i} className={m.r==="ai"?"mr-4 md:mr-16":"ml-4 md:ml-16"}>
                     <p className="text-xs text-neutral-400 mb-1 px-1">{m.r==="ai"?"AI Agent":"Customer"}</p>
-                    <div className={"p-4 text-sm leading-relaxed "+(m.r==="ai"?"bg-neutral-100 text-neutral-700":"bg-neutral-900 text-white")}>{m.t}</div>
+                    <div className={"p-3 md:p-4 text-xs md:text-sm leading-relaxed "+(m.r==="ai"?"bg-neutral-100 text-neutral-700":"bg-neutral-900 text-white")}>{m.t}</div>
                   </div>
                 )):(
                   <div className="bg-neutral-50 p-5 flex items-start gap-3">
@@ -1878,7 +1885,7 @@ const Quotes=()=>{
             <FF label="Description"><TA value={draft.desc} onChange={e=>setDraft({...draft,desc:e.target.value})} rows={2} placeholder="Short description shown to customers"/></FF>
             <div>
               <SL>Category</SL>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                 {["Service","Labor","Parts","Maintenance","Install"].map(c=>(
                   <button key={c} onClick={()=>setDraft({...draft,cat:c})} className={"text-xs md:text-sm py-2.5 border transition-colors "+(draft.cat===c?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{c}</button>
                 ))}
@@ -2775,7 +2782,7 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
           <p className="text-2xl text-neutral-900 tracking-tight mb-1">Business hours</p>
           <p className="text-neutral-400 mb-8">Your AI answers 24/7 — but knows when to book vs. take a message.</p>
           <div className="space-y-1">{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((d,i)=>(
-            <div key={d} className="flex items-center gap-5 py-4 px-1 border-b border-neutral-100 last:border-0"><Toggle on={i<5}/><span className="text-sm text-neutral-700 w-28">{d}</span><input type="time" defaultValue="08:00" className={"border border-neutral-200 px-3 py-2 text-sm "+(i>=5?"opacity-30":"")}/><span className="text-neutral-300">—</span><input type="time" defaultValue="17:00" className={"border border-neutral-200 px-3 py-2 text-sm "+(i>=5?"opacity-30":"")}/></div>
+            <div key={d} className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-5 py-3 md:py-4 px-1 border-b border-neutral-100 last:border-0"><Toggle on={i<5}/><span className="text-sm text-neutral-700 w-20 md:w-28">{d}</span><div className="flex items-center gap-2 ml-auto md:ml-0"><input type="time" defaultValue="08:00" className={"border border-neutral-200 px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm w-[100px] md:w-auto "+(i>=5?"opacity-30":"")}/><span className="text-neutral-300">—</span><input type="time" defaultValue="17:00" className={"border border-neutral-200 px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm w-[100px] md:w-auto "+(i>=5?"opacity-30":"")}/></div></div>
           ))}</div>
         </div>}
 
@@ -3160,13 +3167,13 @@ const Calendar=()=>{
           <FF label="Phone"><TI type="tel" value={newAppt.phone} onChange={e=>setNewAppt({...newAppt,phone:e.target.value})} placeholder="(555) 000-0000"/></FF>
           <FF label="Address"><TI type="text" value={newAppt.address} onChange={e=>setNewAppt({...newAppt,address:e.target.value})} placeholder="Street address"/></FF>
           <FD label="When"/>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <FF label="Date"><TI type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})}/></FF>
             <FF label="Start"><TI type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})}/></FF>
             <FF label="End"><TI type="time" value={newAppt.timeEnd} onChange={e=>setNewAppt({...newAppt,timeEnd:e.target.value})}/></FF>
           </div>
           <FF label="Issue / description"><TA rows={3} value={newAppt.issue} onChange={e=>setNewAppt({...newAppt,issue:e.target.value})} placeholder="Describe the issue..."/></FF>
-          <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><div className="grid grid-cols-3 gap-2">{[["standard","Standard"],["urgent","Urgent"],["emergency","Emergency"]].map(([k,l])=><button key={k} onClick={()=>setNewAppt({...newAppt,urgency:k})} className={"text-sm py-2.5 border transition-colors "+(newAppt.urgency===k?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{l}</button>)}</div></div>
+          <div><label className="text-xs text-neutral-400 mb-1.5 block">Urgency</label><div className="grid grid-cols-3 gap-2">{[["standard","Standard"],["urgent","Urgent"],["emergency","Emergency"]].map(([k,l])=><button key={k} onClick={()=>setNewAppt({...newAppt,urgency:k})} className={"text-xs md:text-sm py-2 md:py-2.5 border transition-colors "+(newAppt.urgency===k?"bg-neutral-900 text-white border-neutral-900":"border-neutral-200 text-neutral-500 hover:border-neutral-400")}>{l}</button>)}</div></div>
         </div>
         <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
           <button onClick={()=>{if(!newAppt.name||!newAppt.date)return;const fmtT=t=>{if(!t)return"TBD";const[h,m]=t.split(":");const hr=parseInt(h);return(hr>12?hr-12:hr===0?12:hr)+":"+m+" "+(hr>=12?"PM":"AM");};const d=new Date(newAppt.date+"T12:00:00");const nb={id:Date.now(),name:newAppt.name,phone:newAppt.phone,address:newAppt.address,issue:newAppt.issue,time:fmtT(newAppt.time),timeEnd:fmtT(newAppt.timeEnd),date:d,status:"pending",urgency:newAppt.urgency,source:"Manual"};setBookings(p=>[...p,nb]);setNewAppt({name:"",phone:"",address:"",issue:"",date:"",time:"",timeEnd:"",urgency:"standard"});setAddPanel(false);}} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Add appointment</button>
@@ -3790,7 +3797,7 @@ const Auth=({onSendOtp})=>{
         <div className="w-full max-w-[400px] fu">
           <div className="mb-8"><Logo s={48}/></div>
 
-          <p className="text-3xl text-neutral-900 tracking-tight mb-2">{mode==="login"?"Sign in to Diali":"Create your account"}</p>
+          <p className="text-2xl md:text-3xl text-neutral-900 tracking-tight mb-2">{mode==="login"?"Sign in to Diali":"Create your account"}</p>
           <p className="text-neutral-400 mb-10">{mode==="login"?"Enter your email and we'll send you a secure login code. No password needed.":"Enter your email to get started. We'll send you a verification code."}</p>
 
           {error&&<div className="bg-neutral-100 border border-neutral-200 px-4 py-3 mb-6"><p className="text-sm text-neutral-700">{error}</p></div>}
@@ -4016,7 +4023,7 @@ const Onboarding=({onDone})=>{
       <div className="h-1 bg-neutral-100 shrink-0"><div className="h-full bg-neutral-900 transition-all duration-700 ease-out" style={{width:pct+"%"}}/></div>
 
       {/* Nav */}
-      <div className="h-16 flex items-center px-10 shrink-0">
+      <div className="h-14 md:h-16 flex items-center px-5 md:px-10 shrink-0">
         <Logo s={32}/>
         <div className="flex-1"/>
         {step>0&&step<total-1&&<button onClick={back} className="text-sm text-neutral-400 hover:text-neutral-900 transition-colors flex items-center gap-2 mr-6"><span className="w-4 h-4">{I.arrowL}</span>Back</button>}
@@ -4024,7 +4031,7 @@ const Onboarding=({onDone})=>{
       </div>
 
       {/* Content — centered, generous whitespace */}
-      <div className="flex-1 flex items-center justify-center px-8 pb-20">
+      <div className="flex-1 flex items-center justify-center px-5 md:px-8 pb-12 md:pb-20">
         <div className="w-full max-w-[560px] fu" key={step}>
 
           {/* Step 0 — Welcome */}
@@ -4043,7 +4050,7 @@ const Onboarding=({onDone})=>{
           {/* Step 1 — Business info */}
           {step===1&&<div>
             <p className="text-xs text-neutral-400 uppercase tracking-widest mb-6">About your business</p>
-            <p className="text-4xl text-neutral-900 tracking-tight mb-3">What do you do?</p>
+            <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">What do you do?</p>
             <p className="text-neutral-400 mb-12">This helps your AI understand your services and speak your customers' language.</p>
             <div className="space-y-8">
               <div className="grid grid-cols-2 gap-4">
@@ -4062,7 +4069,7 @@ const Onboarding=({onDone})=>{
               </div>
               <div>
                 <p className="text-sm text-neutral-900 mb-3">Team size</p>
-                <div className="grid grid-cols-4 gap-2">{["Just me","2–5","6–15","15+"].map(s=>(
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{["Just me","2–5","6–15","15+"].map(s=>(
                   <button key={s} onClick={()=>setTeamSize(s)} className={"px-4 py-3.5 text-sm border-2 transition-all duration-200 "+(teamSize===s?"border-neutral-900 bg-neutral-900 text-white":"border-neutral-200 text-neutral-600 hover:border-neutral-400")}>{s}</button>
                 ))}</div>
               </div>
@@ -4073,7 +4080,7 @@ const Onboarding=({onDone})=>{
           {/* Step 2 — Services */}
           {step===2&&<div>
             <p className="text-xs text-neutral-400 uppercase tracking-widest mb-6">Services</p>
-            <p className="text-4xl text-neutral-900 tracking-tight mb-3">What do you offer?</p>
+            <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">What do you offer?</p>
             <p className="text-neutral-400 mb-12">Your AI uses this to qualify leads and route calls. Select all that apply.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {allServices.map(s=>(
@@ -4089,7 +4096,7 @@ const Onboarding=({onDone})=>{
           {/* Step 3 — AI Voice + Greeting */}
           {step===3&&<div>
             <p className="text-xs text-neutral-400 uppercase tracking-widest mb-6">AI personality</p>
-            <p className="text-4xl text-neutral-900 tracking-tight mb-3">How should your AI sound?</p>
+            <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">How should your AI sound?</p>
             <p className="text-neutral-400 mb-12">Pick a voice and customize the greeting. Customers won't know it's AI.</p>
             <div className="space-y-2 mb-10">
               {[["Kim","Conversational, friendly","Default"],["Asher","Warm, professional","Popular"],["Brady","Deep, confident",""],["Evan","Calm, measured",""],["Larry","Authoritative, steady",""],["Kiora","Friendly, energetic",""]].map(([n,d,tag])=>(
@@ -4114,7 +4121,7 @@ const Onboarding=({onDone})=>{
           {/* Step 4 — Hours */}
           {step===4&&<div>
             <p className="text-xs text-neutral-400 uppercase tracking-widest mb-6">Availability</p>
-            <p className="text-4xl text-neutral-900 tracking-tight mb-3">When are you open?</p>
+            <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">When are you open?</p>
             <p className="text-neutral-400 mb-12">Your AI answers 24/7 — but it'll know when to book vs. take a message.</p>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -4138,7 +4145,7 @@ const Onboarding=({onDone})=>{
             {/* Celebration header */}
             <div className="text-center mb-10">
               <div className="w-16 h-16 bg-neutral-900 text-white flex items-center justify-center mx-auto mb-6" style={{animation:"fu .6s cubic-bezier(.22,1,.36,1) both"}}><span className="w-7 h-7">{I.check}</span></div>
-              <p className="text-4xl text-neutral-900 tracking-tight mb-3">You're all set</p>
+              <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">You're all set</p>
               <p className="text-neutral-400 leading-relaxed max-w-md mx-auto">Your AI receptionist is configured and ready. Here's everything you need to go live.</p>
             </div>
 

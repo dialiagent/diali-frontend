@@ -246,51 +246,124 @@ em{font-style:italic;color:#a3a3a3}
 
 /* ── Mobile optimizations (≤ 767px) ── */
 @media(max-width:767px){
+  /* Global */
   .w{padding:0 20px}
-  nav .w{padding:0 16px;gap:16px}
-  .hero{padding:120px 0 0}
-  .hero-inner{padding:0 16px}
-  .hero h1{font-size:clamp(36px,10vw,44px);letter-spacing:-2px;margin-bottom:20px}
-  .hero p{font-size:16px;margin-bottom:28px}
-  .hero-graphic{margin:48px auto 0;padding:0 16px}
-  .hero-device{padding:20px;gap:16px}
+
+  /* Nav — tight horizontal, keep both buttons visible */
+  nav .w{padding:0 16px;gap:12px}
+  .nav-right{gap:6px}
+  .btn-ghost{padding:8px 10px;font-size:13px}
+  .btn-dark{padding:8px 14px;font-size:13px}
+
+  /* Hero — snug top, readable text */
+  .hero{padding:100px 0 0}
+  .hero-inner{padding:0 20px}
+  .hero h1{font-size:36px;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.02}
+  .hero h1 br{display:none}
+  .hero p{font-size:15px;margin-bottom:24px;line-height:1.55}
+  .hero-actions .btn-lg{padding:12px 20px;font-size:14px;width:100%}
+  .hero-actions{flex-direction:column;gap:8px;max-width:320px;margin:0 auto}
   .hero::before,.hero::after{display:none}
-  section{padding:80px 0}
-  .section-title{font-size:clamp(26px,7vw,32px);letter-spacing:-1.2px;margin-bottom:14px}
-  .section-desc{font-size:15px}
-  .how-strip{padding:60px 0}
-  .how-grid{gap:32px}
+  .announce{font-size:12px;margin-bottom:28px}
+  .announce-tag{font-size:11px;padding:4px 10px}
+  .announce-text{padding:4px 12px 4px 10px;font-size:12px}
+
+  /* Hero device graphic — stack into single column, hide second panel */
+  .hero-graphic{margin:40px auto 0;padding:0 16px}
+  .hero-device{padding:16px;gap:0;grid-template-columns:1fr}
+  .device-panel{display:none}
+  .device-call{padding:16px;border:1px solid #f0f0f0}
+  .device-call-caller{padding:12px}
+  .caller-meta{font-size:10px}
+  .transcript{font-size:11px;max-height:80px}
+  .wave{height:24px}
+
+  /* Sections — consistent spacing */
+  section{padding:64px 0}
+  .section-label{font-size:10px;letter-spacing:1.5px;margin-bottom:12px}
+  .section-title{font-size:28px;letter-spacing:-1px;margin-bottom:12px;line-height:1.08}
+  .section-title br{display:none}
+  .section-desc{font-size:14px;line-height:1.6}
+
+  /* How it works */
+  .how-strip{padding:48px 0}
+  .how-grid{gap:28px}
   .how-item{padding:0}
-  .tabs-section{padding:80px 0}
-  .tabs-head{gap:32px;margin-bottom:32px}
-  .tab{padding:10px 14px;font-size:13px}
-  .tab-panel{padding:24px}
-  .tab-panel.active{gap:28px}
-  .tab-content h3{font-size:22px}
-  .tab-visual{padding:20px;min-height:240px}
-  .split-section{padding:80px 0}
-  .split-grid{gap:40px}
-  .split-left h2{font-size:clamp(28px,8vw,36px);letter-spacing:-1.5px;margin-bottom:20px}
-  .split-left p{font-size:15px;margin-bottom:28px}
+  .how-title{font-size:18px}
+  .how-desc{font-size:13px}
+
+  /* Tabs — horizontal scroll, no wrap */
+  .tabs-section{padding:64px 0}
+  .tabs-head{gap:24px;margin-bottom:24px}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;gap:0;padding-bottom:1px}
+  .tab{padding:10px 14px;font-size:13px;flex-shrink:0;white-space:nowrap}
+  .tab-panel{padding:20px}
+  .tab-panel.active{grid-template-columns:1fr;gap:24px}
+  .tab-content h3{font-size:20px;letter-spacing:-.5px}
+  .tab-content p{font-size:14px;margin-bottom:20px}
+  .tab-features li{font-size:12px;padding:8px 0}
+  .tab-visual{padding:16px;min-height:auto}
+  .tab-visual .panel-row{font-size:11px;padding:6px 0}
+  .tab-visual .panel-row .k{font-size:9px}
+
+  /* Split / dark section */
+  .split-section{padding:64px 0}
+  .split-grid{gap:36px}
+  .split-left h2{font-size:32px;letter-spacing:-1.5px;margin-bottom:16px}
+  .split-left h2 br{display:none}
+  .split-left p{font-size:14px;margin-bottom:24px;line-height:1.6}
+  .split-stat-row .k{font-size:10px}
   .split-stat-row .v{font-size:22px}
-  .voice-card{padding:20px 16px}
-  .features-section{padding:80px 0}
-  .features-head{margin-bottom:40px}
-  .feature{padding:28px 24px;min-height:auto}
-  .pricing-section{padding:80px 0}
-  .pricing-head{margin-bottom:48px}
-  .tier{padding:32px 24px}
+  .split-stats .divider{margin:16px 0}
+  .voice-grid{grid-template-columns:1fr}
+  .voice-card{padding:16px}
+  .voice-name{font-size:14px}
+  .voice-desc{font-size:11px}
+
+  /* Features grid — single column */
+  .features-section{padding:64px 0}
+  .features-head{margin-bottom:32px}
+  .features-grid{grid-template-columns:1fr}
+  .feature{padding:24px 20px;min-height:auto}
+  .feature-num{font-size:9px;margin-bottom:16px}
+  .feature h4{font-size:16px}
+  .feature p{font-size:13px}
+
+  /* Pricing — single column stack */
+  .pricing-section{padding:64px 0}
+  .pricing-head{margin-bottom:40px}
+  .pricing-grid{grid-template-columns:1fr}
+  .tier{padding:28px 24px}
+  .tier-name{font-size:12px;margin-bottom:16px}
   .tier-price .amt{font-size:36px}
-  .roadmap-section{padding:60px 0}
-  .roadmap-grid{margin-top:32px}
-  .roadmap-item{padding:24px}
-  .roadmap-grid{grid-template-columns:1fr 1fr}
-  .cta-section{padding:80px 0}
-  .cta-section h2{font-size:clamp(28px,8vw,36px);letter-spacing:-1.5px;margin-bottom:20px}
-  .cta-section p{font-size:15px;margin-bottom:28px}
-  footer{padding:60px 0 32px}
-  .foot-grid{gap:32px;margin-bottom:48px}
-  .foot-bottom{flex-direction:column;align-items:flex-start;gap:12px}
+  .tier-price .strike{font-size:18px}
+  .tier-desc{font-size:13px;margin-bottom:24px;padding-bottom:24px}
+  .tier-features li{font-size:12px;padding:8px 0}
+  .tier-cta{padding:12px;font-size:13px}
+
+  /* Roadmap — single column */
+  .roadmap-section{padding:48px 0}
+  .roadmap-grid{margin-top:28px;grid-template-columns:1fr}
+  .roadmap-item{padding:20px}
+  .roadmap-item h4{font-size:15px}
+  .roadmap-item p{font-size:12px}
+
+  /* CTA */
+  .cta-section{padding:64px 0}
+  .cta-section h2{font-size:32px;letter-spacing:-1.5px;margin-bottom:16px}
+  .cta-section h2 br{display:none}
+  .cta-section p{font-size:14px;margin-bottom:24px}
+  .cta-actions .btn-lg{width:100%;justify-content:center}
+
+  /* Footer */
+  footer{padding:48px 0 24px}
+  .foot-grid{grid-template-columns:1fr;gap:28px;margin-bottom:40px}
+  .foot-tag{font-size:13px;max-width:100%}
+  .foot-col h5{font-size:11px;margin-bottom:14px}
+  .foot-col a{font-size:13px}
+  .foot-col li{margin-bottom:10px}
+  .foot-bottom{flex-direction:column;align-items:flex-start;gap:10px;padding-top:24px}
+  .foot-bottom p{font-size:12px}
 }
 </style>
 </head>
