@@ -243,6 +243,55 @@ footer{background:#fafafa;border-top:1px solid #e5e5e5;padding:80px 0 40px}
 .d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}.d4{transition-delay:.32s}
 
 em{font-style:italic;color:#a3a3a3}
+
+/* ── Mobile optimizations (≤ 767px) ── */
+@media(max-width:767px){
+  .w{padding:0 20px}
+  nav .w{padding:0 16px;gap:16px}
+  .hero{padding:120px 0 0}
+  .hero-inner{padding:0 16px}
+  .hero h1{font-size:clamp(36px,10vw,44px);letter-spacing:-2px;margin-bottom:20px}
+  .hero p{font-size:16px;margin-bottom:28px}
+  .hero-graphic{margin:48px auto 0;padding:0 16px}
+  .hero-device{padding:20px;gap:16px}
+  .hero::before,.hero::after{display:none}
+  section{padding:80px 0}
+  .section-title{font-size:clamp(26px,7vw,32px);letter-spacing:-1.2px;margin-bottom:14px}
+  .section-desc{font-size:15px}
+  .how-strip{padding:60px 0}
+  .how-grid{gap:32px}
+  .how-item{padding:0}
+  .tabs-section{padding:80px 0}
+  .tabs-head{gap:32px;margin-bottom:32px}
+  .tab{padding:10px 14px;font-size:13px}
+  .tab-panel{padding:24px}
+  .tab-panel.active{gap:28px}
+  .tab-content h3{font-size:22px}
+  .tab-visual{padding:20px;min-height:240px}
+  .split-section{padding:80px 0}
+  .split-grid{gap:40px}
+  .split-left h2{font-size:clamp(28px,8vw,36px);letter-spacing:-1.5px;margin-bottom:20px}
+  .split-left p{font-size:15px;margin-bottom:28px}
+  .split-stat-row .v{font-size:22px}
+  .voice-card{padding:20px 16px}
+  .features-section{padding:80px 0}
+  .features-head{margin-bottom:40px}
+  .feature{padding:28px 24px;min-height:auto}
+  .pricing-section{padding:80px 0}
+  .pricing-head{margin-bottom:48px}
+  .tier{padding:32px 24px}
+  .tier-price .amt{font-size:36px}
+  .roadmap-section{padding:60px 0}
+  .roadmap-grid{margin-top:32px}
+  .roadmap-item{padding:24px}
+  .roadmap-grid{grid-template-columns:1fr 1fr}
+  .cta-section{padding:80px 0}
+  .cta-section h2{font-size:clamp(28px,8vw,36px);letter-spacing:-1.5px;margin-bottom:20px}
+  .cta-section p{font-size:15px;margin-bottom:28px}
+  footer{padding:60px 0 32px}
+  .foot-grid{gap:32px;margin-bottom:48px}
+  .foot-bottom{flex-direction:column;align-items:flex-start;gap:12px}
+}
 </style>
 </head>
 <body>
