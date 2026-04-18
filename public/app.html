@@ -2620,15 +2620,24 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
 const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave,isDemo,curPlan,setCurPlan,curPlanData,requirePlan,sub})=>{
   const[tab,setTab]=useState("profile");
   const[notifs,setNotifs]=useState({calls:true,sms:true,email:false,weekly:true});
-  const toggleN=k=>setNotifs(p=>({...p,[k]:!p[k]}));
+  const toggleN=k=>{const next={...notifs,[k]:!notifs[k]};setNotifs(next);saveSetting({notifications:next});};
+  React.useEffect(()=>{if(notifsLoaded)return;(async()=>{try{const{data}=await window.supabase?.from("settings").select("notifications").eq("id",profile?.id).single();if(data?.notifications){setNotifs(data.notifications);}setNotifsLoaded(true);}catch(e){}})();},[profile?.id]);
   const[pf,setPf]=useState({business_name:profile?.business_name||"",full_name:profile?.full_name||"",email:profile?.email||"",phone:profile?.phone||"",service_area:profile?.service_area||"",trade:profile?.trade||""});
   const[saving,setSaving]=useState(false);
   const[saved,setSaved]=useState(false);
-  const saveProfile=async()=>{setSaving(true);try{await onProfileSave(pf);setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){}setSaving(false);};
+  const[profileError,setProfileError]=useState("");
+  const[deleteModal,setDeleteModal]=useState(false);
+  const[deleteConfirm,setDeleteConfirm]=useState("");
+  const[deleting,setDeleting]=useState(false);
+  const[inviteError,setInviteError]=useState("");
+  const[notifsLoaded,setNotifsLoaded]=useState(false);
+  const saveProfile=async()=>{setProfileError("");setSaving(true);try{if(!pf.full_name?.trim()){throw new Error("Full name is required");}if(!pf.email?.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pf.email)){throw new Error("Valid email is required");}if(!pf.phone?.trim()){throw new Error("Phone number is required");}await onProfileSave(pf);setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){setProfileError(e.message||"Failed to save profile");}setSaving(false);};
 
   /* ── Integration state ── */
   const[intStates,setIntStates]=useState({gcal:true,stripe:true,slack:false,sf:false,zapier:true,eleven:true,qb:false,hw:false});
-  const toggleInt=k=>setIntStates(p=>({...p,[k]:!p[k]}));
+  const[intError,setIntError]=useState("");
+  const toggleInt=k=>{const tier=planTier(curPlan);const premiumInts=["sf","zapier","qb","hw"];if(!intStates[k]&&premiumInts.includes(k)&&tier<1){requirePlan("Premium integrations",tier<1?"growth":"scale");return;}const next={...intStates,[k]:!intStates[k]};setIntStates(next);saveSetting({integrations:next});};
+  React.useEffect(()=>{(async()=>{try{const{data}=await window.supabase?.from("settings").select("integrations").eq("id",profile?.id).single();if(data?.integrations){setIntStates(p=>({...p,...data.integrations}));}}catch(e){}})();},[profile?.id]);
 
   /* ── Billing / Plan state ── */
   const plans=PLANS;
@@ -2667,6 +2676,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
   /* ── Team state — seeded from the user's own profile ── */
   const initialTeam=profile?[{id:0,name:profile.full_name||"You",email:profile.email||"",role:"Owner",status:"Active",phone:profile.phone||"",hours:"",days:"",area:profile.service_area||""}]:[];
   const[team,setTeam]=useState(initialTeam);
+  React.useEffect(()=>{(async()=>{try{const{data}=await window.supabase?.from("settings").select("team_members").eq("id",profile?.id).single();if(data?.team_members&&Array.isArray(data.team_members)){setTeam([...initialTeam,...data.team_members]);}}catch(e){}})();},[profile?.id]);
   const[teamPanel,setTeamPanel]=useState(null);
   const[editMember,setEditMember]=useState(null);
   const[invite,setInvite]=useState({email:"",role:"Technician",hours:"7 AM – 5 PM",days:"Mon – Fri",area:""});
@@ -2676,16 +2686,16 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
   const roleBg=r=>r==="Owner"?"bg-neutral-900 text-white":r==="Admin"?"bg-neutral-700 text-white":r==="Dispatcher"?"bg-neutral-500 text-white":"bg-neutral-200 text-neutral-600";
   const statusBg=s=>s==="Active"?"bg-neutral-900 text-white":s==="Pending"?"bg-neutral-200 text-neutral-600":"bg-neutral-100 text-neutral-400";
   const openEdit=(m)=>{setEditData({...m});setTeamPanel("edit");setEditMember(m);};
-  const saveEdit=()=>{setTeam(p=>p.map(m=>m.id===editMember.id?{...m,...editData}:m));setTeamPanel(null);setEditMember(null);};
-  const deactivateMember=()=>{setTeam(p=>p.map(m=>m.id===editMember.id?{...m,status:m.status==="Deactivated"?"Active":"Deactivated"}:m));setTeamPanel(null);setEditMember(null);};
-  const sendInvite=()=>{if(!invite.email)return;const activeCount=team.filter(m=>m.status==="Active"||m.status==="Pending").length;const seatLimit=curPlanData?.seats||1;if(seatLimit!==999&&activeCount>=seatLimit){setTeamPanel(null);const next=planTier(curPlan)<1?"growth":"scale";requirePlan("More team seats",next);return;}setTeam(p=>[...p,{id:Date.now(),name:invite.email.split("@")[0],email:invite.email,role:invite.role,status:"Pending",phone:"",hours:invite.hours,days:invite.days,area:invite.area}]);setInvite({email:"",role:"Technician",hours:"7 AM \u2013 5 PM",days:"Mon \u2013 Fri",area:""});setTeamPanel(null);};
+  const saveEdit=()=>{const updated=team.map(m=>m.id===editMember.id?{...m,...editData}:m);setTeam(updated);saveSetting({team_members:updated.filter(m=>m.id!==0)});setTeamPanel(null);setEditMember(null);};
+  const deactivateMember=()=>{const updated=team.map(m=>m.id===editMember.id?{...m,status:m.status==="Deactivated"?"Active":"Deactivated"}:m);setTeam(updated);saveSetting({team_members:updated.filter(m=>m.id!==0)});setTeamPanel(null);setEditMember(null);};
+  const sendInvite=()=>{setInviteError("");if(!invite.email?.trim()){setInviteError("Email address is required");return;}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invite.email.trim())){setInviteError("Please enter a valid email address");return;}if(team.some(m=>m.email.toLowerCase()===invite.email.trim().toLowerCase())){setInviteError("This email has already been invited");return;}const activeCount=team.filter(m=>m.status==="Active"||m.status==="Pending").length;const seatLimit=curPlanData?.seats||1;if(seatLimit!==999&&activeCount>=seatLimit){setInviteError("Your "+curPlan+" plan allows "+seatLimit+" team "+(seatLimit===1?"member":"members")+". Upgrade to add more.");return;}const newMember={id:Date.now(),name:invite.email.split("@")[0],email:invite.email.trim(),role:invite.role,status:"Pending",phone:"",hours:invite.hours,days:invite.days,area:invite.area};setTeam(p=>[...p,newMember]);saveSetting({team_members:[...team,newMember].filter(m=>m.id!==0)});setInvite({email:"",role:"Technician",hours:"7 AM \u2013 5 PM",days:"Mon \u2013 Fri",area:""});setTeamPanel(null);};
 
   return(
     <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full fu">
       {/* Mobile: horizontal scroll tabs. Desktop: vertical sidebar */}
       <div className="md:w-52 shrink-0 flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0">{[["profile","Profile"],["integrations","Integrations"],["team","Team"],["billing","Billing"],["notifications","Notifications"]].map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"whitespace-nowrap md:w-full text-left px-4 py-2.5 md:py-3 text-sm transition-all duration-200 "+(tab===k?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600")}>{l}</button>)}</div>
       <div className="flex-1 bg-white border border-neutral-100 p-4 md:p-8 overflow-y-auto">
-        {tab==="profile"&&<div className="max-w-xl"><p className="text-2xl text-neutral-900 tracking-tight mb-8">Profile</p><div className="space-y-5">{[["Business Name","business_name","text"],["Full Name","full_name","text"],["Email","email","email"],["Phone","phone","tel"],["Service Area","service_area","text"],["Trade","trade","text"]].map(([l,k,t])=><div key={k}><label className="text-xs text-neutral-400 mb-1.5 block">{l}</label><input type={t} value={pf[k]} onChange={e=>setPf(p=>({...p,[k]:e.target.value}))} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>)}</div><div className="mt-6"><label className="text-xs text-neutral-400 mb-1.5 block">Logo</label><div className="border-2 border-dashed border-neutral-200 p-10 text-center hover:border-neutral-400 cursor-pointer transition-colors"><p className="text-sm text-neutral-400">Drop your logo here or click to upload</p><p className="text-xs text-neutral-300 mt-1">PNG, SVG up to 2MB</p></div></div><button onClick={saveProfile} disabled={saving} className={"mt-6 px-6 py-3 text-sm transition-colors "+(saved?"bg-neutral-900 text-white":"bg-neutral-900 text-white hover:bg-black")}>{saving?"Saving...":saved?"Saved":"Save changes"}</button><div className="mt-12 pt-8 border-t border-neutral-200"><p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Account</p><div className="flex gap-3"><button onClick={onLogout} className="text-sm text-neutral-600 border border-neutral-200 px-5 py-2.5 hover:bg-neutral-50 transition-colors">Sign out</button><button className="text-sm text-neutral-400 border border-neutral-200 px-5 py-2.5 hover:bg-neutral-50 transition-colors">Delete account</button></div></div></div>}
+        {tab==="profile"&&<div className="max-w-xl"><p className="text-2xl text-neutral-900 tracking-tight mb-8">Profile</p><div className="space-y-5">{[["Business Name","business_name","text"],["Full Name","full_name","text"],["Email","email","email"],["Phone","phone","tel"],["Service Area","service_area","text"],["Trade","trade","text"]].map(([l,k,t])=><div key={k}><label className="text-xs text-neutral-400 mb-1.5 block">{l}</label><input type={t} value={pf[k]} onChange={e=>setPf(p=>({...p,[k]:e.target.value}))} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>)}</div><div className="mt-6"><label className="text-xs text-neutral-400 mb-1.5 block">Logo</label><div className="border-2 border-dashed border-neutral-200 p-10 text-center transition-colors opacity-60"><p className="text-sm text-neutral-400">Logo upload coming soon</p><p className="text-xs text-neutral-300 mt-1">PNG, SVG up to 2MB</p></div></div>{profileError&&<div className="mt-4 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700">{profileError}</div>}<button onClick={saveProfile} disabled={saving} className={"mt-6 px-6 py-3 text-sm transition-colors "+(saved?"bg-neutral-900 text-white":"bg-neutral-900 text-white hover:bg-black")}>{saving?"Saving...":saved?"\u2713 Saved":"Save changes"}</button><div className="mt-12 pt-8 border-t border-neutral-200"><p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Account</p><div className="flex gap-3"><button onClick={onLogout} className="text-sm text-neutral-600 border border-neutral-200 px-5 py-2.5 hover:bg-neutral-50 transition-colors">Sign out</button><button onClick={()=>setDeleteModal(true)} className="text-sm text-red-500 border border-red-200 px-5 py-2.5 hover:bg-red-50 transition-colors">Delete account</button></div>{deleteModal&&<div className="mt-6 p-5 border border-red-200 bg-red-50"><p className="text-sm text-red-700 mb-3">This will permanently delete your account, all settings, and all data. This action cannot be undone.</p><p className="text-xs text-neutral-500 mb-3">Type <strong>DELETE</strong> to confirm</p><input type="text" value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)} placeholder="Type DELETE" className="w-full border border-red-200 px-4 py-2.5 text-sm mb-3"/><div className="flex gap-3"><button onClick={async()=>{if(deleteConfirm!=="DELETE")return;setDeleting(true);try{const sess=await window.supabase.auth.getSession();const uid=sess?.data?.session?.user?.id;if(uid){await window.supabase.from("settings").delete().eq("id",uid);await window.supabase.from("profiles").delete().eq("id",uid);}await window.supabase.auth.signOut();onLogout();}catch(e){setProfileError("Failed to delete account: "+(e.message||"Unknown error"));setDeleting(false);}}} disabled={deleteConfirm!=="DELETE"||deleting} className={"text-sm px-5 py-2.5 transition-colors "+(deleteConfirm==="DELETE"?"bg-red-600 text-white hover:bg-red-700":"bg-neutral-200 text-neutral-400 cursor-not-allowed")}>{deleting?"Deleting...":"Delete permanently"}</button><button onClick={()=>{setDeleteModal(false);setDeleteConfirm("");}} className="text-sm text-neutral-500 border border-neutral-200 px-5 py-2.5 hover:bg-white transition-colors">Cancel</button></div></div>}</div></div>}
         {tab==="integrations"&&<div><p className="text-2xl text-neutral-900 tracking-tight mb-8">Integrations</p>
           {/* Vapi — primary */}
           <div className="border-2 border-neutral-900 p-6 mb-6">
@@ -2739,7 +2749,7 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
                 </div>
               </div>
             </div>
-            <div className="px-7 py-5 border-t border-neutral-100 shrink-0"><button onClick={sendInvite} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Send invite</button></div>
+            <div className="px-7 py-5 border-t border-neutral-100 shrink-0">{inviteError&&<div className="mb-3 px-4 py-2.5 bg-red-50 border border-red-200 text-xs text-red-700">{inviteError}</div>}<button onClick={sendInvite} className="w-full bg-neutral-900 text-white py-3 text-sm hover:bg-black transition-colors">Send invite</button></div>
           </Panel>
 
           {/* Edit member panel */}
@@ -4806,8 +4816,9 @@ const App=()=>{
 
   /* Save profile changes */
   const handleProfileSave=async(data)=>{
-    if(!userId||!window.supabase)return;
-    await window.supabase.from('profiles').upsert({id:userId,...data});
+    if(!userId||!window.supabase)throw new Error("Not signed in");
+    const{error}=await window.supabase.from('profiles').upsert({id:userId,...data});
+    if(error)throw new Error(error.message||"Failed to save profile");
     setProfile(p=>({...p,...data}));
   };
 
