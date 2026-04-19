@@ -2300,6 +2300,11 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
         v.on('call-start',()=>{setCallError("");setCallState('active');});
         v.on('call-end',()=>{
           setCallState('ended');
+          /* Mark test call complete in setup checklist */
+          try{
+            const sb=window.supabase;
+            if(sb){sb.auth.getSession().then(s=>{const uid=s?.data?.session?.user?.id;if(uid){sb.from('settings').select('setup_checklist').eq('id',uid).maybeSingle().then(({data})=>{const cl=data?.setup_checklist||{};if(!cl.test_call){saveSetting({setup_checklist:{...cl,test_call:true}});}});}});}
+          }catch(e){}
           /* Vapi's end-of-call webhook posts async after the call ends. Timing
              is unpredictable (can be 3-15s depending on transcript length).
              Poll refresh at 3s / 7s / 12s / 20s to catch it whenever it lands. */
@@ -3899,6 +3904,114 @@ const Tutorial=({onDone,go})=>{
   );
 };
 
+/* ══════════════════ SETUP GUIDE ══════════════════ */
+const SetupGuide=({profile,agentCfg,go,saveSetting,isDemo})=>{
+  const[open,setOpen]=useState(false);
+  const[popup,setPopup]=useState(null);
+  /* setup_checklist is a jsonb object {test_call:true, phone_forward:true, dismissed:true} */
+  const checklist=agentCfg?.setup_checklist||{};
+  const[local,setLocal]=useState(checklist);
+  const[dismissed,setDismissed]=useState(!!checklist.dismissed);
+
+  /* Sync if agentCfg updates */
+  React.useEffect(()=>{
+    const c=agentCfg?.setup_checklist||{};
+    setLocal(c);
+    setDismissed(!!c.dismissed);
+  },[agentCfg?.setup_checklist]);
+
+  const markStep=(key)=>{
+    const next={...local,[key]:true};
+    setLocal(next);
+    saveSetting({setup_checklist:next});
+  };
+
+  /* Step definitions — each has an id, label, description, action label, completion check, and target page */
+  const steps=[
+    {id:"profile",label:"Complete your profile",desc:"Add your business name, phone number, and service area so your AI receptionist knows who it's answering for.",action:"Edit profile",page:"settings",check:!!(profile?.full_name&&profile?.phone&&profile?.service_area&&profile?.trade)},
+    {id:"agent",label:"Set up your AI receptionist",desc:"Choose a voice, customize your greeting, and configure the qualification questions your receptionist will ask callers.",action:"Configure agent",page:"agent",check:!!(agentCfg?.voice_id&&agentCfg?.greeting&&agentCfg?.system_prompt)},
+    {id:"deploy",label:"Deploy your agent",desc:"Publish your configured AI receptionist so it's ready to take calls. This creates a live phone number that customers can call.",action:"Deploy now",page:"agent",check:!!agentCfg?.vapi_assistant_id},
+    {id:"test",label:"Make a test call",desc:"Try calling your AI receptionist to hear how it sounds and make sure everything works before going live with real customers.",action:"Start test call",page:"agent",check:!!local.test_call},
+    {id:"stripe",label:"Connect Stripe",desc:"Connect your Stripe account to send professional invoices directly from Diali and get paid faster by your customers.",action:"Connect Stripe",page:"settings",check:!!agentCfg?.stripe_account_id},
+    {id:"forward",label:"Forward your phone",desc:"Set up call forwarding from your business phone to your Diali number. Most carriers: dial *72 followed by your Diali number, then press call. To undo, dial *73.",action:"I've set up forwarding",page:null,manual:true,manualKey:"phone_forward",check:!!local.phone_forward},
+  ];
+
+  const done=steps.filter(s=>s.check).length;
+  const total=steps.length;
+  const allDone=done===total;
+
+  /* Auto-hide when all complete */
+  if(allDone&&!open)return null;
+  /* Respect dismissed state */
+  if(dismissed&&!open)return null;
+  /* Don't show for demo users */
+  if(isDemo)return null;
+
+  const dismiss=()=>{setDismissed(true);setOpen(false);const next={...local,dismissed:true};setLocal(next);saveSetting({setup_checklist:next});};
+  const pct=Math.round((done/total)*100);
+
+  return ReactDOM.createPortal(
+    <div className="fixed bottom-0 right-0 z-50 flex flex-col items-end" style={{marginRight:24,marginBottom:24,maxWidth:380,width:'100%'}}>
+      {/* Popup overlay for step detail */}
+      {popup&&<div className="mb-3 bg-white border border-neutral-200 shadow-lg w-full fi" style={{animation:'fi .15s'}}>
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <p className="text-sm font-medium text-neutral-900">{popup.label}</p>
+          <button onClick={()=>setPopup(null)} className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-neutral-600"><span className="w-4 h-4">{I.x}</span></button>
+        </div>
+        <p className="text-sm text-neutral-500 px-5 pb-4 leading-relaxed">{popup.desc}</p>
+        <div className="px-5 pb-4">
+          {popup.manual?<button onClick={()=>{markStep(popup.manualKey);setPopup(null);}} className="w-full py-2.5 bg-neutral-900 text-white text-sm hover:bg-black transition-colors flex items-center justify-center gap-2">
+            <span className="w-3.5 h-3.5">{I.check}</span>{popup.action}
+          </button>:<button onClick={()=>{go(popup.page);setPopup(null);setOpen(false);}} className="w-full py-2.5 bg-neutral-900 text-white text-sm hover:bg-black transition-colors flex items-center justify-center gap-2">
+            {popup.action}<span className="w-3.5 h-3.5">{I.chevR}</span>
+          </button>}
+        </div>
+      </div>}
+      {/* Expanded list */}
+      {open&&<div className="mb-0 bg-white border border-neutral-200 shadow-lg w-full fi" style={{animation:'fi .15s'}}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+          <div>
+            <p className="text-sm font-medium text-neutral-900">Setup guide</p>
+            <p className="text-xs text-neutral-400 mt-0.5">{done} of {total} completed</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {!allDone&&<button onClick={dismiss} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Dismiss</button>}
+            <button onClick={()=>{setOpen(false);setPopup(null);}} className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-neutral-600"><svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className="w-4 h-4"><path d="M19 9l-7 7-7-7"/></svg></button>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="px-5 pt-3 pb-1">
+          <div className="w-full h-1 bg-neutral-100"><div className="h-1 bg-neutral-900 transition-all duration-500" style={{width:pct+"%"}}/></div>
+        </div>
+        {/* Steps */}
+        <div className="px-2 py-2">
+          {steps.map(s=>(
+            <button key={s.id} onClick={()=>{if(!s.check)setPopup(s);}} className={"w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors "+(s.check?"opacity-50":"hover:bg-neutral-50")}>
+              <div className={"w-5 h-5 flex items-center justify-center shrink-0 border "+(s.check?"bg-neutral-900 border-neutral-900 text-white":"border-neutral-300")}>
+                {s.check&&<svg fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" className="w-3 h-3"><path d="M20 6L9 17l-5-5"/></svg>}
+              </div>
+              <span className={"text-sm "+(s.check?"text-neutral-400 line-through":"text-neutral-700")}>{s.label}</span>
+              {!s.check&&<span className="ml-auto w-4 h-4 text-neutral-300">{I.chevR}</span>}
+            </button>
+          ))}
+        </div>
+      </div>}
+      {/* Collapsed trigger bar */}
+      {!open&&<button onClick={()=>setOpen(true)} className="bg-neutral-900 text-white px-5 py-3 shadow-lg flex items-center gap-3 hover:bg-black transition-colors" style={{minWidth:220}}>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium">Setup guide</p>
+          <p className="text-xs text-neutral-400 mt-0.5">{done} of {total} completed</p>
+        </div>
+        <div className="relative w-8 h-8">
+          <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${pct*0.9425} 94.25`} strokeLinecap="butt"/></svg>
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">{done}</span>
+        </div>
+      </button>}
+    </div>,
+    document.body
+  );
+};
+
 const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agentCfg,profile,onProfileSave,showTutorial,onTutorialDone})=>{
   /* ── Quote view state ── */
   const[quoteView,setQuoteView]=useState(null);
@@ -4022,6 +4135,7 @@ const Layout=({pg,go,isNew,isDemo,vapiKeys,setVapiKeys,saveSetting,onLogout,agen
       </div>
       {upgradePrompt&&<UpgradePrompt feature={upgradePrompt.feature} requiredPlan={upgradePrompt.requiredPlan} curPlan={curPlan} onUpgrade={()=>{go("settings");}} onClose={()=>setUpgradePrompt(null)}/>}
       {showTutorial&&<Tutorial onDone={onTutorialDone} go={go}/>}
+      <SetupGuide profile={profile} agentCfg={agentCfg} go={go} saveSetting={saveSetting} isDemo={isDemo}/>
     </div>
   );
 };
