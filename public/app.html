@@ -3909,7 +3909,12 @@ const SetupGuide=({profile,agentCfg,go,saveSetting,isDemo})=>{
   const[open,setOpen]=useState(false);
   const[popup,setPopup]=useState(null);
   /* setup_checklist is a jsonb object {test_call:true, phone_forward:true, dismissed:true} */
-  const checklist=agentCfg?.setup_checklist||{};
+  const getChecklist=()=>{
+    if(agentCfg?.setup_checklist)return agentCfg.setup_checklist;
+    try{const s=window.sessionStorage?.getItem('diali_setup');if(s)return JSON.parse(s);}catch(e){}
+    return {};
+  };
+  const checklist=getChecklist();
   const[local,setLocal]=useState(checklist);
   const[dismissed,setDismissed]=useState(!!checklist.dismissed);
 
@@ -3920,10 +3925,14 @@ const SetupGuide=({profile,agentCfg,go,saveSetting,isDemo})=>{
     setDismissed(!!c.dismissed);
   },[agentCfg?.setup_checklist]);
 
+  const saveChecklist=(obj)=>{
+    try{saveSetting({setup_checklist:obj});}catch(e){}
+    try{window.sessionStorage?.setItem('diali_setup',JSON.stringify(obj));}catch(e){}
+  };
   const markStep=(key)=>{
     const next={...local,[key]:true};
     setLocal(next);
-    saveSetting({setup_checklist:next});
+    saveChecklist(next);
   };
 
   /* Step definitions — each has an id, label, description, action label, completion check, and target page */
@@ -3947,7 +3956,7 @@ const SetupGuide=({profile,agentCfg,go,saveSetting,isDemo})=>{
   /* Don't show for demo users */
   if(isDemo)return null;
 
-  const dismiss=()=>{setDismissed(true);setOpen(false);const next={...local,dismissed:true};setLocal(next);saveSetting({setup_checklist:next});};
+  const dismiss=()=>{setDismissed(true);setOpen(false);const next={...local,dismissed:true};setLocal(next);saveChecklist(next);};
   const pct=Math.round((done/total)*100);
 
   return ReactDOM.createPortal(
