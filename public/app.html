@@ -2459,6 +2459,7 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
             {saving?<><div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>Saving...</>:saved?<><span className="w-4 h-4">{I.check}</span>Saved to Vapi</>:<><span className="w-4 h-4">{I.upload}</span>Deploy to Vapi</>}
           </button>}
           {assistantId&&<p className="text-xs text-neutral-300 text-center truncate px-2" title={assistantId}>ID: {assistantId.slice(0,8)}...</p>}
+          {agentCfg?.diali_phone_number&&<div className="mt-3 p-3 bg-neutral-50 border border-neutral-100"><p className="text-xs text-neutral-400 mb-1">Your Diali number</p><p className="text-sm text-neutral-900 tabular-nums">{(()=>{const d=agentCfg.diali_phone_number.replace(/\D/g,"");const l=d.length===11?d.slice(1):d;return l.length===10?`(${l.slice(0,3)}) ${l.slice(3,6)}-${l.slice(6)}`:agentCfg.diali_phone_number;})()}</p><button onClick={()=>navigator.clipboard.writeText(agentCfg.diali_phone_number.replace(/\D/g,""))} className="text-xs text-neutral-400 hover:text-neutral-900 mt-1 transition-colors">Copy</button></div>}
         </div>
         {/* Mobile action buttons */}
         <div className="flex md:hidden gap-2 mt-3">
@@ -2621,6 +2622,37 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
   );
 };
 
+/* ── Diali Phone Number Display (reusable) ── */
+const DialiPhoneDisplay=()=>{
+  const[num,setNum]=useState(null);
+  React.useEffect(()=>{(async()=>{try{
+    const sb=window.supabase;if(!sb)return;
+    const{data:{session}}=await sb.auth.getSession();if(!session)return;
+    const{data}=await sb.from('settings').select('diali_phone_number').eq('id',session.user.id).maybeSingle();
+    if(data?.diali_phone_number){
+      const d=data.diali_phone_number.replace(/\D/g,'');const l=d.length===11?d.slice(1):d;
+      setNum({raw:l,formatted:l.length===10?`(${l.slice(0,3)}) ${l.slice(3,6)}-${l.slice(6)}`:data.diali_phone_number,e164:data.diali_phone_number});
+    }
+  }catch(e){}})();},[]);
+  if(!num)return null;
+  const[copied,setCopied]=useState(false);
+  return(
+    <div className="mt-8 pt-6 border-t border-neutral-200">
+      <p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">AI Receptionist</p>
+      <div className="bg-neutral-900 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-neutral-500 mb-1">Your Diali number</p>
+            <p className="text-xl text-white tracking-tight tabular-nums">{num.formatted}</p>
+            <p className="text-xs text-neutral-500 mt-2">Forward your business line to this number</p>
+          </div>
+          <button onClick={()=>{navigator.clipboard.writeText(num.raw);setCopied(true);setTimeout(()=>setCopied(false),2000);}} className={"text-xs px-4 py-2 transition-colors "+(copied?"bg-white text-neutral-900":"bg-neutral-800 text-neutral-400 hover:text-white")}>{copied?"Copied":"Copy"}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ══════════════════ SETTINGS ══════════════════ */
 const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave,isDemo,curPlan,setCurPlan,curPlanData,requirePlan,sub})=>{
   const[tab,setTab]=useState("profile");
@@ -2707,7 +2739,8 @@ const Settings=({vapiKeys,setVapiKeys,saveSetting,onLogout,profile,onProfileSave
       {/* Mobile: horizontal scroll tabs. Desktop: vertical sidebar */}
       <div className="md:w-52 shrink-0 flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0">{[["profile","Profile"],["integrations","Integrations"],["team","Team"],["billing","Billing"],["notifications","Notifications"]].map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"whitespace-nowrap md:w-full text-left px-4 py-2.5 md:py-3 text-sm transition-all duration-200 "+(tab===k?"bg-neutral-900 text-white":"text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600")}>{l}</button>)}</div>
       <div className="flex-1 bg-white border border-neutral-100 p-4 md:p-8 overflow-y-auto">
-        {tab==="profile"&&<div className="max-w-xl"><p className="text-2xl text-neutral-900 tracking-tight mb-8">Profile</p><div className="space-y-5">{[["Business Name","business_name","text"],["Full Name","full_name","text"],["Email","email","email"],["Phone","phone","tel"],["Service Area","service_area","text"],["Trade","trade","text"]].map(([l,k,t])=><div key={k}><label className="text-xs text-neutral-400 mb-1.5 block">{l}</label><input type={t} value={pf[k]} onChange={e=>setPf(p=>({...p,[k]:e.target.value}))} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>)}</div><div className="mt-6"><label className="text-xs text-neutral-400 mb-1.5 block">Logo</label><div className="border-2 border-dashed border-neutral-200 p-10 text-center transition-colors opacity-60"><p className="text-sm text-neutral-400">Logo upload coming soon</p><p className="text-xs text-neutral-300 mt-1">PNG, SVG up to 2MB</p></div></div>{profileError&&<div className="mt-4 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700">{profileError}</div>}<button onClick={saveProfile} disabled={saving} className={"mt-6 px-6 py-3 text-sm transition-colors "+(saved?"bg-neutral-900 text-white":"bg-neutral-900 text-white hover:bg-black")}>{saving?"Saving...":saved?"\u2713 Saved":"Save changes"}</button><div className="mt-12 pt-8 border-t border-neutral-200"><p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Account</p><div className="flex gap-3"><button onClick={onLogout} className="text-sm text-neutral-600 border border-neutral-200 px-5 py-2.5 hover:bg-neutral-50 transition-colors">Sign out</button><button onClick={()=>setDeleteModal(true)} className="text-sm text-red-500 border border-red-200 px-5 py-2.5 hover:bg-red-50 transition-colors">Delete account</button></div>{deleteModal&&<div className="mt-6 p-5 border border-red-200 bg-red-50"><p className="text-sm text-red-700 mb-3">This will permanently delete your account, all settings, and all data. This action cannot be undone.</p><p className="text-xs text-neutral-500 mb-3">Type <strong>DELETE</strong> to confirm</p><input type="text" value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)} placeholder="Type DELETE" className="w-full border border-red-200 px-4 py-2.5 text-sm mb-3"/><div className="flex gap-3"><button onClick={async()=>{if(deleteConfirm!=="DELETE")return;setDeleting(true);try{const sess=await window.supabase.auth.getSession();const uid=sess?.data?.session?.user?.id;if(uid){await window.supabase.from("settings").delete().eq("id",uid);await window.supabase.from("profiles").delete().eq("id",uid);}await window.supabase.auth.signOut();onLogout();}catch(e){setProfileError("Failed to delete account: "+(e.message||"Unknown error"));setDeleting(false);}}} disabled={deleteConfirm!=="DELETE"||deleting} className={"text-sm px-5 py-2.5 transition-colors "+(deleteConfirm==="DELETE"?"bg-red-600 text-white hover:bg-red-700":"bg-neutral-200 text-neutral-400 cursor-not-allowed")}>{deleting?"Deleting...":"Delete permanently"}</button><button onClick={()=>{setDeleteModal(false);setDeleteConfirm("");}} className="text-sm text-neutral-500 border border-neutral-200 px-5 py-2.5 hover:bg-white transition-colors">Cancel</button></div></div>}</div></div>}
+        {tab==="profile"&&<div className="max-w-xl"><p className="text-2xl text-neutral-900 tracking-tight mb-8">Profile</p><div className="space-y-5">{[["Business Name","business_name","text"],["Full Name","full_name","text"],["Email","email","email"],["Phone","phone","tel"],["Service Area","service_area","text"],["Trade","trade","text"]].map(([l,k,t])=><div key={k}><label className="text-xs text-neutral-400 mb-1.5 block">{l}</label><input type={t} value={pf[k]} onChange={e=>setPf(p=>({...p,[k]:e.target.value}))} className="w-full border border-neutral-200 px-4 py-3 text-sm"/></div>)}</div>
+        <DialiPhoneDisplay/><div className="mt-6"><label className="text-xs text-neutral-400 mb-1.5 block">Logo</label><div className="border-2 border-dashed border-neutral-200 p-10 text-center transition-colors opacity-60"><p className="text-sm text-neutral-400">Logo upload coming soon</p><p className="text-xs text-neutral-300 mt-1">PNG, SVG up to 2MB</p></div></div>{profileError&&<div className="mt-4 px-4 py-3 bg-red-50 border border-red-200 text-sm text-red-700">{profileError}</div>}<button onClick={saveProfile} disabled={saving} className={"mt-6 px-6 py-3 text-sm transition-colors "+(saved?"bg-neutral-900 text-white":"bg-neutral-900 text-white hover:bg-black")}>{saving?"Saving...":saved?"\u2713 Saved":"Save changes"}</button><div className="mt-12 pt-8 border-t border-neutral-200"><p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">Account</p><div className="flex gap-3"><button onClick={onLogout} className="text-sm text-neutral-600 border border-neutral-200 px-5 py-2.5 hover:bg-neutral-50 transition-colors">Sign out</button><button onClick={()=>setDeleteModal(true)} className="text-sm text-red-500 border border-red-200 px-5 py-2.5 hover:bg-red-50 transition-colors">Delete account</button></div>{deleteModal&&<div className="mt-6 p-5 border border-red-200 bg-red-50"><p className="text-sm text-red-700 mb-3">This will permanently delete your account, all settings, and all data. This action cannot be undone.</p><p className="text-xs text-neutral-500 mb-3">Type <strong>DELETE</strong> to confirm</p><input type="text" value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)} placeholder="Type DELETE" className="w-full border border-red-200 px-4 py-2.5 text-sm mb-3"/><div className="flex gap-3"><button onClick={async()=>{if(deleteConfirm!=="DELETE")return;setDeleting(true);try{const sess=await window.supabase.auth.getSession();const uid=sess?.data?.session?.user?.id;if(uid){await window.supabase.from("settings").delete().eq("id",uid);await window.supabase.from("profiles").delete().eq("id",uid);}await window.supabase.auth.signOut();onLogout();}catch(e){setProfileError("Failed to delete account: "+(e.message||"Unknown error"));setDeleting(false);}}} disabled={deleteConfirm!=="DELETE"||deleting} className={"text-sm px-5 py-2.5 transition-colors "+(deleteConfirm==="DELETE"?"bg-red-600 text-white hover:bg-red-700":"bg-neutral-200 text-neutral-400 cursor-not-allowed")}>{deleting?"Deleting...":"Delete permanently"}</button><button onClick={()=>{setDeleteModal(false);setDeleteConfirm("");}} className="text-sm text-neutral-500 border border-neutral-200 px-5 py-2.5 hover:bg-white transition-colors">Cancel</button></div></div>}</div></div>}
         {tab==="integrations"&&<div><p className="text-2xl text-neutral-900 tracking-tight mb-8">Integrations</p>
           {/* Vapi — primary */}
           <div className="border-2 border-neutral-900 p-6 mb-6">
