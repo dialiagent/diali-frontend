@@ -1934,6 +1934,35 @@ const Quotes=()=>{
 };
 
 /* ══════════════════ AGENT ══════════════════ */
+/* ── Agent page phone card — shows number or provision button ── */
+const AgentPhoneCard=({agentCfg})=>{
+  const[num,setNum]=useState(agentCfg?.diali_phone_number?fmtE164(agentCfg.diali_phone_number):null);
+  const[busy,setBusy]=useState(false);
+  const[err,setErr]=useState("");
+  const go=async()=>{
+    setBusy(true);setErr("");
+    try{
+      const sb=window.supabase;if(!sb)throw new Error("Not ready");
+      const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error("Not signed in");
+      const token=session.access_token;
+      /* Ensure assistant is deployed */
+      const{data:s}=await sb.from('settings').select('vapi_assistant_id,voice_id,greeting,system_prompt').eq('id',session.user.id).maybeSingle();
+      if(!s?.vapi_assistant_id){
+        const vid=s?.voice_id||"O7LV5fxosQChiBE7l6Wz";
+        const r=await fetch(BACKEND_URL+"/api/assistants/deploy",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({assistantConfig:{model:{provider:"openai",model:"gpt-4o",messages:[{role:"system",content:s?.system_prompt||"You are the AI receptionist for a home-services business."}]},voice:{provider:"11labs",voiceId:vid},firstMessage:s?.greeting||"Hi, thanks for calling!",transcriber:{provider:"deepgram",model:"nova-2"},name:"Diali Receptionist"}})});
+        const d=await r.json();if(!r.ok||!d.assistantId)throw new Error(d.error||"Deploy failed");
+      }
+      const{data:prof}=await sb.from('profiles').select('service_area').eq('id',session.user.id).maybeSingle();
+      const r2=await fetch(BACKEND_URL+"/api/phone/provision",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceArea:prof?.service_area||""})});
+      const pd=await r2.json();if(!r2.ok||!pd.phoneNumber)throw new Error(pd.error||"Provision failed");
+      setNum(fmtE164(pd.phoneNumber));
+    }catch(e){setErr(e.message||"Something went wrong");}
+    setBusy(false);
+  };
+  if(num)return(<div className="mt-3 p-3 bg-neutral-50 border border-neutral-100"><p className="text-xs text-neutral-400 mb-1">Your Diali number</p><p className="text-sm text-neutral-900 tabular-nums">{num.formatted}</p><button onClick={()=>navigator.clipboard.writeText(num.raw)} className="text-xs text-neutral-400 hover:text-neutral-900 mt-1 transition-colors">Copy</button></div>);
+  return(<div className="mt-3"><button onClick={go} disabled={busy} className="w-full border border-neutral-200 py-2.5 text-sm text-neutral-500 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">{busy?<><div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>Provisioning...</>:<><span className="w-4 h-4">{I.phone}</span>Get phone number</>}</button>{err&&<p className="text-xs text-red-500 mt-1.5 text-center">{err}</p>}</div>);
+};
+
 const Agent=({vapiKeys,setVapiKeys,saveSetting,agentCfg})=>{
   const defaultPrompt=`You are Diali, the receptionist for this home-services business. You answer the phone. You sound like a sharp dispatcher who's been doing this for ten years — not a chatbot.
 
@@ -2459,7 +2488,7 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
             {saving?<><div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>Saving...</>:saved?<><span className="w-4 h-4">{I.check}</span>Saved to Vapi</>:<><span className="w-4 h-4">{I.upload}</span>Deploy to Vapi</>}
           </button>}
           {assistantId&&<p className="text-xs text-neutral-300 text-center truncate px-2" title={assistantId}>ID: {assistantId.slice(0,8)}...</p>}
-          {agentCfg?.diali_phone_number&&<div className="mt-3 p-3 bg-neutral-50 border border-neutral-100"><p className="text-xs text-neutral-400 mb-1">Your Diali number</p><p className="text-sm text-neutral-900 tabular-nums">{(()=>{const d=agentCfg.diali_phone_number.replace(/\D/g,"");const l=d.length===11?d.slice(1):d;return l.length===10?`(${l.slice(0,3)}) ${l.slice(3,6)}-${l.slice(6)}`:agentCfg.diali_phone_number;})()}</p><button onClick={()=>navigator.clipboard.writeText(agentCfg.diali_phone_number.replace(/\D/g,""))} className="text-xs text-neutral-400 hover:text-neutral-900 mt-1 transition-colors">Copy</button></div>}
+          <AgentPhoneCard agentCfg={agentCfg}/>
         </div>
         {/* Mobile action buttons */}
         <div className="flex md:hidden gap-2 mt-3">
@@ -2623,23 +2652,74 @@ Picking the wrong timestamp puts the appointment at the wrong hour and wastes ev
 };
 
 /* ── Diali Phone Number Display (reusable) ── */
+const fmtE164=(e164)=>{const d=e164.replace(/\D/g,'');const l=d.length===11?d.slice(1):d;return{raw:l,formatted:l.length===10?`(${l.slice(0,3)}) ${l.slice(3,6)}-${l.slice(6)}`:e164,e164};};
+
 const DialiPhoneDisplay=()=>{
   const[num,setNum]=useState(null);
+  const[loaded,setLoaded]=useState(false);
+  const[provisioning,setProvisioning]=useState(false);
+  const[provError,setProvError]=useState("");
+  const[copied,setCopied]=useState(false);
+
+  /* Load existing number on mount */
   React.useEffect(()=>{(async()=>{try{
     const sb=window.supabase;if(!sb)return;
     const{data:{session}}=await sb.auth.getSession();if(!session)return;
     const{data}=await sb.from('settings').select('diali_phone_number').eq('id',session.user.id).maybeSingle();
-    if(data?.diali_phone_number){
-      const d=data.diali_phone_number.replace(/\D/g,'');const l=d.length===11?d.slice(1):d;
-      setNum({raw:l,formatted:l.length===10?`(${l.slice(0,3)}) ${l.slice(3,6)}-${l.slice(6)}`:data.diali_phone_number,e164:data.diali_phone_number});
+    if(data?.diali_phone_number)setNum(fmtE164(data.diali_phone_number));
+  }catch(e){}setLoaded(true);})();},[]);
+
+  /* Provision a new number on demand */
+  const provision=async()=>{
+    setProvisioning(true);setProvError("");
+    try{
+      const sb=window.supabase;if(!sb)throw new Error("Not ready");
+      const{data:{session}}=await sb.auth.getSession();
+      if(!session)throw new Error("Not signed in");
+      const token=session.access_token;
+
+      /* Make sure they have an assistant deployed first */
+      const{data:settings}=await sb.from('settings').select('vapi_assistant_id,voice_id,greeting,system_prompt,questions').eq('id',session.user.id).maybeSingle();
+      if(!settings?.vapi_assistant_id){
+        /* Auto-deploy a default assistant */
+        const vid=settings?.voice_id||"O7LV5fxosQChiBE7l6Wz";
+        const gr=settings?.greeting||"Hi, thanks for calling! How can we help you today?";
+        const deployRes=await fetch(BACKEND_URL+"/api/assistants/deploy",{
+          method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+          body:JSON.stringify({assistantConfig:{
+            model:{provider:"openai",model:"gpt-4o",messages:[{role:"system",content:settings?.system_prompt||"You are the AI receptionist for a home-services business. Be warm, direct, and efficient."}]},
+            voice:{provider:"11labs",voiceId:vid},firstMessage:gr,
+            transcriber:{provider:"deepgram",model:"nova-2"},name:"Diali Receptionist"
+          }})
+        });
+        const dd=await deployRes.json();
+        if(!deployRes.ok||!dd.assistantId)throw new Error(dd.error||"Failed to deploy agent");
+      }
+
+      /* Get service area for local number matching */
+      const{data:prof}=await sb.from('profiles').select('service_area').eq('id',session.user.id).maybeSingle();
+      const phoneRes=await fetch(BACKEND_URL+"/api/phone/provision",{
+        method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+        body:JSON.stringify({serviceArea:prof?.service_area||""})
+      });
+      const pd=await phoneRes.json();
+      if(!phoneRes.ok||!pd.phoneNumber)throw new Error(pd.error||"Failed to provision number");
+      setNum(fmtE164(pd.phoneNumber));
+    }catch(e){
+      console.error("[provision] error:",e);
+      setProvError(e.message||"Something went wrong");
     }
-  }catch(e){}})();},[]);
-  if(!num)return null;
-  const[copied,setCopied]=useState(false);
+    setProvisioning(false);
+  };
+
+  if(!loaded)return null;
+
   return(
     <div className="mt-8 pt-6 border-t border-neutral-200">
       <p className="text-xs text-neutral-400 uppercase tracking-widest mb-4">AI Receptionist</p>
-      <div className="bg-neutral-900 p-6">
+
+      {/* Has a number — show it */}
+      {num&&<div className="bg-neutral-900 p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-neutral-500 mb-1">Your Diali number</p>
@@ -2648,7 +2728,31 @@ const DialiPhoneDisplay=()=>{
           </div>
           <button onClick={()=>{navigator.clipboard.writeText(num.raw);setCopied(true);setTimeout(()=>setCopied(false),2000);}} className={"text-xs px-4 py-2 transition-colors "+(copied?"bg-white text-neutral-900":"bg-neutral-800 text-neutral-400 hover:text-white")}>{copied?"Copied":"Copy"}</button>
         </div>
-      </div>
+      </div>}
+
+      {/* No number yet — provision button */}
+      {!num&&!provisioning&&<div className="border border-neutral-200 p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-5 h-5 text-neutral-400">{I.phone}</span></div>
+          <div className="flex-1">
+            <p className="text-sm text-neutral-900 mb-1">Get your Diali phone number</p>
+            <p className="text-xs text-neutral-400 leading-relaxed mb-4">We'll provision a dedicated local phone number for your AI receptionist. Customers call this number and your AI picks up.</p>
+            {provError&&<p className="text-xs text-red-500 mb-3">{provError}</p>}
+            <button onClick={provision} className="bg-neutral-900 text-white px-5 py-2.5 text-sm hover:bg-black transition-colors">Get my number</button>
+          </div>
+        </div>
+      </div>}
+
+      {/* Provisioning in progress */}
+      {!num&&provisioning&&<div className="border border-neutral-200 p-6">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-neutral-900 flex items-center justify-center shrink-0"><div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin" style={{borderRadius:"50%"}}/></div>
+          <div>
+            <p className="text-sm text-neutral-900 mb-1">Setting up your number...</p>
+            <p className="text-xs text-neutral-400">Deploying your AI agent and provisioning a local phone number. This takes about 10 seconds.</p>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 };
@@ -4664,22 +4768,39 @@ const Empty=({icon,title,sub,action,onAction})=>(
 const HomeEmpty=()=>{
   const[fwdPanel,setFwdPanel]=useState(false);
   const[dialiNum,setDialiNum]=useState(null);
+  const[homeProvBusy,setHomeProvBusy]=useState(false);
+  const[homeProvErr,setHomeProvErr]=useState("");
   /* Load provisioned phone number from settings */
   React.useEffect(()=>{
     (async()=>{try{
       const sb=window.supabase;if(!sb)return;
       const{data:{session}}=await sb.auth.getSession();if(!session)return;
       const{data}=await sb.from('settings').select('diali_phone_number').eq('id',session.user.id).maybeSingle();
-      if(data?.diali_phone_number){
-        const d=data.diali_phone_number.replace(/\D/g,'');
-        const local=d.length===11?d.slice(1):d;
-        const fmt=local.length===10?`(${local.slice(0,3)}) ${local.slice(3,6)}-${local.slice(6)}`:data.diali_phone_number;
-        setDialiNum({raw:d.length===11?d.slice(1):d,formatted:fmt,e164:data.diali_phone_number});
-      }
+      if(data?.diali_phone_number)setDialiNum(fmtE164(data.diali_phone_number));
     }catch(e){}})();
   },[]);
+  /* Provision on demand */
+  const homeProvision=async()=>{
+    setHomeProvBusy(true);setHomeProvErr("");
+    try{
+      const sb=window.supabase;if(!sb)throw new Error("Not ready");
+      const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error("Not signed in");
+      const token=session.access_token;
+      const{data:s}=await sb.from('settings').select('vapi_assistant_id,voice_id,greeting,system_prompt').eq('id',session.user.id).maybeSingle();
+      if(!s?.vapi_assistant_id){
+        const vid=s?.voice_id||"O7LV5fxosQChiBE7l6Wz";
+        const r=await fetch(BACKEND_URL+"/api/assistants/deploy",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({assistantConfig:{model:{provider:"openai",model:"gpt-4o",messages:[{role:"system",content:s?.system_prompt||"You are the AI receptionist for a home-services business."}]},voice:{provider:"11labs",voiceId:vid},firstMessage:s?.greeting||"Hi, thanks for calling!",transcriber:{provider:"deepgram",model:"nova-2"},name:"Diali Receptionist"}})});
+        const d=await r.json();if(!r.ok||!d.assistantId)throw new Error(d.error||"Deploy failed");
+      }
+      const{data:prof}=await sb.from('profiles').select('service_area').eq('id',session.user.id).maybeSingle();
+      const r2=await fetch(BACKEND_URL+"/api/phone/provision",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({serviceArea:prof?.service_area||""})});
+      const pd=await r2.json();if(!r2.ok||!pd.phoneNumber)throw new Error(pd.error||"Provision failed");
+      setDialiNum(fmtE164(pd.phoneNumber));
+    }catch(e){setHomeProvErr(e.message||"Something went wrong");}
+    setHomeProvBusy(false);
+  };
   const num=dialiNum?.raw||"";
-  const numFmt=dialiNum?.formatted||"Not provisioned";
+  const numFmt=dialiNum?.formatted||"";
   const carriers=[
     {name:"AT&T",steps:["From your AT&T phone, dial *21*"+num+"#","Press Call","You'll hear a confirmation tone","To cancel: dial ##21# and press Call"]},
     {name:"Verizon",steps:["From your Verizon phone, dial *72","When you hear the dial tone, enter "+num,"Wait for confirmation beeps","To cancel: dial *73"]},
@@ -4691,7 +4812,7 @@ const HomeEmpty=()=>{
   const[selCarrier,setSelCarrier]=useState(null);
   return(
   <div className="fu">
-    <Panel open={fwdPanel} onClose={()=>{setFwdPanel(false);setSelCarrier(null);}}>
+    <Panel open={fwdPanel&&!!dialiNum} onClose={()=>{setFwdPanel(false);setSelCarrier(null);}}>
       <PanelHeader onClose={()=>{setFwdPanel(false);setSelCarrier(null);}} title="Set up call forwarding" sub="Forward your business line to Diali"/>
       <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
         <div className="bg-neutral-900 p-6">
@@ -4751,8 +4872,16 @@ const HomeEmpty=()=>{
         </div>
         <div className="bg-neutral-900 p-7">
           <div className="flex items-center gap-2.5 mb-4"><span className="w-4 h-4 text-neutral-500">{I.zap}</span><span className="text-xs text-neutral-400 uppercase tracking-widest">Getting started</span></div>
-          <p className="text-neutral-300 leading-relaxed mb-6">Forward your business phone to your Diali number to start receiving AI-answered calls.</p>
-          <button onClick={()=>setFwdPanel(true)} className="bg-white text-neutral-900 text-sm px-5 py-2.5 hover:bg-neutral-100 transition-colors">Set up forwarding</button>
+          {dialiNum?<>
+            <p className="text-neutral-300 leading-relaxed mb-6">Forward your business phone to your Diali number to start receiving AI-answered calls.</p>
+            <button onClick={()=>setFwdPanel(true)} className="bg-white text-neutral-900 text-sm px-5 py-2.5 hover:bg-neutral-100 transition-colors">Set up forwarding</button>
+          </>:<>
+            <p className="text-neutral-300 leading-relaxed mb-4">Get a dedicated phone number for your AI receptionist. Customers call it, your AI picks up.</p>
+            {homeProvErr&&<p className="text-xs text-red-400 mb-3">{homeProvErr}</p>}
+            <button onClick={homeProvision} disabled={homeProvBusy} className="bg-white text-neutral-900 text-sm px-5 py-2.5 hover:bg-neutral-100 transition-colors flex items-center gap-2">
+              {homeProvBusy?<><div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent animate-spin" style={{borderRadius:'50%'}}/>Setting up...</>:<><span className="w-4 h-4">{I.phone}</span>Get my number</>}
+            </button>
+          </>}
         </div>
       </div>
     </div>
