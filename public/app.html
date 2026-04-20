@@ -4349,8 +4349,64 @@ const Onboarding=({onDone})=>{
   const toggleSvc=s=>setServices(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
   const voiceIdMap={"Kim":"O7LV5fxosQChiBE7l6Wz","Asher":"tMvyQtpCVQ0DkixuYm6J","Brady":"Sr9Xhw1be5kyNtGEOV0y","Evan":"TWutjvRaJqAX89preB4e","Larry":"LoQnubeEKhw9RDkfeS80","Kiora":"hGQkZQUA5RiOXIw7P9iO"};
   const total=6;
-  const finish=()=>onDone({fullName,bizName,trade,area,phone,teamSize,services,voiceId:voiceIdMap[voicePick]||"O7LV5fxosQChiBE7l6Wz",voiceName:voicePick||"Kim",greeting});
-  const next=()=>step<total-1?setStep(step+1):finish();
+  const[provisioning,setProvisioning]=useState(false);
+  const[provisionedNumber,setProvisionedNumber]=useState(null);
+  const[provisionError,setProvisionError]=useState("");
+
+  /* Deploy AI assistant + provision a local Twilio phone number.
+     Runs automatically when the user reaches the Go Live step. */
+  const deployAndProvision=async()=>{
+    setProvisioning(true);setProvisionError("");
+    try{
+      const sb=window.supabase;if(!sb)throw new Error("Not ready");
+      const{data:{session}}=await sb.auth.getSession();
+      if(!session)throw new Error("Not signed in");
+      const token=session.access_token;
+      const vid=voiceIdMap[voicePick]||"O7LV5fxosQChiBE7l6Wz";
+
+      /* 1. Deploy the assistant first (phone provisioning requires it) */
+      const assistantConfig={
+        model:{provider:"openai",model:"gpt-4o",messages:[{role:"system",content:"You are the AI receptionist for a "+trade+" business. Be warm, direct, and efficient."}]},
+        voice:{provider:"11labs",voiceId:vid},
+        firstMessage:greeting,
+        transcriber:{provider:"deepgram",model:"nova-2"},
+        name:"Diali Receptionist"
+      };
+      const deployRes=await fetch(BACKEND_URL+"/api/assistants/deploy",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+        body:JSON.stringify({assistantConfig})
+      });
+      const deployData=await deployRes.json();
+      if(!deployRes.ok||!deployData.assistantId)throw new Error(deployData.error||"Failed to deploy agent");
+
+      /* 2. Provision a local phone number matching their service area */
+      const phoneRes=await fetch(BACKEND_URL+"/api/phone/provision",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+        body:JSON.stringify({serviceArea:area||""})
+      });
+      const phoneData=await phoneRes.json();
+      if(!phoneRes.ok||!phoneData.phoneNumber)throw new Error(phoneData.error||"Failed to provision number");
+
+      setProvisionedNumber(phoneData);
+    }catch(e){
+      console.error("[onboarding] deploy+provision error:",e);
+      setProvisionError(e.message||"Something went wrong");
+    }
+    setProvisioning(false);
+  };
+
+  const finish=()=>onDone({fullName,bizName,trade,area,phone,teamSize,services,voiceId:voiceIdMap[voicePick]||"O7LV5fxosQChiBE7l6Wz",voiceName:voicePick||"Kim",greeting,provisionedNumber:provisionedNumber?.phoneNumber||null,provisionedFormatted:provisionedNumber?.formatted||null});
+  const next=()=>{
+    if(step===4){
+      /* Transitioning to Go Live — kick off deploy + provision */
+      setStep(5);
+      deployAndProvision();
+      return;
+    }
+    step<total-1?setStep(step+1):finish();
+  };
   const back=()=>step>0&&setStep(step-1);
   const pct=((step)/(total-1))*100;
 
@@ -4508,34 +4564,52 @@ const Onboarding=({onDone})=>{
 
           {/* Step 5 — Ready */}
           {step===5&&<div>
-            {/* Celebration header */}
-            <div className="text-center mb-10">
-              <div className="w-16 h-16 bg-neutral-900 text-white flex items-center justify-center mx-auto mb-6" style={{animation:"fu .6s cubic-bezier(.22,1,.36,1) both"}}><span className="w-7 h-7">{I.check}</span></div>
-              <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">You're all set</p>
-              <p className="text-neutral-400 leading-relaxed max-w-md mx-auto">Your AI receptionist is configured and ready. Here's everything you need to go live.</p>
-            </div>
+            {/* Provisioning in progress */}
+            {provisioning&&<div className="text-center py-20">
+              <div className="w-16 h-16 bg-neutral-900 flex items-center justify-center mx-auto mb-6" style={{animation:"fu .6s cubic-bezier(.22,1,.36,1) both"}}><div className="w-6 h-6 border-2 border-white border-t-transparent animate-spin" style={{borderRadius:"50%"}}/></div>
+              <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">Setting up your AI</p>
+              <p className="text-neutral-400 leading-relaxed max-w-md mx-auto">Deploying your receptionist and provisioning your dedicated phone number. This takes about 10 seconds.</p>
+            </div>}
 
-            {/* How call forwarding works */}
-            <div className="border border-neutral-200 mb-6">
-              <div className="px-5 pt-5 pb-4">
-                <p className="text-sm text-neutral-900 mb-1">How it works</p>
-                <p className="text-xs text-neutral-400 leading-relaxed">Forward your business phone to your Diali number. When a customer calls, your AI receptionist picks up — qualifies the lead, books appointments, and gives pricing from your pricebook.</p>
+            {/* Error state */}
+            {!provisioning&&provisionError&&<div className="text-center py-20">
+              <div className="w-16 h-16 bg-neutral-100 flex items-center justify-center mx-auto mb-6"><span className="w-7 h-7 text-neutral-400">{I.x}</span></div>
+              <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">Setup hit a snag</p>
+              <p className="text-neutral-400 leading-relaxed max-w-md mx-auto mb-4">{provisionError}</p>
+              <button onClick={deployAndProvision} className="bg-neutral-900 text-white px-8 py-3 text-sm hover:bg-black transition-colors">Try again</button>
+              <button onClick={finish} className="block mx-auto mt-4 text-sm text-neutral-400 hover:text-neutral-900 transition-colors">Skip for now</button>
+            </div>}
+
+            {/* Success state */}
+            {!provisioning&&!provisionError&&<div>
+              <div className="text-center mb-10">
+                <div className="w-16 h-16 bg-neutral-900 text-white flex items-center justify-center mx-auto mb-6" style={{animation:"fu .6s cubic-bezier(.22,1,.36,1) both"}}><span className="w-7 h-7">{I.check}</span></div>
+                <p className="text-2xl md:text-4xl text-neutral-900 tracking-tight mb-3">You're all set</p>
+                <p className="text-neutral-400 leading-relaxed max-w-md mx-auto">Your AI receptionist is live. Here's everything you need to start taking calls.</p>
               </div>
-              <div className="border-t border-neutral-200 px-5 py-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="w-9 h-9 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-neutral-400">{I.phone}</span></span>
-                    <div><p className="text-xs text-neutral-400">Your Diali number</p><p className="text-lg text-neutral-900 tracking-tight tabular-nums">(855) 342-5411</p></div>
+
+              {/* How call forwarding works */}
+              <div className="border border-neutral-200 mb-6">
+                <div className="px-5 pt-5 pb-4">
+                  <p className="text-sm text-neutral-900 mb-1">How it works</p>
+                  <p className="text-xs text-neutral-400 leading-relaxed">Forward your business phone to your Diali number. When a customer calls, your AI receptionist picks up — qualifies the lead, books appointments, and gives pricing from your pricebook.</p>
+                </div>
+                <div className="border-t border-neutral-200 px-5 py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="w-9 h-9 bg-neutral-100 flex items-center justify-center shrink-0"><span className="w-4 h-4 text-neutral-400">{I.phone}</span></span>
+                      <div><p className="text-xs text-neutral-400">Your Diali number</p><p className="text-lg text-neutral-900 tracking-tight tabular-nums">{provisionedNumber?.formatted||"Provisioning..."}</p></div>
+                    </div>
+                    {provisionedNumber&&<button onClick={()=>{navigator.clipboard.writeText(provisionedNumber.phoneNumber.replace(/\D/g,""));}} className="text-xs text-neutral-400 hover:text-neutral-900 border border-neutral-200 px-3 py-1.5 transition-colors">Copy</button>}
                   </div>
-                  <button onClick={()=>{navigator.clipboard.writeText("8553425411");}} className="text-xs text-neutral-400 hover:text-neutral-900 border border-neutral-200 px-3 py-1.5 transition-colors">Copy</button>
+                </div>
+                <div className="border-t border-neutral-100 px-5 py-3 bg-neutral-50">
+                  <p className="text-xs text-neutral-400">Set up call forwarding from your carrier's settings or dial *72 then your Diali number on most landlines.</p>
                 </div>
               </div>
-              <div className="border-t border-neutral-100 px-5 py-3 bg-neutral-50">
-                <p className="text-xs text-neutral-400">Set up call forwarding from your carrier's settings or dial *72 then your Diali number on most landlines.</p>
-              </div>
-            </div>
 
-            <button onClick={next} className="w-full bg-neutral-900 text-white py-4 text-sm hover:bg-black transition-colors">Enter dashboard</button>
+              <button onClick={finish} className="w-full bg-neutral-900 text-white py-4 text-sm hover:bg-black transition-colors">Enter dashboard</button>
+            </div>}
           </div>}
 
         </div>
@@ -4556,13 +4630,30 @@ const Empty=({icon,title,sub,action,onAction})=>(
 
 const HomeEmpty=()=>{
   const[fwdPanel,setFwdPanel]=useState(false);
+  const[dialiNum,setDialiNum]=useState(null);
+  /* Load provisioned phone number from settings */
+  React.useEffect(()=>{
+    (async()=>{try{
+      const sb=window.supabase;if(!sb)return;
+      const{data:{session}}=await sb.auth.getSession();if(!session)return;
+      const{data}=await sb.from('settings').select('diali_phone_number').eq('id',session.user.id).maybeSingle();
+      if(data?.diali_phone_number){
+        const d=data.diali_phone_number.replace(/\D/g,'');
+        const local=d.length===11?d.slice(1):d;
+        const fmt=local.length===10?`(${local.slice(0,3)}) ${local.slice(3,6)}-${local.slice(6)}`:data.diali_phone_number;
+        setDialiNum({raw:d.length===11?d.slice(1):d,formatted:fmt,e164:data.diali_phone_number});
+      }
+    }catch(e){}})();
+  },[]);
+  const num=dialiNum?.raw||"";
+  const numFmt=dialiNum?.formatted||"Not provisioned";
   const carriers=[
-    {name:"AT&T",steps:["From your AT&T phone, dial *21*8553425411#","Press Call","You'll hear a confirmation tone","To cancel: dial ##21# and press Call"]},
-    {name:"Verizon",steps:["From your Verizon phone, dial *72","When you hear the dial tone, enter 8553425411","Wait for confirmation beeps","To cancel: dial *73"]},
-    {name:"T-Mobile",steps:["From your T-Mobile phone, dial **21*8553425411#","Press Call","You'll receive an SMS confirmation","To cancel: dial ##21#"]},
-    {name:"Xfinity / Comcast",steps:["Log in to your Xfinity Voice account","Go to Call Forwarding settings","Enter 8553425411 as the forwarding number","Enable forwarding and save"]},
-    {name:"Spectrum",steps:["From your Spectrum phone, dial *72","Enter 8553425411 when prompted","Wait for confirmation tone","To cancel: dial *73"]},
-    {name:"VoIP / Other",steps:["Log in to your phone system's admin portal","Find the Call Forwarding or Routing settings","Set forward-to number as 8553425411","Save and test with a call from another phone"]}
+    {name:"AT&T",steps:["From your AT&T phone, dial *21*"+num+"#","Press Call","You'll hear a confirmation tone","To cancel: dial ##21# and press Call"]},
+    {name:"Verizon",steps:["From your Verizon phone, dial *72","When you hear the dial tone, enter "+num,"Wait for confirmation beeps","To cancel: dial *73"]},
+    {name:"T-Mobile",steps:["From your T-Mobile phone, dial **21*"+num+"#","Press Call","You'll receive an SMS confirmation","To cancel: dial ##21#"]},
+    {name:"Xfinity / Comcast",steps:["Log in to your Xfinity Voice account","Go to Call Forwarding settings","Enter "+num+" as the forwarding number","Enable forwarding and save"]},
+    {name:"Spectrum",steps:["From your Spectrum phone, dial *72","Enter "+num+" when prompted","Wait for confirmation tone","To cancel: dial *73"]},
+    {name:"VoIP / Other",steps:["Log in to your phone system's admin portal","Find the Call Forwarding or Routing settings","Set forward-to number as "+num,"Save and test with a call from another phone"]}
   ];
   const[selCarrier,setSelCarrier]=useState(null);
   return(
@@ -4572,7 +4663,7 @@ const HomeEmpty=()=>{
       <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
         <div className="bg-neutral-900 p-6">
           <p className="text-xs text-neutral-500 uppercase tracking-widest mb-2">Your Diali number</p>
-          <p className="text-2xl text-white tracking-tight">(855) 342-5411</p>
+          <p className="text-2xl text-white tracking-tight">{numFmt}</p>
           <p className="text-xs text-neutral-500 mt-2">Forward your business line to this number</p>
         </div>
         <div>
@@ -4953,7 +5044,9 @@ const App=()=>{
       try{
         const{data:{user:authUser}}=await window.supabase.auth.getUser();
         await window.supabase.from('profiles').upsert({id:userId,trade:obData.trade||'',service_area:obData.area||'',phone:obData.phone||'',team_size:obData.teamSize||'',services:obData.services||[],business_name:obData.bizName||'',full_name:obData.fullName||'',email:authUser?.email||''});
-        await window.supabase.from('settings').upsert({id:userId,voice_id:obData.voiceId||'O7LV5fxosQChiBE7l6Wz',voice_name:obData.voiceName||'Kim',greeting:obData.greeting||"Hi, thanks for calling! I can help you with scheduling a service appointment or answer any questions. What's going on?"});
+        const settingsData={id:userId,voice_id:obData.voiceId||'O7LV5fxosQChiBE7l6Wz',voice_name:obData.voiceName||'Kim',greeting:obData.greeting||"Hi, thanks for calling! I can help you with scheduling a service appointment or answer any questions. What's going on?"};
+        if(obData.provisionedNumber)settingsData.diali_phone_number=obData.provisionedNumber;
+        await window.supabase.from('settings').upsert(settingsData);
         /* Reload profile to get the DB-generated workspace_id */
         const{data:freshProf}=await window.supabase.from('profiles').select('*').eq('id',userId).single();
         if(freshProf){setProfile(freshProf);if(freshProf.workspace_id){setWorkspaceId(freshProf.workspace_id);setWorkspaceUrl(freshProf.workspace_id,"home");}}
