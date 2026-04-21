@@ -5616,11 +5616,38 @@ const App=()=>{
       /* No profile by ID — check if there's a pre-created invite profile by email */
       const{data:{user:authUser}}=await sb.auth.getUser();
       if(authUser?.email){
-        const{data:emailProf}=await sb.from('profiles').select('*').eq('email',authUser.email.toLowerCase()).maybeSingle();
+        const userEmail=authUser.email.toLowerCase().trim();
+        const{data:emailProf}=await sb.from('profiles').select('*').eq('email',userEmail).maybeSingle();
         if(emailProf&&emailProf.role==='tech'){
           /* Link the pre-created tech profile to this auth user */
           await sb.from('profiles').update({id:uid}).eq('id',emailProf.id);
           prof={...emailProf,id:uid};
+        }else{
+          /* Check pending_invites on any admin's settings — someone may have invited this email */
+          const{data:allSettings}=await sb.from('settings').select('id,pending_invites').not('pending_invites','eq','[]');
+          if(allSettings){
+            for(const row of allSettings){
+              const pending=Array.isArray(row.pending_invites)?row.pending_invites:[];
+              const invite=pending.find(p=>p.email?.toLowerCase().trim()===userEmail);
+              if(invite){
+                /* Found a pending invite — look up admin's workspace */
+                const{data:adminProf}=await sb.from('profiles').select('workspace_id').eq('id',row.id).maybeSingle();
+                const wsId=adminProf?.workspace_id||null;
+                /* Create the tech profile */
+                await sb.from('profiles').upsert({
+                  id:uid,email:userEmail,full_name:invite.name||'',role:'tech',
+                  workspace_id:wsId,invited_by:row.id,trade:''
+                });
+                /* Remove from pending_invites */
+                const remaining=pending.filter(p=>p.email?.toLowerCase().trim()!==userEmail);
+                await sb.from('settings').update({pending_invites:remaining}).eq('id',row.id);
+                /* Ensure settings row exists for the tech */
+                await sb.from('settings').upsert({id:uid},{onConflict:'id',ignoreDuplicates:true});
+                prof={id:uid,email:userEmail,full_name:invite.name||'',role:'tech',workspace_id:wsId,invited_by:row.id};
+                break;
+              }
+            }
+          }
         }
       }
     }
