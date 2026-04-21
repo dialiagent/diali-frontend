@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -5157,13 +5157,16 @@ const setWorkspaceUrl=(wid,page)=>{
 const TECH_STATUSES=["En Route","On Site","In Progress","Done"];
 const techStatusColor=s=>s==="Done"?"bg-neutral-100 text-neutral-500":s==="In Progress"?"bg-neutral-900 text-white":s==="On Site"?"bg-neutral-700 text-white":"bg-neutral-200 text-neutral-600";
 
+/* ── TechLayout — mobile-native app experience ── */
 const TechLayout=({profile,onLogout})=>{
   const[jobs,setJobs]=useState([]);
   const[loading,setLoading]=useState(true);
   const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState("today");/* today | upcoming | completed */
+  const[tab,setTab]=useState("today");
+  const[btmTab,setBtmTab]=useState("jobs");/* jobs | profile */
   const[techNote,setTechNote]=useState("");
   const[savingNote,setSavingNote]=useState(false);
+  const[detailSection,setDetailSection]=useState("info");/* info | checklist | notes */
 
   /* Load jobs assigned to this tech */
   React.useEffect(()=>{
@@ -5172,7 +5175,6 @@ const TechLayout=({profile,onLogout})=>{
         const sb=window.supabase;if(!sb)return;
         const sess=await sb.auth.getSession();
         const uid=sess?.data?.session?.user?.id;if(!uid)return;
-        /* Tech sees jobs where they are the assigned tech, or all jobs if workspace matches */
         const techName=profile?.full_name||"";
         const{data,error}=await sb
           .from("appointments")
@@ -5238,151 +5240,337 @@ const TechLayout=({profile,onLogout})=>{
   };
 
   const urgencyLabel=u=>u==="emergency"?"Emergency":u==="urgent"?"Urgent":"Normal";
-  const urgencyStyle=u=>u==="emergency"?"bg-neutral-900 text-white":u==="urgent"?"bg-neutral-700 text-white":"bg-neutral-200 text-neutral-600";
 
-  return(
-    <div className="min-h-screen bg-neutral-50">
-      {/* Top bar */}
-      <div className="bg-white border-b border-neutral-100 px-4 md:px-6 py-4 flex items-center justify-between sticky top-0" style={{zIndex:50}}>
-        <div className="flex items-center gap-3">
-          <Logo s={24}/>
-          <div>
-            <p className="text-sm text-neutral-900">{profile?.full_name||"Technician"}</p>
-            <p className="text-xs text-neutral-400">Technician</p>
+  /* Greeting based on time of day */
+  const hour=new Date().getHours();
+  const greeting=hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";
+  const firstName=(profile?.full_name||"").split(" ")[0]||"Tech";
+
+  /* Status stepper component */
+  const StatusStepper=({current})=>{
+    const idx=TECH_STATUSES.indexOf(current);
+    return <div className="flex items-center gap-0 w-full">
+      {TECH_STATUSES.map((s,i)=>{
+        const done=i<idx;const active=i===idx;const future=i>idx;
+        return <React.Fragment key={s}>
+          {i>0&&<div className={"flex-1 h-0.5 "+(done?"bg-neutral-900":"bg-neutral-200")} style={{transition:"background .3s"}}/>}
+          <div className="flex flex-col items-center" style={{minWidth:i===0||i===3?50:60}}>
+            <div className={"w-7 h-7 flex items-center justify-center text-xs font-medium transition-all duration-300 "+(done?"bg-neutral-900 text-white":active?"bg-neutral-900 text-white ring-4 ring-neutral-200":future?"bg-neutral-100 text-neutral-400":"")}>
+              {done?<span className="w-3.5 h-3.5">{I.check}</span>:(i+1)}
+            </div>
+            <span className={"text-xs mt-1.5 whitespace-nowrap "+(done||active?"text-neutral-900":"text-neutral-400")} style={{fontSize:10}}>{s}</span>
           </div>
-        </div>
-        <button onClick={onLogout} className="text-xs text-neutral-400 hover:text-neutral-900 transition-colors px-3 py-1.5 border border-neutral-200">Sign out</button>
-      </div>
+        </React.Fragment>;
+      })}
+    </div>;
+  };
 
-      {/* Tab bar */}
-      <div className="bg-white border-b border-neutral-100 px-4 md:px-6">
-        <div className="flex gap-0">
-          {[["today","Today",todayJobs.length],["upcoming","Upcoming",upcomingJobs.length],["completed","Completed",completedJobs.length]].map(([k,l,ct])=>(
-            <button key={k} onClick={()=>setTab(k)} className={"px-4 py-3 text-sm transition-colors border-b-2 "+(tab===k?"border-neutral-900 text-neutral-900":"border-transparent text-neutral-400 hover:text-neutral-600")}>
-              {l}{ct>0&&<span className="ml-1.5 text-xs bg-neutral-100 px-1.5 py-0.5 tabular-nums">{ct}</span>}
+  /* ── Full-screen job detail (native app feel) ── */
+  if(sel){
+    const checklist=Array.isArray(sel.checklist)?sel.checklist:[];
+    const checkDone=checklist.filter(c=>c.done).length;
+    const nextStatus=TECH_STATUSES[TECH_STATUSES.indexOf(sel.techStatus)+1]||null;
+    const statusLabel=nextStatus==="On Site"?"I'm on site":nextStatus==="In Progress"?"Start work":nextStatus==="Done"?"Mark complete":nextStatus;
+    const statusIcon=nextStatus==="Done"?I.check:I.chevR;
+
+    return <div className="fixed inset-0 bg-white flex flex-col" style={{zIndex:100}}>
+      {/* Detail header */}
+      <div className="shrink-0 bg-white" style={{paddingTop:"env(safe-area-inset-top,0px)"}}>
+        <div className="flex items-center justify-between px-5 py-3">
+          <button onClick={()=>setSel(null)} className="flex items-center gap-1 text-neutral-500 active:text-neutral-900 py-2 pr-4" style={{minHeight:44}}>
+            <span className="w-5 h-5">{I.arrowL}</span>
+            <span className="text-sm">Jobs</span>
+          </button>
+          <span className={"text-xs px-3 py-1.5 uppercase tracking-widest "+techStatusColor(sel.techStatus)}>{sel.techStatus||"Scheduled"}</span>
+        </div>
+
+        {/* Customer name + time hero */}
+        <div className="px-5 pb-4">
+          <h1 className="text-2xl text-neutral-900 tracking-tight mb-1">{sel.cust}</h1>
+          <p className="text-sm text-neutral-400">{fmtDateShort(sel.starts_at)} · {fmtTime12(sel.starts_at)}{sel.ends_at?" – "+fmtTime12(sel.ends_at):""}</p>
+        </div>
+
+        {/* Urgency banner */}
+        {sel.urgency==="emergency"&&<div className="bg-neutral-900 mx-5 mb-4 px-4 py-3 flex items-center gap-2.5"><span className="w-4 h-4 text-red-400">{I.bell}</span><p className="text-sm text-white tracking-wide">Emergency — prioritize this job</p></div>}
+
+        {/* Status stepper */}
+        <div className="px-5 pb-4"><StatusStepper current={sel.techStatus}/></div>
+
+        {/* Quick action buttons — large, thumb-friendly */}
+        <div className="grid grid-cols-3 gap-px bg-neutral-100 border-y border-neutral-100">
+          <a href={sel.phone?"tel:"+sel.phone:"#"} className="bg-white flex flex-col items-center justify-center gap-1.5 py-4 active:bg-neutral-50 transition-colors" style={{minHeight:72}}>
+            <div className="w-10 h-10 bg-neutral-900 flex items-center justify-center"><span className="w-5 h-5 text-white">{I.phone}</span></div>
+            <span className="text-xs text-neutral-600">Call</span>
+          </a>
+          <a href={sel.phone?"sms:"+sel.phone:"#"} className="bg-white flex flex-col items-center justify-center gap-1.5 py-4 active:bg-neutral-50 transition-colors" style={{minHeight:72}}>
+            <div className="w-10 h-10 bg-neutral-900 flex items-center justify-center"><span className="w-5 h-5 text-white">{I.msg}</span></div>
+            <span className="text-xs text-neutral-600">Text</span>
+          </a>
+          <a href={sel.addr?"https://maps.google.com/?daddr="+encodeURIComponent(sel.addr):"#"} target="_blank" rel="noopener noreferrer" className="bg-white flex flex-col items-center justify-center gap-1.5 py-4 active:bg-neutral-50 transition-colors" style={{minHeight:72}}>
+            <div className="w-10 h-10 bg-neutral-900 flex items-center justify-center"><span className="w-5 h-5 text-white">{I.map}</span></div>
+            <span className="text-xs text-neutral-600">Navigate</span>
+          </a>
+        </div>
+
+        {/* Detail section tabs — scrollable, large targets */}
+        <div className="flex border-b border-neutral-100 px-5 gap-0">
+          {[["info","Details"],["checklist","Checklist"+(checklist.length?" ("+checkDone+"/"+checklist.length+")":"")],["notes","Notes"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setDetailSection(k)} className={"flex-1 py-3.5 text-sm text-center transition-colors border-b-2 "+(detailSection===k?"border-neutral-900 text-neutral-900":"border-transparent text-neutral-400 active:text-neutral-600")} style={{minHeight:48}}>
+              {l}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
-        {loading?<div className="flex items-center justify-center h-40"><p className="text-sm text-neutral-300">Loading jobs...</p></div>
-        :activeList.length===0?(
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-14 h-14 bg-neutral-100 flex items-center justify-center mb-4"><span className="w-5 h-5 text-neutral-300">{I.wrench}</span></div>
-            <p className="text-lg text-neutral-900 mb-1">{tab==="today"?"No jobs today":tab==="upcoming"?"No upcoming jobs":"No completed jobs"}</p>
-            <p className="text-sm text-neutral-400">{tab==="today"?"You're all caught up. Enjoy the downtime.":tab==="upcoming"?"Nothing scheduled for the next 7 days.":"Completed jobs will show up here."}</p>
-          </div>
-        ):(
-          <div className="space-y-3">
-            {activeList.map(job=>(
-              <button key={job.id} onClick={()=>{setSel(job);setTechNote(job.tech_notes||"");}} className="w-full text-left bg-white border border-neutral-100 hover:border-neutral-200 transition-colors">
-                <div className="px-5 py-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={"text-xs px-2.5 py-0.5 uppercase tracking-widest "+techStatusColor(job.techStatus)}>{job.techStatus||"Scheduled"}</span>
-                    <span className="text-xs text-neutral-400 tabular-nums">{fmtTime12(job.starts_at)}{job.ends_at?" – "+fmtTime12(job.ends_at):""}</span>
+      {/* Scrollable detail content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="px-5 py-5 space-y-5" style={{paddingBottom:120}}>
+
+          {detailSection==="info"&&<>
+            {/* Issue description */}
+            <div className="bg-neutral-50 border border-neutral-100 p-4">
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Issue</p>
+              <p className="text-sm text-neutral-800 leading-relaxed">{sel.issue}</p>
+            </div>
+
+            {/* Customer details — stacked for mobile readability */}
+            <div>
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Customer</p>
+              <div className="space-y-0 border border-neutral-100 divide-y divide-neutral-100">
+                {[["Name",sel.cust,null],["Phone",sel.phone,sel.phone?"tel:"+sel.phone:null],["Email",sel.email,sel.email?"mailto:"+sel.email:null],["Address",sel.addr,sel.addr?"https://maps.google.com/?q="+encodeURIComponent(sel.addr):null]].map(([label,val,href],i)=>(
+                  <div key={i} className="bg-white">
+                    {href?<a href={href} target={label==="Address"?"_blank":undefined} rel={label==="Address"?"noopener noreferrer":undefined} className="flex items-center justify-between px-4 py-3.5 active:bg-neutral-50" style={{minHeight:48}}>
+                      <div><p className="text-xs text-neutral-400 mb-0.5">{label}</p><p className="text-sm text-neutral-900">{val||"—"}</p></div>
+                      <span className="w-4 h-4 text-neutral-300">{I.chevR}</span>
+                    </a>:<div className="px-4 py-3.5" style={{minHeight:48}}><p className="text-xs text-neutral-400 mb-0.5">{label}</p><p className="text-sm text-neutral-900">{val||"—"}</p></div>}
                   </div>
-                  <p className="text-sm text-neutral-900 mb-1">{job.cust}</p>
-                  <p className="text-xs text-neutral-500 leading-relaxed line-clamp-1">{job.issue}</p>
-                  {job.addr&&<div className="flex items-center gap-1.5 mt-2"><span className="w-3 h-3 text-neutral-300">{I.map}</span><p className="text-xs text-neutral-400 truncate">{job.addr}</p></div>}
+                ))}
+              </div>
+            </div>
+
+            {/* Job info grid */}
+            <div>
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Job info</p>
+              <div className="grid grid-cols-2 gap-px bg-neutral-100 border border-neutral-100">
+                {[["Urgency",urgencyLabel(sel.urgency)],["Time",fmtTime12(sel.starts_at)+(sel.ends_at?" – "+fmtTime12(sel.ends_at):"")],["Estimate",sel.revenue_estimate?"$"+Number(sel.revenue_estimate).toLocaleString():"—"],["Date",fmtDateShort(sel.starts_at)]].map(([l,v],i)=>(
+                  <div key={i} className="bg-white px-4 py-3.5"><p className="text-xs text-neutral-400 mb-0.5">{l}</p><p className="text-sm text-neutral-900">{v}</p></div>
+                ))}
+              </div>
+            </div>
+
+            {/* Dispatch notes */}
+            {sel.notes&&<div>
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Dispatch notes</p>
+              <div className="bg-neutral-50 border border-neutral-100 p-4"><p className="text-sm text-neutral-700 leading-relaxed">{sel.notes}</p></div>
+            </div>}
+
+            {/* Parts */}
+            {sel.parts&&Array.isArray(sel.parts)&&sel.parts.length>0&&<div>
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Parts ({sel.parts.length})</p>
+              <div className="border border-neutral-100 divide-y divide-neutral-100">
+                {sel.parts.map((part,i)=>(
+                  <div key={i} className="bg-white px-4 py-3.5 flex items-center justify-between" style={{minHeight:48}}>
+                    <span className="text-sm text-neutral-700">{part.name||part}</span>
+                    {part.qty&&<span className="text-sm text-neutral-400 tabular-nums bg-neutral-100 px-2.5 py-1">x{part.qty}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>}
+          </>}
+
+          {detailSection==="checklist"&&<>
+            {checklist.length===0?(
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-14 h-14 bg-neutral-100 flex items-center justify-center mb-4"><span className="w-5 h-5 text-neutral-300">{I.check}</span></div>
+                <p className="text-base text-neutral-900 mb-1">No checklist</p>
+                <p className="text-sm text-neutral-400">No checklist items for this job.</p>
+              </div>
+            ):(
+              <div>
+                {/* Progress bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-neutral-600">{checkDone} of {checklist.length} complete</span>
+                    <span className="text-sm text-neutral-400 tabular-nums">{checklist.length>0?Math.round(checkDone/checklist.length*100):0}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-neutral-100">
+                    <div className="h-full bg-neutral-900 transition-all duration-500" style={{width:(checklist.length>0?checkDone/checklist.length*100:0)+"%"}}/>
+                  </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Job detail panel */}
-      <Panel open={!!sel} onClose={()=>setSel(null)}>
-        {sel&&(()=>{
-          const checklist=Array.isArray(sel.checklist)?sel.checklist:[];
-          const checkDone=checklist.filter(c=>c.done).length;
-          const nextStatus=TECH_STATUSES[TECH_STATUSES.indexOf(sel.techStatus)+1]||null;
-          return<>
-            <PanelHeader onClose={()=>setSel(null)} title={sel.cust} sub={fmtDateShort(sel.starts_at)+" · "+fmtTime12(sel.starts_at)}
-              right={<span className={"text-xs px-3 py-1 uppercase tracking-widest "+techStatusColor(sel.techStatus)}>{sel.techStatus||"Scheduled"}</span>}/>
-            <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-
-              {/* Urgency banner */}
-              {sel.urgency==="emergency"&&<div className="bg-neutral-900 px-5 py-3 flex items-center gap-2"><span className="w-3.5 h-3.5 text-red-400">{I.bell}</span><p className="text-sm text-white">Emergency — prioritize this job</p></div>}
-
-              {/* Quick contact */}
-              <div className="grid grid-cols-3 gap-px bg-neutral-100 border border-neutral-100">
-                <a href={sel.phone?"tel:"+sel.phone:"#"} className="bg-white px-4 py-3 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors text-sm text-neutral-700"><span className="w-4 h-4 text-neutral-500">{I.phone}</span>Call</a>
-                <a href={sel.phone?"sms:"+sel.phone:"#"} className="bg-white px-4 py-3 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors text-sm text-neutral-700"><span className="w-4 h-4 text-neutral-500">{I.msg}</span>Text</a>
-                <a href={sel.addr?"https://maps.google.com/?q="+encodeURIComponent(sel.addr):"#"} target="_blank" rel="noopener noreferrer" className="bg-white px-4 py-3 flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors text-sm text-neutral-700"><span className="w-4 h-4 text-neutral-500">{I.map}</span>Navigate</a>
-              </div>
-
-              {/* Customer info */}
-              <div>
-                <ST icon={I.users} title="Customer"/>
-                <IG items={[["Name",sel.cust],["Phone",sel.phone],["Email",sel.email],["Address",sel.addr]]}/>
-              </div>
-
-              {/* Job details */}
-              <div>
-                <ST icon={I.wrench} title="Job details"/>
-                <p className="text-sm text-neutral-700 leading-relaxed mb-3">{sel.issue}</p>
-                <IG items={[["Urgency",urgencyLabel(sel.urgency)],["Time",fmtTime12(sel.starts_at)+(sel.ends_at?" – "+fmtTime12(sel.ends_at):"")],["Estimate",sel.revenue_estimate?"$"+Number(sel.revenue_estimate).toLocaleString():"—"],["Date",fmtDateShort(sel.starts_at)]]}/>
-              </div>
-
-              {/* Dispatch notes (from office) */}
-              {sel.notes&&<div>
-                <ST icon={I.msg} title="Dispatch notes"/>
-                <div className="bg-neutral-50 border border-neutral-100 p-4"><p className="text-sm text-neutral-700 leading-relaxed">{sel.notes}</p></div>
-              </div>}
-
-              {/* Checklist */}
-              {checklist.length>0&&<div>
-                <ST icon={I.check} title="Checklist" count={checkDone+"/"+checklist.length}/>
                 <div className="border border-neutral-100 divide-y divide-neutral-100">
                   {checklist.map((item,i)=>(
-                    <button key={i} onClick={()=>toggleCheck(i)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors text-left">
-                      <div className={"w-5 h-5 border flex items-center justify-center shrink-0 transition-colors "+(item.done?"bg-neutral-900 border-neutral-900":"border-neutral-300")}>
-                        {item.done&&<span className="w-3 h-3 text-white">{I.check}</span>}
+                    <button key={i} onClick={()=>toggleCheck(i)} className="w-full flex items-center gap-4 px-4 py-4 active:bg-neutral-50 transition-colors text-left" style={{minHeight:52}}>
+                      <div className={"w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-all duration-200 "+(item.done?"bg-neutral-900 border-neutral-900":"border-neutral-300")}>
+                        {item.done&&<span className="w-4 h-4 text-white">{I.check}</span>}
                       </div>
-                      <span className={"text-sm "+(item.done?"text-neutral-400 line-through":"text-neutral-700")}>{item.text||item.label||item}</span>
+                      <span className={"text-sm leading-relaxed "+(item.done?"text-neutral-400 line-through":"text-neutral-800")}>{item.text||item.label||item}</span>
                     </button>
                   ))}
                 </div>
-              </div>}
-
-              {/* Parts */}
-              {sel.parts&&Array.isArray(sel.parts)&&sel.parts.length>0&&<div>
-                <ST icon={I.dollar} title="Parts" count={sel.parts.length}/>
-                <div className="border border-neutral-100 divide-y divide-neutral-100">
-                  {sel.parts.map((part,i)=>(
-                    <div key={i} className="px-4 py-3 flex items-center justify-between">
-                      <span className="text-sm text-neutral-700">{part.name||part}</span>
-                      {part.qty&&<span className="text-xs text-neutral-400 tabular-nums">×{part.qty}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>}
-
-              {/* Tech notes */}
-              <div>
-                <ST icon={I.msg} title="Tech notes"/>
-                <textarea value={techNote} onChange={e=>setTechNote(e.target.value)} placeholder="Add notes about the job — what you found, what you did, parts used..." className="w-full border border-neutral-200 px-4 py-3 text-sm resize-none leading-relaxed" rows={4}/>
-                <button onClick={saveTechNotes} disabled={savingNote} className="mt-2 text-xs bg-neutral-900 text-white px-4 py-2 hover:bg-black transition-colors">{savingNote?"Saving...":"Save notes"}</button>
               </div>
-            </div>
+            )}
+          </>}
 
-            {/* Footer — status advance */}
-            <div className="px-7 py-5 border-t border-neutral-100 shrink-0">
-              {nextStatus?
-                <button onClick={()=>updateStatus(sel,nextStatus)} className="w-full bg-neutral-900 text-white py-3.5 text-sm hover:bg-black transition-colors flex items-center justify-center gap-2">
-                  <span className="w-4 h-4">{nextStatus==="Done"?I.check:I.chevR}</span>
-                  {nextStatus==="On Site"?"I'm on site":nextStatus==="In Progress"?"Start work":nextStatus==="Done"?"Mark complete":nextStatus}
-                </button>
-              :<div className="flex items-center justify-center gap-2 py-3 text-sm text-neutral-400">
-                <span className="w-4 h-4">{I.check}</span>Job complete
-              </div>}
+          {detailSection==="notes"&&<>
+            <div>
+              <p className="text-xs text-neutral-400 uppercase tracking-widest mb-3">Your notes</p>
+              <textarea
+                value={techNote}
+                onChange={e=>setTechNote(e.target.value)}
+                placeholder="What you found, what you did, parts used..."
+                className="w-full border border-neutral-200 px-4 py-4 text-base resize-none leading-relaxed bg-white"
+                rows={6}
+                style={{fontSize:16}}
+              />
+              <button
+                onClick={saveTechNotes}
+                disabled={savingNote}
+                className="mt-3 w-full bg-neutral-200 text-neutral-900 py-3.5 text-sm active:bg-neutral-300 transition-colors flex items-center justify-center gap-2"
+                style={{minHeight:48}}>
+                {savingNote?<><span className="w-4 h-4 animate-spin border-2 border-neutral-400 border-t-transparent" style={{borderRadius:"50%"}}/> Saving...</>:"Save notes"}
+              </button>
             </div>
-          </>;
-        })()}
-      </Panel>
+          </>}
+
+        </div>
+      </div>
+
+      {/* Sticky bottom action — status advance */}
+      <div className="shrink-0 bg-white border-t border-neutral-100" style={{paddingBottom:"max(env(safe-area-inset-bottom,0px), 16px)"}}>
+        <div className="px-5 pt-4">
+          {nextStatus?
+            <button onClick={()=>updateStatus(sel,nextStatus)} className="w-full bg-neutral-900 text-white py-4 text-base active:bg-black transition-colors flex items-center justify-center gap-2.5" style={{minHeight:56}}>
+              <span className="w-5 h-5">{statusIcon}</span>
+              {statusLabel}
+            </button>
+          :<div className="w-full bg-neutral-100 py-4 flex items-center justify-center gap-2 text-sm text-neutral-500" style={{minHeight:56}}>
+            <span className="w-5 h-5">{I.check}</span>Job complete
+          </div>}
+        </div>
+      </div>
+    </div>;
+  }
+
+  /* ── Jobs list view (main screen) ── */
+  return(
+    <div className="fixed inset-0 bg-neutral-50 flex flex-col">
+      {/* App header — greeting */}
+      <div className="shrink-0 bg-white" style={{paddingTop:"env(safe-area-inset-top,0px)"}}>
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl text-neutral-900 tracking-tight">{greeting}, {firstName}</p>
+              <p className="text-sm text-neutral-400 mt-1">{todayJobs.length===0?"No jobs today":todayJobs.length===1?"1 job today":todayJobs.length+" jobs today"}</p>
+            </div>
+            <div className="w-11 h-11 bg-neutral-900 flex items-center justify-center text-white text-sm">{firstName[0]?.toUpperCase()}</div>
+          </div>
+        </div>
+
+        {/* Top filter tabs */}
+        <div className="flex px-5 gap-2 pb-4">
+          {[["today","Today",todayJobs.length],["upcoming","Upcoming",upcomingJobs.length],["completed","Done",completedJobs.length]].map(([k,l,ct])=>(
+            <button key={k} onClick={()=>setTab(k)} className={"flex-1 py-3 text-sm text-center transition-all duration-200 "+(tab===k?"bg-neutral-900 text-white":"bg-neutral-100 text-neutral-500 active:bg-neutral-200")} style={{minHeight:44}}>
+              {l}{ct>0&&<span className={"ml-1.5 tabular-nums "+(tab===k?"text-neutral-400":"text-neutral-400")}>{ct}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Job list — scrollable */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="px-5 pb-24">
+          {loading?(
+            <div className="flex items-center justify-center py-20">
+              <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 animate-spin" style={{borderRadius:"50%"}}/>
+            </div>
+          ):activeList.length===0?(
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 bg-neutral-100 flex items-center justify-center mb-4"><span className="w-6 h-6 text-neutral-300">{I.wrench}</span></div>
+              <p className="text-lg text-neutral-900 mb-1">{tab==="today"?"All clear":tab==="upcoming"?"Nothing upcoming":"No completed jobs"}</p>
+              <p className="text-sm text-neutral-400 leading-relaxed max-w-xs">{tab==="today"?"No jobs scheduled for today. Enjoy the downtime.":tab==="upcoming"?"Nothing on the calendar for the next 7 days.":"Completed jobs will appear here."}</p>
+            </div>
+          ):(
+            <div className="space-y-3 pt-1">
+              {activeList.map(job=>{
+                const nextSt=TECH_STATUSES[TECH_STATUSES.indexOf(job.techStatus)+1]||null;
+                return(
+                <button key={job.id} onClick={()=>{setSel(job);setTechNote(job.tech_notes||"");setDetailSection("info");}} className="w-full text-left bg-white border border-neutral-100 active:bg-neutral-50 transition-colors" style={{WebkitTapHighlightColor:"transparent"}}>
+                  <div className="p-4">
+                    {/* Status + time row */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={"text-xs px-2.5 py-1 uppercase tracking-widest "+techStatusColor(job.techStatus)}>{job.techStatus||"Scheduled"}</span>
+                      <span className="text-sm text-neutral-400 tabular-nums">{fmtTime12(job.starts_at)}</span>
+                    </div>
+
+                    {/* Customer name */}
+                    <p className="text-base text-neutral-900 mb-1">{job.cust}</p>
+
+                    {/* Issue preview */}
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-3" style={{display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{job.issue}</p>
+
+                    {/* Address row */}
+                    {job.addr&&<div className="flex items-center gap-2 mb-3">
+                      <span className="w-4 h-4 text-neutral-300 shrink-0">{I.map}</span>
+                      <p className="text-sm text-neutral-400 truncate">{job.addr}</p>
+                    </div>}
+
+                    {/* Urgency tag for emergency/urgent */}
+                    {job.urgency!=="normal"&&<div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 text-neutral-500">{I.zap}</span>
+                      <span className={"text-xs uppercase tracking-wider "+(job.urgency==="emergency"?"text-neutral-900":"text-neutral-500")}>{job.urgency}</span>
+                    </div>}
+                  </div>
+
+                  {/* Navigate shortcut bar */}
+                  {job.addr&&<div className="border-t border-neutral-100 px-4 py-3 flex items-center justify-between" onClick={e=>{e.stopPropagation();window.open("https://maps.google.com/?daddr="+encodeURIComponent(job.addr),"_blank");}}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 text-neutral-400">{I.map}</span>
+                      <span className="text-sm text-neutral-600">Navigate</span>
+                    </div>
+                    <span className="w-4 h-4 text-neutral-300">{I.chevR}</span>
+                  </div>}
+                </button>
+              );})}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom tab bar — native app navigation */}
+      <div className="shrink-0 bg-white border-t border-neutral-100" style={{paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
+        <div className="flex">
+          <button onClick={()=>setBtmTab("jobs")} className={"flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors "+(btmTab==="jobs"?"text-neutral-900":"text-neutral-400")} style={{minHeight:56}}>
+            <span className="w-6 h-6">{I.wrench}</span>
+            <span style={{fontSize:10}} className="uppercase tracking-wider">Jobs</span>
+          </button>
+          <button onClick={()=>setBtmTab("profile")} className={"flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors "+(btmTab==="profile"?"text-neutral-900":"text-neutral-400")} style={{minHeight:56}}>
+            <span className="w-6 h-6">{I.users}</span>
+            <span style={{fontSize:10}} className="uppercase tracking-wider">Profile</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Profile sheet overlay */}
+      {btmTab==="profile"&&<div className="fixed inset-0 bg-white flex flex-col" style={{zIndex:80,paddingTop:"env(safe-area-inset-top,0px)"}}>
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          <div className="w-20 h-20 bg-neutral-900 flex items-center justify-center text-white text-2xl mb-5">{firstName[0]?.toUpperCase()}</div>
+          <h2 className="text-xl text-neutral-900 mb-1">{profile?.full_name||"Technician"}</h2>
+          <p className="text-sm text-neutral-400 mb-1">{profile?.email||""}</p>
+          <p className="text-xs text-neutral-300 uppercase tracking-widest mb-8">Technician</p>
+
+          <div className="w-full max-w-xs space-y-3">
+            <button onClick={()=>setBtmTab("jobs")} className="w-full bg-neutral-100 text-neutral-700 py-3.5 text-sm active:bg-neutral-200 transition-colors flex items-center justify-center gap-2" style={{minHeight:48}}>
+              <span className="w-4 h-4">{I.arrowL}</span>Back to jobs
+            </button>
+            <button onClick={onLogout} className="w-full bg-neutral-900 text-white py-3.5 text-sm active:bg-black transition-colors" style={{minHeight:48}}>
+              Sign out
+            </button>
+          </div>
+        </div>
+        <div className="shrink-0 py-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-1"><Logo s={16}/><span className="text-xs text-neutral-300">Diali</span></div>
+        </div>
+      </div>}
     </div>
   );
 };
